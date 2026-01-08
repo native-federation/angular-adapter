@@ -1,0 +1,53 @@
+{
+  "name": "@nf-beta/angular",
+  "version": "0.0.3",
+  "generators": "./collection.json",
+  "builders": "./builders.json",
+  "schematics": "./collection.json",
+  "license": "MIT",
+  "author": {
+    "name": "Manfred Steyer",
+    "url": "http://www.angulararchitects.io"
+  },
+  "dependencies": {
+    "@nf-beta/core": "^0.0.5",
+    "@angular-devkit/architect": "^0.2100.4",
+    "@angular-devkit/build-angular": "^21.0.4",
+    "@angular-devkit/core": "^21.0.4",
+    "@angular-devkit/schematics": "^21.0.4",
+    "@angular/build": "^21.0.4",
+    "@chialab/esbuild-plugin-commonjs": "^0.19.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/native-federation/angular"
+  },
+  "ng-update": {
+    "migrations": "./migration-collection.json"
+  },
+  "exports": {
+    "./package.json": "./package.json",
+    ".": {
+      "types": "./src/index.d.ts",
+      "import": "./src/index.js",
+      "default": "./src/index.js"
+    },
+    "./config": {
+      "types": "./src/config.d.ts",
+      "import": "./src/config.js",
+      "default": "./src/config.js"
+    }
+  },
+  "homepage": "https://github.com/native-federation/angular",
+  "type": "module",
+  "files": [
+    "src",
+    "collection.json",
+    "generators.json",
+    "builders.json",
+    "migration-collection.json",
+    "README.md",
+    "LICENSE",
+    "!**/*.tsbuildinfo"
+  ]
+}

@@ -7,16 +7,7 @@
   "files": [],
   "references": [
     {
-      "path": "./packages/domain"
-    },
-    {
-      "path": "./packages/core"
-    },
-    {
-      "path": "./packages/runtime"
-    },
-    {
-      "path": "./packages/node"
+      "path": "./packages/angular"
     }
   ]
 }

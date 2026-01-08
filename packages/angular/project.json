@@ -1,14 +1,14 @@
 {
-  "name": "@native-federation/angular",
+  "name": "@nf-beta/angular",
   "$schema": "../../node_modules/nx/schemas/project-schema.json",
   "projectType": "library",
-  "sourceRoot": "packages/core/src",
+  "sourceRoot": "packages/angular/src",
   "tags": ["npm:public"],
   "targets": {
     "test": {
       "executor": "nx:run-commands",
       "options": {
-        "cwd": "packages/core",
+        "cwd": "packages/angular",
         "command": "vitest"
       },
       "cache": true,
@@ -22,7 +22,7 @@
           "env": "CI"
         }
       ],
-      "outputs": ["{workspaceRoot}/coverage/packages/core"],
+      "outputs": ["{workspaceRoot}/coverage/packages/angular"],
       "dependsOn": ["^build"]
     },
     "nx-release-publish": {
@@ -35,40 +35,40 @@
       "outputs": ["{options.outputPath}"],
       "defaultConfiguration": "production",
       "options": {
-        "outputPath": "packages/core/dist/",
-        "main": "packages/core/src/index.ts",
-        "tsConfig": "packages/core/tsconfig.build.json",
+        "outputPath": "packages/angular/dist/",
+        "main": "packages/angular/src/index.ts",
+        "tsConfig": "packages/angular/tsconfig.build.json",
         "format": ["esm"],
         "assets": [
-          "packages/core/*.md",
-          "packages/core/LICENSE",
+          "packages/angular/*.md",
+          "packages/angular/LICENSE",
           {
-            "input": "./packages/core/src",
+            "input": "./packages/angular/src",
             "glob": "**/!(*.ts)",
             "output": "./src"
           },
           {
-            "input": "./packages/core/src",
+            "input": "./packages/angular/src",
             "glob": "**/*.d.ts",
             "output": "./src"
           },
           {
-            "input": "./packages/core",
+            "input": "./packages/angular",
             "glob": "generators.json",
             "output": "."
           },
           {
-            "input": "./packages/core",
+            "input": "./packages/angular",
             "glob": "builders.json",
             "output": "."
           },
           {
-            "input": "./packages/core",
+            "input": "./packages/angular",
             "glob": "migration-collection.json",
             "output": "."
           },
           {
-            "input": "./packages/core",
+            "input": "./packages/angular",
             "glob": "collection.json",
             "output": "."
           }

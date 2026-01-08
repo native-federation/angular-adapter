@@ -1,9 +1,9 @@
-export { withNativeFederation } from '@softarc/native-federation/build.js';
 export {
   findRootTsConfigJson,
+  withNativeFederation,
   share,
   shareAll,
   DEFAULT_SKIP_LIST,
-} from '@softarc/native-federation/build.js';
+} from '@nf-beta/core/build';
 
 export { shareAngularLocales } from './utils/angular-locales.js';

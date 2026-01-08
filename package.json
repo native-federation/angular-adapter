@@ -1,5 +1,5 @@
 {
-  "name": "@native-federation-core/source",
+  "name": "@nf-beta/source",
   "version": "0.0.0",
   "license": "MIT",
   "scripts": {
@@ -50,10 +50,10 @@
     "@angular/build": "^21.0.4",
     "@babel/core": "^7.28.5",
     "@chialab/esbuild-plugin-commonjs": "^0.19.0",
+    "@nf-beta/core": "^0.0.4",
+    "@nf-beta/runtime": "^0.0.1",
     "@nx/devkit": "^22.3.3",
     "@schematics/angular": "^21.0.4",
-    "@softarc/native-federation": "^3.4.2",
-    "@softarc/native-federation-runtime": "^3.4.2",
     "@softarc/sheriff-core": "^0.19.6",
     "@types/babel__core": "^7.20.5",
     "chalk": "^5.6.2",

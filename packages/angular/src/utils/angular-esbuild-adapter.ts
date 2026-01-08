@@ -6,7 +6,7 @@ import {
   type BuildKind,
   type BuildResult,
   type EntryPoint,
-} from '@softarc/native-federation/build.js';
+} from '@nf-beta/core/build';
 
 import * as esbuild from 'esbuild';
 
@@ -80,7 +80,7 @@ export function createAngularBuildAdapter(
       entryPoints,
       external,
       outdir,
-      tsConfigPath,
+      tsConfigPath!,
       mappedPaths,
       watch,
       rebuildRequested,

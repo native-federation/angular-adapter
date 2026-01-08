@@ -17,6 +17,5 @@
     "noUncheckedIndexedAccess": true,
     "strict": true,
     "target": "esnext",
-    "customConditions": ["@native-federation-core/source"]
   }
 }

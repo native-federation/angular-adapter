@@ -25,7 +25,7 @@ import {
   setLogLevel,
   RebuildQueue,
   AbortedError,
-} from '@softarc/native-federation/build.js';
+} from '@nf-beta/core/build';
 import {
   createAngularBuildAdapter,
   setMemResultHandler,
@@ -35,7 +35,7 @@ import { type JsonObject } from '@angular-devkit/core';
 import { existsSync, mkdirSync, rmSync } from 'fs';
 import { fstart } from '../../tools/fstart-as-data-url.js';
 import { EsBuildResult, MemResults, NgCliAssetResult } from '../../utils/mem-resuts.js';
-import { type FederationInfo } from '@softarc/native-federation-runtime';
+import { type FederationInfo } from '@nf-beta/runtime';
 import { type Plugin, type PluginBuild } from 'esbuild';
 import { getI18nConfig, translateFederationArtefacts } from '../../utils/i18n.js';
 import { RebuildHubs } from '../../utils/rebuild-events.js';
@@ -48,8 +48,8 @@ const originalWrite = process.stderr.write.bind(process.stderr);
 
 process.stderr.write = function (
   chunk: string | Uint8Array,
-  encodingOrCallback?: BufferEncoding | ((err?: Error|null) => void),
-  callback?: (err?: Error|null) => void
+  encodingOrCallback?: BufferEncoding | ((err?: Error | null) => void),
+  callback?: (err?: Error | null) => void
 ): boolean {
   const str = typeof chunk === 'string' ? chunk : chunk.toString();
 
@@ -256,7 +256,14 @@ export async function* runBuilder(
         ]
       : []),
 
-    (req: { url?: string }, res: { writeHead: (status: number, headers: Record<string, string>) => void; end: (body: string) => void }, next: () => void) => {
+    (
+      req: { url?: string },
+      res: {
+        writeHead: (status: number, headers: Record<string, string>) => void;
+        end: (body: string) => void;
+      },
+      next: () => void
+    ) => {
       const url = removeBaseHref(req, options.baseHref);
 
       const fileName = path.join(fedOptions.workspaceRoot, devServerOutputPath, url);
@@ -356,11 +363,19 @@ export async function* runBuilder(
       lastResult = output;
 
       if (!write && output['outputFiles']) {
-        memResults.add(output['outputFiles'].map((file: ConstructorParameters<typeof EsBuildResult>[0]) => new EsBuildResult(file)));
+        memResults.add(
+          output['outputFiles'].map(
+            (file: ConstructorParameters<typeof EsBuildResult>[0]) => new EsBuildResult(file)
+          )
+        );
       }
 
       if (!write && output['assetFiles']) {
-        memResults.add(output['assetFiles'].map((file: ConstructorParameters<typeof NgCliAssetResult>[0]) => new NgCliAssetResult(file)));
+        memResults.add(
+          output['assetFiles'].map(
+            (file: ConstructorParameters<typeof NgCliAssetResult>[0]) => new NgCliAssetResult(file)
+          )
+        );
       }
 
       // if (write && !runServer && !nfOptions.skipHtmlTransform) {

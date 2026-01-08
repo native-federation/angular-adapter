@@ -1,4 +1,4 @@
-import { share, type SharedConfig } from '@softarc/native-federation/build.js';
+import { share, type SharedConfig } from '@nf-beta/core/build';
 
 export function shareAngularLocales(
   keys: string[],
