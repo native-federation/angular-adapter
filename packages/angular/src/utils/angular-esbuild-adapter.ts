@@ -1,7 +1,7 @@
 import {
-  type BuildAdapter,
+  type NFBuildAdapter,
   type BuildKind,
-  type BuildResult,
+  type NFBuildAdapterResult,
   type EntryPoint,
 } from '@nf-beta/core';
 import { logger, type MappedPath, AbortedError } from '@nf-beta/core/internal';
@@ -52,7 +52,7 @@ export function createAngularBuildAdapter(
   builderOptions: ApplicationBuilderOptions,
   context: BuilderContext,
   rebuildRequested: RebuildEvents = new RebuildHubs()
-): BuildAdapter {
+): NFBuildAdapter {
   return async options => {
     const {
       entryPoints,
@@ -99,7 +99,7 @@ export function createAngularBuildAdapter(
       }
     }
 
-    return files.map(fileName => ({ fileName } as BuildResult));
+    return files.map(fileName => ({ fileName } as NFBuildAdapterResult));
   };
 
   async function link(outfile: string, dev: boolean) {
