@@ -1,24 +1,28 @@
-import { share, type SharedConfig } from '@nf-beta/core/build';
+import { share, type ExternalConfig } from '@nf-beta/core/config';
 
 export function shareAngularLocales(
   keys: string[],
-  config: SharedConfig = {
-    singleton: true,
-    strictVersion: true,
-    requiredVersion: 'auto',
-  }
+  opts: { config?: ExternalConfig; legacy?: boolean } = {}
 ) {
+  if (!opts.config) {
+    opts.config = {
+      singleton: true,
+      strictVersion: true,
+      requiredVersion: 'auto',
+    };
+  }
+  const ext = opts.legacy ? '.mjs' : '.js';
   const locales = keys.reduce((acc, key) => {
     acc[`@angular/common/locales/${key}`] = {
-      ...config,
-    };
-    acc[`@angular/common/locales/${key}`]!.packageInfo = {
-      ...(config.packageInfo ?? { esm: true, version: '0.0.0' }),
-      entryPoint:
-        config.packageInfo?.entryPoint || `node_modules/@angular/common/locales/${key}.mjs`,
+      ...opts.config!,
+      packageInfo: {
+        esm: true,
+        entryPoint: `node_modules/@angular/common/locales/${key}${ext}`,
+        ...opts.config!.packageInfo,
+      },
     };
     return acc;
-  }, {} as Record<string, SharedConfig>);
+  }, {} as Record<string, ExternalConfig>);
 
   return share(locales);
 }

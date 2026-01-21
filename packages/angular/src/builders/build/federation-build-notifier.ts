@@ -1,5 +1,5 @@
-import { BuildNotificationType } from '@nf-beta/runtime';
-import { logger } from '@nf-beta/core/build';
+import { BuildNotificationType } from '@nf-beta/core';
+import { logger } from '@nf-beta/core/internal';
 import type { IncomingMessage, ServerResponse } from 'http';
 
 // =============================================================================

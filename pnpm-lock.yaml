@@ -30,20 +30,14 @@ importers:
         specifier: ^0.19.0
         version: 0.19.0
       '@nf-beta/core':
-        specifier: ^0.0.4
-        version: 0.0.4
-      '@nf-beta/runtime':
-        specifier: ^0.0.1
-        version: 0.0.1
+        specifier: ^0.0.8
+        version: 0.0.8(typescript@5.9.3)
       '@nx/devkit':
         specifier: ^22.3.3
         version: 22.3.3(nx@22.0.3(@swc-node/register@1.9.2(@swc/core@1.5.29(@swc/helpers@0.5.18))(@swc/types@0.1.25)(typescript@5.9.3))(@swc/core@1.5.29(@swc/helpers@0.5.18)))
       '@schematics/angular':
         specifier: ^21.0.4
         version: 21.0.5(chokidar@4.0.3)
-      '@softarc/sheriff-core':
-        specifier: ^0.19.6
-        version: 0.19.6(typescript@5.9.3)
       '@types/babel__core':
         specifier: ^7.20.5
         version: 7.20.5
@@ -154,7 +148,29 @@ importers:
         specifier: ^3.0.0
         version: 3.2.4(@types/node@20.19.9)(@vitest/browser@3.2.4)(@vitest/ui@3.2.4)(jiti@2.6.1)(jsdom@27.4.0)(less@4.4.2)(msw@2.12.7(@types/node@20.19.9)(typescript@5.9.3))(sass@1.93.2)(terser@5.44.0)(yaml@2.8.2)
 
-  packages/angular: {}
+  packages/angular:
+    dependencies:
+      '@angular-devkit/architect':
+        specifier: ^0.2100.4
+        version: 0.2100.5(chokidar@4.0.3)
+      '@angular-devkit/build-angular':
+        specifier: ^21.0.4
+        version: 21.0.5(@angular/compiler-cli@21.0.7(@angular/compiler@21.0.7)(typescript@5.9.3))(@angular/compiler@21.0.7)(@swc/core@1.5.29(@swc/helpers@0.5.18))(@types/node@20.19.9)(chokidar@4.0.3)(jiti@2.6.1)(typescript@5.9.3)(vitest@3.2.4)(yaml@2.8.2)
+      '@angular-devkit/core':
+        specifier: ^21.0.4
+        version: 21.0.5(chokidar@4.0.3)
+      '@angular-devkit/schematics':
+        specifier: ^21.0.4
+        version: 21.0.5(chokidar@4.0.3)
+      '@angular/build':
+        specifier: ^21.0.4
+        version: 21.0.5(@angular/compiler-cli@21.0.7(@angular/compiler@21.0.7)(typescript@5.9.3))(@angular/compiler@21.0.7)(@types/node@20.19.9)(chokidar@4.0.3)(jiti@2.6.1)(less@4.4.2)(postcss@8.5.6)(terser@5.44.0)(tslib@2.8.1)(typescript@5.9.3)(vitest@3.2.4)(yaml@2.8.2)
+      '@chialab/esbuild-plugin-commonjs':
+        specifier: ^0.19.0
+        version: 0.19.0
+      '@nf-beta/core':
+        specifier: ^0.0.8
+        version: 0.0.8(typescript@5.9.3)
 
 packages:
 
@@ -1859,11 +1875,8 @@ packages:
   '@napi-rs/wasm-runtime@1.1.1':
     resolution: {integrity: sha512-p64ah1M1ld8xjWv3qbvFwHiFVWrq1yFvV4f7w+mzaqiR4IlSgkqhcRdHwsGgomwzBH51sRY4NEowLxnaBjcW/A==}
 
-  '@nf-beta/core@0.0.4':
-    resolution: {integrity: sha512-04jYfcOkWNzjOlSRM6YWV+fBKDdRstboS1MrWEW/4nbi3/uWte+fA3Iw5Ad/SDRI7DNme0Ko5sBGlLUMTH/Mjw==}
-
-  '@nf-beta/runtime@0.0.1':
-    resolution: {integrity: sha512-wZ1pqFfdZHeggxb/gnchRHdgpYCFw6F5KEYe3LHcNyDAO6Xm0c1Bh5K44/wPyu6taYjoXYtX75YTO+9ArPI4FQ==}
+  '@nf-beta/core@0.0.8':
+    resolution: {integrity: sha512-pkXdCboiStIEK7jfPhkxbZkITBCZ/vGrlNJe5+ocYb3J5BLG1ZrJXH8cvm566ghFNV34I67XvG8uhMfTtyilQQ==}
 
   '@ngtools/webpack@21.0.5':
     resolution: {integrity: sha512-m27t/Gl+AAW4jHZ0WOZTQhuYEHtI6ThfR/msKiAnOcfx9z5zR4hbR68cIuxx7KPkd/yDjL6mdi9i/vhcq9DNPg==}
@@ -8408,11 +8421,14 @@ snapshots:
       '@tybys/wasm-util': 0.10.1
     optional: true
 
-  '@nf-beta/core@0.0.4':
+  '@nf-beta/core@0.0.8(typescript@5.9.3)':
     dependencies:
-      '@nf-beta/runtime': 0.0.1
-
-  '@nf-beta/runtime@0.0.1': {}
+      '@softarc/sheriff-core': 0.19.6(typescript@5.9.3)
+      chalk: 5.6.2
+      fast-glob: 3.3.3
+      json5: 2.2.3
+    transitivePeerDependencies:
+      - typescript
 
   '@ngtools/webpack@21.0.5(@angular/compiler-cli@21.0.7(@angular/compiler@21.0.7)(typescript@5.9.3))(typescript@5.9.3)(webpack@5.104.0(@swc/core@1.5.29(@swc/helpers@0.5.18))(esbuild@0.26.0))':
     dependencies:

@@ -1,6 +1,6 @@
 import * as path from 'path';
 import * as fs from 'fs';
-import type { FederationOptions } from '@nf-beta/core/build';
+import type { FederationOptions } from '@nf-beta/core';
 import type { NfBuilderSchema } from '../builders/build/schema.js';
 
 export function updateIndexHtml(fedOptions: FederationOptions, nfOptions: NfBuilderSchema) {

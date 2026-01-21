@@ -1,9 +1,9 @@
 import type { BuilderContext } from '@angular-devkit/architect';
-import { logger } from '@nf-beta/core/build';
+import { logger } from '@nf-beta/core/internal';
 import { execSync } from 'child_process';
 import path from 'path';
 import fs from 'fs';
-import type { FederationInfo } from '@nf-beta/runtime';
+import type { FederationInfo } from '@nf-beta/core';
 
 export type WorkspaceConfig = {
   i18n?: I18nConfig;

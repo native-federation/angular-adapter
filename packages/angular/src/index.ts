@@ -1,1 +1,1 @@
-export * from '@nf-beta/runtime';
+export * from '@nf-beta/core';

@@ -1,13 +1,10 @@
 import {
-  AbortedError,
   type BuildAdapter,
-  logger,
-  type MappedPath,
   type BuildKind,
   type BuildResult,
   type EntryPoint,
-} from '@nf-beta/core/build';
-
+} from '@nf-beta/core';
+import { logger, type MappedPath, AbortedError } from '@nf-beta/core/internal';
 import * as esbuild from 'esbuild';
 
 import {

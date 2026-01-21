@@ -1,6 +1,6 @@
 import type { Plugin, PluginBuild } from 'esbuild';
 import * as path from 'path';
-import type { MappedPath } from '@nf-beta/core/build';
+import type { MappedPath } from '@nf-beta/core/internal';
 
 export function createSharedMappingsPlugin(mappedPaths: MappedPath[]): Plugin {
   return {

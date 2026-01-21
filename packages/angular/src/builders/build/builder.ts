@@ -17,15 +17,13 @@ import type { Schema as DevServerSchema } from '@angular-devkit/build-angular/sr
 
 import {
   buildForFederation,
+  type FederationInfo,
   type FederationOptions,
   getExternals,
   loadFederationConfig,
-  logger,
   setBuildAdapter,
-  setLogLevel,
-  RebuildQueue,
-  AbortedError,
-} from '@nf-beta/core/build';
+} from '@nf-beta/core';
+import { logger, setLogLevel, RebuildQueue, AbortedError } from '@nf-beta/core/internal';
 import {
   createAngularBuildAdapter,
   setMemResultHandler,
@@ -35,7 +33,6 @@ import { type JsonObject } from '@angular-devkit/core';
 import { existsSync, mkdirSync, rmSync } from 'fs';
 import { fstart } from '../../tools/fstart-as-data-url.js';
 import { EsBuildResult, MemResults, NgCliAssetResult } from '../../utils/mem-resuts.js';
-import { type FederationInfo } from '@nf-beta/runtime';
 import { type Plugin, type PluginBuild } from 'esbuild';
 import { getI18nConfig, translateFederationArtefacts } from '../../utils/i18n.js';
 import { RebuildHubs } from '../../utils/rebuild-events.js';
