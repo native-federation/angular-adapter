@@ -5,7 +5,11 @@ import type { Plugin, ViteDevServer, IndexHtmlTransformResult, Connect } from 'v
 import { lookup } from 'mrmime';
 import { devExternalsMixin } from './dev-externals-mixin.js';
 import { filterExternals } from './externals-skip-list.js';
-import { type BuildHelperParams, federationBuilder, type FederationInfo } from '@nf-beta/core';
+import {
+  type BuildHelperParams,
+  federationBuilder,
+  type FederationInfo,
+} from '@softarc/native-federation';
 
 type FedInfoRef = { federationInfo: FederationInfo };
 

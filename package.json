@@ -50,7 +50,7 @@
     "@angular/build": "^21.0.4",
     "@babel/core": "^7.28.5",
     "@chialab/esbuild-plugin-commonjs": "^0.19.0",
-    "@nf-beta/core": "^0.0.10",
+    "@softarc/native-federation": "4.0.0-RC1",
     "@nx/devkit": "^22.3.3",
     "@schematics/angular": "^21.0.4",
     "@types/babel__core": "^7.20.5",

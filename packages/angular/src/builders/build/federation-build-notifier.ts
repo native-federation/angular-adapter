@@ -1,5 +1,5 @@
-import { BuildNotificationType } from '@nf-beta/core';
-import { logger } from '@nf-beta/core/internal';
+import { BuildNotificationType } from '@softarc/native-federation';
+import { logger } from '@softarc/native-federation/internal';
 import type { IncomingMessage, ServerResponse } from 'http';
 
 // =============================================================================

@@ -1,5 +1,5 @@
 {
-  "name": "@nf-beta/angular",
+  "name": "@angular-architects/native-federation-v4",
   "$schema": "../../node_modules/nx/schemas/project-schema.json",
   "projectType": "library",
   "sourceRoot": "packages/angular/src",

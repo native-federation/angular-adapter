@@ -1,6 +1,6 @@
 {
-  "name": "@nf-beta/angular",
-  "version": "0.0.6",
+  "name": "@angular-architects/native-federation-v4",
+  "version": "21.1.0",
   "generators": "./collection.json",
   "builders": "./builders.json",
   "schematics": "./collection.json",
@@ -10,13 +10,13 @@
     "url": "http://www.angulararchitects.io"
   },
   "dependencies": {
-    "@nf-beta/core": "^0.0.10",
-    "@nf-beta/runtime": "^0.0.4",
-    "@angular-devkit/architect": "^0.2100.4",
-    "@angular-devkit/build-angular": "^21.0.4",
-    "@angular-devkit/core": "^21.0.4",
-    "@angular-devkit/schematics": "^21.0.4",
-    "@angular/build": "^21.0.4",
+    "@softarc/native-federation": "4.0.0-RC1",
+    "@softarc/native-federation-runtime": "4.0.0-RC1",
+    "@angular-devkit/architect": "^0.2101.1",
+    "@angular-devkit/build-angular": "^21.1.0",
+    "@angular-devkit/core": "^21.1.0",
+    "@angular-devkit/schematics": "^21.1.0",
+    "@angular/build": "^21.1.0",
     "@chialab/esbuild-plugin-commonjs": "^0.19.0"
   },
   "repository": {

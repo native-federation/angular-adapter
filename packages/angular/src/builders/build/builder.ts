@@ -22,8 +22,13 @@ import {
   getExternals,
   loadFederationConfig,
   setBuildAdapter,
-} from '@nf-beta/core';
-import { logger, setLogLevel, RebuildQueue, AbortedError } from '@nf-beta/core/internal';
+} from '@softarc/native-federation';
+import {
+  logger,
+  setLogLevel,
+  RebuildQueue,
+  AbortedError,
+} from '@softarc/native-federation/internal';
 import {
   createAngularBuildAdapter,
   setMemResultHandler,

@@ -1,4 +1,4 @@
-import { share, type ExternalConfig } from '@nf-beta/core/config';
+import { share, type ExternalConfig } from '@softarc/native-federation/config';
 
 export function shareAngularLocales(
   keys: string[],

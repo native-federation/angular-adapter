@@ -157,7 +157,7 @@ export default function config(options: NfSchematicSchema): Rule {
     });
 
     addPackageJsonDependency(tree, {
-      name: '@nf-beta/core-node',
+      name: '@softarc/native-federation-node',
       type: NodeDependencyType.Default,
       version: SSR_VERSION,
       overwrite: true,
@@ -509,7 +509,7 @@ const cors = require("cors");
 
     let newMainContent = '';
     if (options.type === 'dynamic-host') {
-      newMainContent = `import { initNodeFederation } from '@nf-beta/core-node';
+      newMainContent = `import { initNodeFederation } from '@softarc/native-federation-node';
 
 console.log('Starting SSR for Shell');
 
@@ -526,7 +526,7 @@ console.log('Starting SSR for Shell');
 `;
     } else if (options.type === 'host') {
       const manifest = JSON.stringify(remoteMap, null, 2).replace(/"/g, "'");
-      newMainContent = `import { initNodeFederation } from '@nf-beta/core-node';
+      newMainContent = `import { initNodeFederation } from '@softarc/native-federation-node';
 
 console.log('Starting SSR for Shell');
 
@@ -542,7 +542,7 @@ console.log('Starting SSR for Shell');
 })();
 `;
     } else {
-      newMainContent = `import { initNodeFederation } from '@nf-beta/core-node';
+      newMainContent = `import { initNodeFederation } from '@softarc/native-federation-node';
 
 (async () => {
 

@@ -3,8 +3,8 @@ import {
   type BuildKind,
   type NFBuildAdapterResult,
   type EntryPoint,
-} from '@nf-beta/core';
-import { logger, type MappedPath, AbortedError } from '@nf-beta/core/internal';
+} from '@softarc/native-federation';
+import { logger, type MappedPath, AbortedError } from '@softarc/native-federation/internal';
 import * as esbuild from 'esbuild';
 
 import {

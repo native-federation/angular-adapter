@@ -1,7 +1,7 @@
-export * from '@nf-beta/core/domain';
+export * from '@softarc/native-federation/domain';
 export {
   initFederation,
   type InitFederationOptions,
   loadRemoteModule,
   type LoadRemoteModuleOptions,
-} from '@nf-beta/runtime';
+} from '@softarc/native-federation-runtime';

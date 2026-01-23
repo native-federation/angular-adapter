@@ -1,5 +1,5 @@
 import type { JsonObject } from '@angular-devkit/core';
-import type { BuildNotificationOptions } from '@nf-beta/runtime';
+import type { BuildNotificationOptions } from '@softarc/native-federation-runtime';
 import type { ESMSInitOptions } from 'es-module-shims';
 
 export interface NfBuilderSchema extends JsonObject {
