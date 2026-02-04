@@ -64,8 +64,10 @@ export function createAngularBuildAdapter(
       watch,
       dev,
       hash,
+      chunks,
       platform,
       optimizedMappings,
+
       signal,
     } = options;
 
@@ -83,6 +85,7 @@ export function createAngularBuildAdapter(
       rebuildRequested,
       dev,
       kind,
+      chunks,
       hash,
       undefined,
       undefined,
@@ -154,6 +157,7 @@ async function runEsbuild(
   rebuildRequested: RebuildEvents = new RebuildHubs(),
   dev?: boolean,
   kind?: BuildKind,
+  chunks?: boolean,
   hash = false,
   plugins: esbuild.Plugin[] | null = null,
   absWorkingDir: string | undefined = undefined,
@@ -251,11 +255,12 @@ async function runEsbuild(
     bundle: true,
     sourcemap: sourcemapOptions.scripts,
     minify: !dev,
+
     supported: {
       'async-await': false,
       'object-rest-spread': false,
     },
-    splitting: true, //kind === 'mapping-or-exposed',
+    splitting: chunks, //kind === 'mapping-or-exposed',
     platform: platform ?? 'browser',
     format: 'esm',
     target: target,

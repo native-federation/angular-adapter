@@ -213,6 +213,7 @@ export async function* runBuilder(
     verbose: options.verbose,
     watch: false, // options.watch,
     dev: !!nfOptions.dev,
+    chunks: !nfOptions.chunks ? false : nfOptions.chunks,
     entryPoint,
     buildNotifications: nfOptions.buildNotifications,
     cacheExternalArtifacts: nfOptions.cacheExternalArtifacts,

@@ -65,6 +65,25 @@
       "type": "boolean",
       "description": "can be used to disable the dev server when dev=true"
     },
+    "cacheExternalArtifacts": {
+      "type": "boolean",
+      "description": "Will cache the shared externals so they can be re-used between builds"
+    },
+    "chunks": {
+      "type": "object",
+      "properties": {
+        "enable": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable chunking (code splitting)."
+        },
+        "dense": {
+          "type": "boolean",
+          "default": false,
+          "description": "Allows for a more compact remoteEntry.json."
+        }
+      }
+    },
     "buildNotifications": {
       "type": "object",
       "properties": {
