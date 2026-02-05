@@ -37,7 +37,7 @@ export async function getI18nConfig(context: BuilderContext): Promise<I18nConfig
   return i18nConfig;
 }
 
-export async function translateFederationArtefacts(
+export async function translateFederationArtifacts(
   i18n: I18nConfig,
   localize: boolean | string[],
   outputPath: string,

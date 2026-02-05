@@ -39,7 +39,7 @@ import { existsSync, mkdirSync, rmSync } from 'fs';
 import { fstart } from '../../tools/fstart-as-data-url.js';
 import { EsBuildResult, MemResults, NgCliAssetResult } from '../../utils/mem-resuts.js';
 import { type Plugin, type PluginBuild } from 'esbuild';
-import { getI18nConfig, translateFederationArtefacts } from '../../utils/i18n.js';
+import { getI18nConfig, translateFederationArtifacts } from '../../utils/i18n.js';
 import { RebuildHubs } from '../../utils/rebuild-events.js';
 import { createSharedMappingsPlugin } from '../../utils/shared-mappings-plugin.js';
 import { updateScriptTags } from '../../utils/updateIndexHtml.js';
@@ -334,7 +334,7 @@ export async function* runBuilder(
   if (hasLocales && localeFilter) {
     const start = process.hrtime();
 
-    translateFederationArtefacts(i18n, localeFilter, outputOptions.base, federationResult);
+    translateFederationArtifacts(i18n, localeFilter, outputOptions.base, federationResult);
     logger.measure(start, 'To translate the artifacts.');
   }
 
@@ -424,7 +424,7 @@ export async function* runBuilder(
             }
 
             if (hasLocales && localeFilter) {
-              translateFederationArtefacts(
+              translateFederationArtifacts(
                 i18n,
                 localeFilter,
                 outputOptions.base,

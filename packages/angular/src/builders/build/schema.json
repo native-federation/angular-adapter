@@ -32,7 +32,7 @@
     "rebuildDelay": {
       "type": "number",
       "default": 2000,
-      "description": "The delay for rebuilding federation artefacts. This allows to have more resources for refreshing your micro frontend in the browser."
+      "description": "The delay for rebuilding federation artifacts. This allows to have more resources for refreshing your micro frontend in the browser."
     },
     "shell": {
       "type": "string",
