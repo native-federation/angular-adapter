@@ -42,11 +42,11 @@ The first step is to update the `package.json` to install the new packages:
   "private": true,
   "dependencies": {
     // [...] Dependencies
-    "@softarc/native-federation-runtime": "4.0.0-RC8" // Lock the version to the v4 RC8
+    "@softarc/native-federation-runtime": "4.0.0-RC9" // Lock the version to the v4 RC9
   },
   "devDependencies": {
     "@angular-architects/native-federation-v4": "~20.3.6", // Switch over to the (temporary) v4 package
-    "@softarc/native-federation": "4.0.0-RC8", // Lock the version to the v4 RC6
+    "@softarc/native-federation": "4.0.0-RC9", // Lock the version to the v4 RC6
     "@softarc/native-federation-orchestrator": "4.0.0-RC4" // Lock the version to the v4 RC4
   }
 }
@@ -73,7 +73,7 @@ module.exports = withNativeFederation({
   shared: {
     ...shareAll({ singleton: true, strictVersion: true, requiredVersion: 'auto' }),
 
-    // This example is only for setups that have a share after the shareAll as you can see here.
+    // OLD: This example is only for setups that currently have a share after the shareAll.
     ...share({ "@angular/core": { singleton: true, strictVersion: true, requiredVersion: 'auto' }});
   },
 
@@ -95,7 +95,8 @@ module.exports = withNativeFederation({
 
 ```javascript
 // Our well-known ESM importing types
-import { withNativeFederation, shareAll } from '@softarc/native-federation/config';
+// As you can see, USE THE ANGULAR ONES, NOT THE DEFAULT ONES
+import { withNativeFederation, shareAll } from '@angular-architects/native-federation-v4/config';
 
 // change this line to the default export.
 export default withNativeFederation({
@@ -133,7 +134,8 @@ export default withNativeFederation({
   skip: ['rxjs/ajax', 'rxjs/fetch', 'rxjs/testing', 'rxjs/webSocket'],
 
   features: {
-    ignoreUnusedDeps: true,
+    ignoreUnusedDeps: true, // Now enabled by default
+    denseChunking: true, // Opt-in: groups chunks in remoteEntry.json for smaller file size
   },
 });
 ```
@@ -166,7 +168,6 @@ In the new version we're moving to an opt-in setup where the user (you) can cust
             "target": "mfe1:serve-original:development",
             "cacheExternalArtifacts": true, // Cache and re-use external bundled artifacts that don't change (e.g. RxJs) across builds
             "rebuildDelay": 500, // Allows for a grace period between builds when you develop; within this period it can cancel previous builds to save time (500/1000 is good)
-            "chunks": { "enable": true, "dense": true }, // Enabling code splitting. The default is true, but dense mode is opt-in (so false by default).
             "dev": true,
             "port": 0
           }
@@ -177,7 +178,7 @@ In the new version we're moving to an opt-in setup where the user (you) can cust
 }
 ```
 
-Dense mode is something new in v4 that is experimental! Read more about it here: https://github.com/native-federation/native-federation-core/issues/5
+> **Note:** Code-splitting (`chunks`) and dense chunking (`denseChunking`) are now configured in `federation.config.js` instead of the angular.json builder options. See the [README](./README.md#code-splitting-for-shared-dependencies) for details.
 
 And that's it! Your micro frontend is migrated to the new major! We do have some optional improvements that can be nice:
 

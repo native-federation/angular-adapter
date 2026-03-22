@@ -8,6 +8,12 @@
       "factory": "./src/schematics/update18/schematic",
       "schema": "./src/schematics/update18/schema.json",
       "description": "migrating to v18"
+    },
+    "update-v4": {
+      "version": "21.2.0-beta.0",
+      "factory": "./src/schematics/update-v4/schematic",
+      "schema": "./src/schematics/update-v4/schema.json",
+      "description": "migrating from native-federation v3 to v4"
     }
   }
 }

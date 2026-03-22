@@ -1,9 +1,6 @@
 import * as esbuild from 'esbuild';
 import * as path from 'path';
-import * as fs from 'fs';
 import { createRequire } from 'node:module';
-import { isDeepStrictEqual } from 'node:util';
-import JSON5 from 'json5';
 
 import {
   transformSupportedBrowsersToTargets,
@@ -11,46 +8,44 @@ import {
   generateSearchDirectories,
   findTailwindConfiguration,
   loadPostcssConfiguration,
-  type SourceFileCache,
-  type createCompilerPlugin
+  type createCompilerPlugin,
 } from '@angular/build/private';
-
-import type { BuilderContext } from '@angular-devkit/architect';
 
 import {
   normalizeOptimization,
   normalizeSourceMaps,
 } from '@angular-devkit/build-angular/src/utils/index.js';
 
-import type { ApplicationBuilderOptions } from '@angular/build';
-import type { EntryPoint, FederationCache } from '@softarc/native-federation';
-import type { MappedPath } from '@softarc/native-federation/internal';
-
-import { createSharedMappingsPlugin } from './shared-mappings-plugin.js';
 import { createAwaitableCompilerPlugin } from './create-awaitable-compiler-plugin.js';
+import type { NormalizedContextOptions } from './normalize-context-options.js';
+import { createFederationTsConfig } from './create-federation-tsconfig.js';
 
 type CreateCompilerPluginParams = Parameters<typeof createCompilerPlugin>;
 
-export interface AngularBundleResult {
+export async function createAngularEsbuildContext(options: NormalizedContextOptions): Promise<{
   ctx: esbuild.BuildContext;
   pluginDisposed: Promise<void>;
-}
+}> {
+  const {
+    builderOptions,
+    context,
+    entryPoints,
+    external,
+    outdir,
+    cache,
+    dev,
+    hash,
+    chunks,
+    platform,
+    optimizedMappings,
+  } = options;
 
-export async function createAngularEsbuildContext(
-  builderOptions: ApplicationBuilderOptions,
-  context: BuilderContext,
-  entryPoints: EntryPoint[],
-  external: string[],
-  outdir: string,
-  tsConfigPath: string,
-  mappedPaths: MappedPath[],
-  cache: FederationCache<SourceFileCache>,
-  dev?: boolean,
-  hash: boolean = false,
-  chunks?: boolean,
-  platform?: 'browser' | 'node',
-  optimizedMappings?: boolean
-): Promise<AngularBundleResult> {
+  let tsConfigPath = options.tsConfigPath;
+
+  if (!tsConfigPath) {
+    throw new Error('tsConfigPath is required for Angular/esbuild context creation');
+  }
+
   const workspaceRoot = context.workspaceRoot;
 
   const projectMetadata = await context.getProjectMetadata(context.target!.project);
@@ -87,7 +82,7 @@ export async function createAngularEsbuildContext(
     }
   }
 
-  tsConfigPath = createTsConfigForFederation(
+  tsConfigPath = createFederationTsConfig(
     workspaceRoot,
     tsConfigPath,
     entryPoints,
@@ -107,30 +102,31 @@ export async function createAngularEsbuildContext(
     includeTestMetadata: !optimizationOptions.scripts,
   };
 
-  const stylesheetBundlerOptions: CreateCompilerPluginParams[1] & { inlineStyleLanguage: string } = {
-    workspaceRoot,
-    inlineFonts: !!optimizationOptions.fonts.inline,
-    optimization: !!optimizationOptions.styles.minify,
-    sourcemap:
-      // Hidden component stylesheet sourcemaps are inaccessible which is effectively
-      // the same as being disabled. Disabling has the advantage of avoiding the overhead
-      // of sourcemap processing.
-      sourcemapOptions.styles && !sourcemapOptions.hidden ? 'linked' : false,
-    outputNames,
-    includePaths: builderOptions.stylePreprocessorOptions?.includePaths,
-    sass: builderOptions?.stylePreprocessorOptions?.sass as any,
-    externalDependencies: external,
-    target,
-    inlineStyleLanguage: builderOptions.inlineStyleLanguage ?? 'css',
-    preserveSymlinks: builderOptions.preserveSymlinks,
-    tailwindConfiguration,
-    postcssConfiguration,
-    cacheOptions: {
-      enabled: true,
-      basePath: cache.cachePath,
-      path: cache.cachePath,
-    },
-  };
+  const stylesheetBundlerOptions: CreateCompilerPluginParams[1] & { inlineStyleLanguage: string } =
+    {
+      workspaceRoot,
+      inlineFonts: !!optimizationOptions.fonts.inline,
+      optimization: !!optimizationOptions.styles.minify,
+      sourcemap:
+        // Hidden component stylesheet sourcemaps are inaccessible which is effectively
+        // the same as being disabled. Disabling has the advantage of avoiding the overhead
+        // of sourcemap processing.
+        sourcemapOptions.styles && !sourcemapOptions.hidden ? 'linked' : false,
+      outputNames,
+      includePaths: builderOptions.stylePreprocessorOptions?.includePaths,
+      sass: builderOptions?.stylePreprocessorOptions?.sass as any,
+      externalDependencies: external,
+      target,
+      inlineStyleLanguage: builderOptions.inlineStyleLanguage ?? 'css',
+      preserveSymlinks: builderOptions.preserveSymlinks,
+      tailwindConfiguration,
+      postcssConfiguration,
+      cacheOptions: {
+        enabled: true,
+        basePath: cache.cachePath,
+        path: cache.cachePath,
+      },
+    };
 
   const commonjsPluginModule = await import('@chialab/esbuild-plugin-commonjs');
   const commonjsPlugin = commonjsPluginModule.default;
@@ -164,13 +160,9 @@ export async function createAngularEsbuildContext(
     format: 'esm',
     target: target,
     logLimit: 0,
-    plugins: [
-      compilerPlugin,
-      ...(mappedPaths && mappedPaths.length > 0 ? [createSharedMappingsPlugin(mappedPaths)] : []),
-      commonjsPlugin(),
-    ],
+    plugins: [compilerPlugin, commonjsPlugin()],
     define: {
-      ...(!dev ? { ngDevMode: 'false' } : {}),
+      ngDevMode: dev ? 'true' : 'false',
       ngJitMode: 'false',
     },
     ...(builderOptions.loader ? { loader: builderOptions.loader } : {}),
@@ -195,66 +187,4 @@ async function getTailwindConfig(
     file: tailwindConfigurationPath,
     package: createRequire(tailwindConfigurationPath).resolve('tailwindcss'),
   };
-}
-
-/**
- * Creates a tsconfig.federation.json that includes the federation entry points.
- */
-function createTsConfigForFederation(
-  workspaceRoot: string,
-  tsConfigPath: string,
-  entryPoints: EntryPoint[],
-  optimizedMappings?: boolean
-): string {
-  const fullTsConfigPath = path.join(workspaceRoot, tsConfigPath);
-  const tsconfigDir = path.dirname(fullTsConfigPath);
-
-  const tsconfigAsString = fs.readFileSync(fullTsConfigPath, 'utf-8');
-  const tsconfig = JSON5.parse(tsconfigAsString);
-
-  tsconfig.files = entryPoints
-    .filter(ep => ep.fileName.startsWith('.'))
-    .map(ep => path.relative(tsconfigDir, ep.fileName).replace(/\\\\/g, '/'));
-
-  if (optimizedMappings) {
-    const filtered = entryPoints
-      .filter(ep => !ep.fileName.startsWith('.'))
-      .map(ep => path.relative(tsconfigDir, ep.fileName).replace(/\\\\/g, '/'));
-
-    if (!tsconfig.include) {
-      tsconfig.include = [];
-    }
-
-    for (const ep of filtered) {
-      if (!tsconfig.include.includes(ep)) {
-        tsconfig.include.push(ep);
-      }
-    }
-  }
-
-  const content = JSON5.stringify(tsconfig, null, 2);
-
-  const tsconfigFedPath = path.join(tsconfigDir, 'tsconfig.federation.json');
-
-  if (!doesFileExistAndJsonEqual(tsconfigFedPath, content)) {
-    fs.writeFileSync(tsconfigFedPath, JSON.stringify(tsconfig, null, 2));
-  }
-
-  return tsconfigFedPath;
-}
-
-function doesFileExistAndJsonEqual(filePath: string, content: string): boolean {
-  if (!fs.existsSync(filePath)) {
-    return false;
-  }
-
-  try {
-    const currentContent = fs.readFileSync(filePath, 'utf-8');
-    const currentJson = JSON5.parse(currentContent);
-    const newJson = JSON5.parse(content);
-
-    return isDeepStrictEqual(currentJson, newJson);
-  } catch {
-    return false;
-  }
 }

@@ -1,6 +1,6 @@
-const { withNativeFederation, shareAll } = require('@angular-architects/native-federation/config');
+import { withNativeFederation, shareAll } from '@angular-architects/native-federation-v4/config';
 
-module.exports = withNativeFederation({
+export default withNativeFederation({
   name: '<%=project%>',
 
 <% if (type === 'remote') { %>
@@ -10,7 +10,18 @@ module.exports = withNativeFederation({
   },
 <% } %>
   shared: {
-    ...shareAll({ singleton: true, strictVersion: true, requiredVersion: 'auto' }),
+    ...shareAll({ 
+      singleton: true, strictVersion: true, requiredVersion: 'auto'
+    }, {
+      overrides: {
+        '@angular/core': {
+          singleton: true, strictVersion: true, requiredVersion: 'auto', build: 'package', chunks: true, includeSecondaries: {keepAll: true},
+        },
+        '@angular/common': {
+          singleton: true, strictVersion: true, requiredVersion: 'auto', build: 'package',chunks: true, includeSecondaries: {keepAll: true},
+        }
+      } 
+    }),
   },
 
   skip: [
@@ -25,9 +36,10 @@ module.exports = withNativeFederation({
   // https://shorturl.at/jmzH0
 
   features: {
-    // New feature for more performance and avoiding
-    // issues with node libs. Comment this out to
-    // get the traditional behavior:
-    ignoreUnusedDeps: true
+    // ignoreUnusedDeps is enabled by default now
+    // ignoreUnusedDeps: true,
+
+    // Opt-in: groups chunks in remoteEntry.json for smaller metadata file
+    denseChunking: true
   }
 });

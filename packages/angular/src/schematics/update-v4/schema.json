@@ -1,0 +1,23 @@
+{
+  "$schema": "http://json-schema.org/schema",
+  "$id": "update-v4",
+  "title": "",
+  "type": "object",
+  "properties": {
+    "project": {
+      "type": "string",
+      "description": "The project to migrate to v4",
+      "$default": {
+        "$source": "argv",
+        "index": 0
+      },
+      "x-prompt": "Project name (press enter for default project)"
+    },
+    "orchestrator": {
+      "type": "boolean",
+      "description": "Switch main.ts to use @softarc/native-federation-orchestrator instead of the legacy runtime",
+      "default": false,
+      "x-prompt": "Would you like to use the new orchestrator runtime? (recommended)"
+    }
+  }
+}

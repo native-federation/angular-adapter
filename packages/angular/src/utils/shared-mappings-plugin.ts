@@ -1,29 +1,29 @@
 import type { Plugin, PluginBuild } from 'esbuild';
 import * as path from 'path';
-import type { MappedPath } from '@softarc/native-federation/internal';
+import type { PathToImport } from '@softarc/native-federation/internal';
 
-export function createSharedMappingsPlugin(mappedPaths: MappedPath[]): Plugin {
+export function createSharedMappingsPlugin(mappedPaths: PathToImport): Plugin {
   return {
     name: 'custom',
     setup(build: PluginBuild) {
       build.onResolve({ filter: /^[.]/ }, async args => {
-        let mappedPath: MappedPath | null = null;
+        let mappedPath: string | undefined = undefined;
         let isSelf = false;
 
         if (args.kind === 'import-statement') {
           const importPath = path.join(args.resolveDir, args.path);
           if (mappedPaths) {
-            mappedPath = mappedPaths.find(p => importPath.startsWith(path.dirname(p.path))) ?? null;
+            mappedPath = Object.keys(mappedPaths).find(p => importPath.startsWith(path.dirname(p)));
           }
         }
 
         if (mappedPath) {
-          isSelf = args.importer.startsWith(path.dirname(mappedPath.path));
+          isSelf = args.importer.startsWith(path.dirname(mappedPath));
         }
 
         if (mappedPath && !isSelf) {
           return {
-            path: mappedPath.key,
+            path: mappedPaths[mappedPath],
             external: true,
           };
         }

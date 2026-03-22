@@ -6,18 +6,16 @@ export interface NfBuilderSchema extends JsonObject {
   target: string;
   dev: boolean;
   port: number;
-  open: boolean;
   rebuildDelay: number;
   buildNotifications?: BuildNotificationOptions;
-  shell: string;
   watch: boolean;
   skipHtmlTransform: boolean;
   esmsInitOptions: ESMSInitOptions;
   baseHref?: string;
   outputPath?: string;
+  projectName?: string;
   ssr: boolean;
   devServer?: boolean;
-  chunks?: { enable: boolean; dense: true };
-  entryPoint?: string;
+  entryPoints?: string[];
   cacheExternalArtifacts?: boolean;
-} // eslint-disable-line
+}

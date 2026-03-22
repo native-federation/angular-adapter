@@ -12,17 +12,20 @@ export function shareAngularLocales(
     };
   }
   const ext = opts.legacy ? '.mjs' : '.js';
-  const locales = keys.reduce((acc, key) => {
-    acc[`@angular/common/locales/${key}`] = {
-      ...opts.config!,
-      packageInfo: {
-        esm: true,
-        entryPoint: `node_modules/@angular/common/locales/${key}${ext}`,
-        ...opts.config!.packageInfo,
-      },
-    };
-    return acc;
-  }, {} as Record<string, ExternalConfig>);
+  const locales = keys.reduce(
+    (acc, key) => {
+      acc[`@angular/common/locales/${key}`] = {
+        ...opts.config!,
+        packageInfo: {
+          esm: true,
+          entryPoint: `node_modules/@angular/common/locales/${key}${ext}`,
+          ...opts.config!.packageInfo,
+        },
+      };
+      return acc;
+    },
+    {} as Record<string, ExternalConfig>
+  );
 
   return share(locales);
 }

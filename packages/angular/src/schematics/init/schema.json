@@ -1,12 +1,12 @@
 {
   "$schema": "http://json-schema.org/schema",
-  "$id": "mf",
+  "$id": "nf",
   "title": "",
   "type": "object",
   "properties": {
     "project": {
       "type": "string",
-      "description": "The project to add module federation",
+      "description": "The project to add native-federation federation",
       "$default": {
         "$source": "argv",
         "index": 0
@@ -25,10 +25,6 @@
       "enum": ["host", "dynamic-host", "remote"],
       "type": "string",
       "default": "remote"
-    },
-    "nxBuilders": {
-      "type": "boolean",
-      "description": "Use builders provided by Nx instead of ngx-build-plus? Defaults to true for Nx workspaces and false for CLI workspaces."
     }
   }
 }

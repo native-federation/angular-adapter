@@ -24,7 +24,7 @@ import {
 
 import * as path from 'path';
 
-const SSR_VERSION = '^3.3.4';
+const SSR_VERSION = '4.0.0-RC9';
 
 type NormalizedOptions = {
   polyfills: string;
@@ -118,22 +118,7 @@ export default function config(options: NfSchematicSchema): Rule {
     const ssr = isSsrProject(normalized);
     const server = ssr ? getSsrFilePath(normalized) : '';
 
-    if (ssr) {
-      console.log('SSR detected ...');
-      console.log('Activating CORS ...');
-
-      addPackageJsonDependency(tree, {
-        name: 'cors',
-        type: NodeDependencyType.Default,
-        version: '^2.8.5',
-        overwrite: false,
-      });
-    }
-
     updateWorkspaceConfig(tree, normalized, workspace, workspaceFileName, ssr);
-
-    // updatePackageJson(tree);
-    // patchAngularBuild(tree);
 
     addPackageJsonDependency(tree, {
       name: '@angular/animations',
@@ -157,13 +142,32 @@ export default function config(options: NfSchematicSchema): Rule {
     });
 
     addPackageJsonDependency(tree, {
-      name: '@softarc/native-federation-node',
+      name: '@softarc/native-federation-orchestrator',
       type: NodeDependencyType.Default,
-      version: SSR_VERSION,
-      overwrite: true,
+      version: '4.0.0-RC4',
+      overwrite: false,
     });
 
     context.addTask(new NodePackageInstallTask());
+
+    if (ssr) {
+      console.log('SSR detected ...');
+      console.log('Activating CORS ...');
+
+      addPackageJsonDependency(tree, {
+        name: 'cors',
+        type: NodeDependencyType.Default,
+        version: '^2.8.5',
+        overwrite: false,
+      });
+
+      addPackageJsonDependency(tree, {
+        name: '@softarc/native-federation-node',
+        type: NodeDependencyType.Default,
+        version: SSR_VERSION,
+        overwrite: true,
+      });
+    }
 
     return chain([
       generateRule,
@@ -207,7 +211,9 @@ function updateWorkspaceConfig(
   workspaceFileName: string,
   ssr: boolean
 ) {
-  const { projectConfig, projectName, port } = options;
+  const { projectConfig, projectName, port, main, projectSourceRoot } = options;
+
+  const entryPoints = main ? [main] : [path.join(projectSourceRoot, 'main.ts')];
 
   if (!projectConfig?.architect?.build || !projectConfig?.architect?.serve) {
     throw new Error(`The project doesn't have a build or serve target in angular.json!`);
@@ -237,7 +243,11 @@ function updateWorkspaceConfig(
 
   projectConfig.architect.build = {
     builder: '@angular-architects/native-federation:build',
-    options: {},
+    options: {
+      projectName,
+      cacheExternalArtifacts: true,
+      entryPoints,
+    },
     configurations: {
       production: {
         target: `${projectName}:esbuild:production`,
@@ -278,11 +288,14 @@ function updateWorkspaceConfig(
   projectConfig.architect.serve = {
     builder: '@angular-architects/native-federation:build',
     options: {
+      projectName,
       target: `${projectName}:serve-original:development`,
       rebuildDelay: 500,
+      cacheExternalArtifacts: true,
       dev: true,
-      cacheExternalArtifacts: false,
+      devServer: true,
       port: 0,
+      entryPoints,
     },
   };
 
@@ -446,28 +459,43 @@ function makeMainAsync(
     const mainContent = tree.read(main);
     if (mainContent) tree.create(bootstrapName, mainContent);
 
+    const orchestratorImports = `import { initFederation } from '@softarc/native-federation-orchestrator';
+import {
+  useShimImportMap,
+  consoleLogger,
+  globalThisStorageEntry,
+} from '@softarc/native-federation-orchestrator/options';`;
+
+    const orchestratorOptions = `{
+  ...useShimImportMap({ shimMode: true }),
+  logger: consoleLogger,
+  storage: globalThisStorageEntry,
+  hostRemoteEntry: './remoteEntry.json',
+  logLevel: 'debug',
+}`;
+
     let newMainContent = '';
     if (options.type === 'dynamic-host') {
-      newMainContent = `import { initFederation } from '@angular-architects/native-federation';
+      newMainContent = `${orchestratorImports}
 
-initFederation('${manifestRelPath}')
+initFederation('${manifestRelPath}', ${orchestratorOptions})
   .catch(err => console.error(err))
   .then(_ => import('./bootstrap'))
   .catch(err => console.error(err));
 `;
     } else if (options.type === 'host') {
       const manifest = JSON.stringify(remoteMap, null, 2).replace(/"/g, "'");
-      newMainContent = `import { initFederation } from '@angular-architects/native-federation';
+      newMainContent = `${orchestratorImports}
 
-initFederation(${manifest})
+initFederation(${manifest}, ${orchestratorOptions})
   .catch(err => console.error(err))
   .then(_ => import('./bootstrap'))
   .catch(err => console.error(err));
 `;
     } else {
-      newMainContent = `import { initFederation } from '@angular-architects/native-federation';
+      newMainContent = `${orchestratorImports}
 
-initFederation()
+initFederation({ '${options.project}': './remoteEntry.json' }, ${orchestratorOptions})
   .catch(err => console.error(err))
   .then(_ => import('./bootstrap'))
   .catch(err => console.error(err));

@@ -23,30 +23,22 @@
       "type": "number",
       "default": 0
     },
-    "entryPoint": {
-      "type": "string"
-    },
-    "open": {
-      "type": "boolean",
-      "default": true,
-      "description": "Open browser?",
-      "alias": "o"
+    "entryPoints": {
+      "type": "array"
     },
     "rebuildDelay": {
       "type": "number",
       "default": 2000,
       "description": "The delay for rebuilding federation artifacts. This allows to have more resources for refreshing your micro frontend in the browser."
     },
-    "shell": {
-      "type": "string",
-      "description": "Experimental",
-      "default": ""
-    },
     "skipHtmlTransform": {
       "type": "boolean",
       "default": false
     },
     "baseHref": {
+      "type": "string"
+    },
+    "projectName": {
       "type": "string"
     },
     "outputPath": {
@@ -70,22 +62,9 @@
     },
     "cacheExternalArtifacts": {
       "type": "boolean",
-      "description": "Will cache the shared externals so they can be re-used between builds"
-    },
-    "chunks": {
-      "type": "object",
-      "properties": {
-        "enable": {
-          "type": "boolean",
-          "default": true,
-          "description": "Enable chunking (code splitting)."
-        },
-        "dense": {
-          "type": "boolean",
-          "default": false,
-          "description": "Allows for a more compact remoteEntry.json."
-        }
-      }
+      "default": true,
+      "description": "Will cache the shared externals so they can be re-used between builds",
+      "alias": "cache"
     },
     "buildNotifications": {
       "type": "object",
