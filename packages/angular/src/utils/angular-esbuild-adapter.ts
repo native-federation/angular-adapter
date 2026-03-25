@@ -122,7 +122,7 @@ export function createAngularBuildAdapter(
   const build = async (
     name: string,
     opts: {
-      files?: string[];
+      modifiedFiles?: string[];
       signal?: AbortSignal;
     } = {}
   ): Promise<NFBuildAdapterResult[]> => {
@@ -136,8 +136,8 @@ export function createAngularBuildAdapter(
     }
 
     try {
-      if (opts.files) {
-        bundleContext.cache.bundlerCache.invalidate(new Set(opts.files));
+      if (opts.modifiedFiles) {
+        bundleContext.cache.bundlerCache.invalidate(new Set(opts.modifiedFiles));
       }
       const result = await bundleContext.ctx.rebuild();
       const writtenFiles = writeResult(

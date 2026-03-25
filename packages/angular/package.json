@@ -1,6 +1,6 @@
 {
   "name": "@angular-architects/native-federation-v4",
-  "version": "20.3.8",
+  "version": "20.3.9",
   "generators": "./collection.json",
   "builders": "./builders.json",
   "schematics": "./collection.json",
