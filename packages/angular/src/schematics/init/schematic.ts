@@ -24,7 +24,7 @@ import {
 
 import * as path from 'path';
 
-const SSR_VERSION = '4.0.0-RC9';
+const SSR_VERSION = '4.0.0-RC10';
 
 type NormalizedOptions = {
   polyfills: string;

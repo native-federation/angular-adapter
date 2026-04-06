@@ -1,6 +1,7 @@
 import type { JsonObject } from '@angular-devkit/core';
 import type { BuildNotificationOptions } from '@softarc/native-federation-runtime';
 import type { ESMSInitOptions } from 'es-module-shims';
+import type { Plugin } from 'esbuild';
 
 export interface NfBuilderSchema extends JsonObject {
   target: string;
@@ -19,3 +20,5 @@ export interface NfBuilderSchema extends JsonObject {
   entryPoints?: string[];
   cacheExternalArtifacts?: boolean;
 }
+
+export type NfInternalOptions = { plugins: Plugin[] };

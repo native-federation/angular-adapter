@@ -525,6 +525,63 @@ The already prepared packages are cached in `node_modules/.cache`. Make sure, th
 
 We use Import Maps at runtime. In addition to Import Maps, we use some code at build time and at runtime to provide the Mental Model of Module Federation.
 
+### How to integrate custom esbuild plugins in Native Federation v4 build process?
+
+Native Federation v4 allows you to inject custom esbuild plugins into the build process. This is useful for tasks like code transformation, bundling optimizations, or integrating third-party tools.
+
+#### Steps to integrate custom plugins:
+
+1. **Create a custom builder file** (e.g., `custom-builder.js`) in your project root or a suitable location.
+
+2. **Configure your `angular.json`** to use the custom builder instead of the default Native Federation builder.
+
+3. **Pass your plugins** through the `plugins` option in the custom builder.
+
+#### Example:
+
+Create `custom-builder.js`:
+
+```js
+import { runBuilder } from '@angular-architects/native-federation-v4';
+import { createBuilder } from '@angular-devkit/architect';
+
+async function* customBuilder(options, context) {
+  const nfOptions = {
+    ...options,
+    plugins: [], // Inject your plugins here
+  };
+
+  yield* runBuilder(nfOptions, context);
+}
+
+export default createBuilder(customBuilder);
+```
+
+Update your `angular.json` (for both `build` and `serve` targets):
+
+```json
+{
+  "projects": {
+    "your-project": {
+      "architect": {
+        "build": {
+          "builder": "./custom-builder",
+          "options": {
+            // Your existing options...
+          }
+        },
+        "serve": {
+          "builder": "./custom-builder",
+          "options": {
+            // Your existing options...
+          }
+        }
+      }
+    }
+  }
+}
+```
+
 ## Documentation 📰
 
 Please have a look at this [article series](https://www.angulararchitects.io/en/aktuelles/the-microfrontend-revolution-part-2-module-federation-with-angular/).
