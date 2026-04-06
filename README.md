@@ -542,7 +542,7 @@ Native Federation v4 allows you to inject custom esbuild plugins into the build 
 Create `custom-builder.js`:
 
 ```js
-import { runBuilder } from '@angular-architects/native-federation-v4';
+import { runBuilder } from '@angular-architects/native-federation-v4/internal';
 import { createBuilder } from '@angular-devkit/architect';
 
 async function* customBuilder(options, context) {

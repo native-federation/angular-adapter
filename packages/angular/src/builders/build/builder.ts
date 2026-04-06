@@ -67,7 +67,7 @@ process.stderr.write = function (
 };
 
 const createInternalAngularBuilder =
-  (_: NormalizedFederationOptions<SourceFileCache>) =>
+  (externals: string[]) =>
   (
     options: Parameters<typeof buildApplicationInternal>[0],
     context: BuilderContext,
@@ -81,6 +81,15 @@ const createInternalAngularBuilder =
     } else {
       extensions = pluginsOrExtensions as Parameters<typeof buildApplicationInternal>[2];
     }
+
+    // serveWithVite fetches its own browserOptions independently, so ngBuilderOptions
+    // modifications don't reach here. Add NF externals to externalDependencies so
+    // Angular routes them to optimizeDeps.exclude, preventing Vite from trying to
+    // pre-bundle packages that include native .node binaries.
+    options.externalDependencies = [
+      ...(options.externalDependencies ?? []),
+      ...externals,
+    ];
 
     // Todo: share cache with Angular builder: https://github.com/angular/angular-cli/pull/32527
     // options.codeBundleCache = nfOptions.federationCache.bundlerCache;
@@ -358,7 +367,7 @@ export async function* runBuilder(
     ? serveWithVite(
         serverOptions as unknown as Parameters<typeof serveWithVite>[0],
         appBuilderName,
-        createInternalAngularBuilder(normalized.options),
+        createInternalAngularBuilder(externals),
         context,
         nfBuilderOptions.skipHtmlTransform
           ? {}

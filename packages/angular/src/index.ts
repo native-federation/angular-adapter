@@ -5,4 +5,3 @@ export {
   loadRemoteModule,
   type LoadRemoteModuleOptions,
 } from '@softarc/native-federation-runtime';
-export { runBuilder } from './builders/build/builder.js';

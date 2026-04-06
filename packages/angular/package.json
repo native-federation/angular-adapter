@@ -37,6 +37,11 @@
       "types": "./src/config.d.ts",
       "import": "./src/config.js",
       "default": "./src/config.js"
+    },
+    "./internal": {
+      "types": "./src/internal.d.ts",
+      "import": "./src/internal.js",
+      "default": "./src/internal.js"
     }
   },
   "homepage": "https://github.com/native-federation/angular",
