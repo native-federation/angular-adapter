@@ -11,16 +11,13 @@ export default withNativeFederation({
 <% } %>
   shared: {
     ...shareAll({ 
-      singleton: true, strictVersion: true, requiredVersion: 'auto'
-    }, {
-      overrides: {
-        '@angular/core': {
-          singleton: true, strictVersion: true, requiredVersion: 'auto', build: 'package', chunks: true, includeSecondaries: {keepAll: true},
-        },
-        '@angular/common': {
-          singleton: true, strictVersion: true, requiredVersion: 'auto', build: 'package',chunks: true, includeSecondaries: {keepAll: true},
+      { singleton: true, strictVersion: true, requiredVersion: 'auto', build: 'package' },
+      {
+        overrides: {
+          '@angular/core': { singleton: true, strictVersion: true, requiredVersion: 'auto', build: 'package', includeSecondaries: {keepAll: true}},
+          '@angular/common': { singleton: true, strictVersion: true, requiredVersion: 'auto', build: 'package', chunks: true },
         }
-      } 
+      }
     }),
   },
 

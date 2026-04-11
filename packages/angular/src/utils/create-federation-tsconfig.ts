@@ -5,49 +5,43 @@ import JSON5 from 'json5';
 import { isDeepStrictEqual } from 'util';
 
 /**
- * Creates a tsconfig.federation.json that includes the federation entry points.
+ * Updates the federation tsconfig to include optimized mapping entry points.
+ * Only modifies the file when there are non-local entry points to add.
  */
-export function createFederationTsConfig(
+export function updateFederationTsConfig(
   workspaceRoot: string,
   tsConfigPath: string,
-  entryPoints: EntryPoint[],
-  optimizedMappings?: boolean
-): string {
+  entryPoints: EntryPoint[]
+): void {
   const fullTsConfigPath = path.join(workspaceRoot, tsConfigPath);
   const tsconfigDir = path.dirname(fullTsConfigPath);
+
+  const filtered = entryPoints
+    .filter(ep => !ep.fileName.startsWith('.'))
+    .map(ep => path.relative(tsconfigDir, ep.fileName).replace(/\\\\/g, '/'));
+
+  if (filtered.length === 0) {
+    return;
+  }
 
   const tsconfigAsString = fs.readFileSync(fullTsConfigPath, 'utf-8');
   const tsconfig = JSON5.parse(tsconfigAsString);
 
-  tsconfig.files = entryPoints
-    .filter(ep => ep.fileName.startsWith('.'))
-    .map(ep => path.relative(tsconfigDir, ep.fileName).replace(/\\\\/g, '/'));
+  if (!tsconfig.include) {
+    tsconfig.include = [];
+  }
 
-  if (optimizedMappings) {
-    const filtered = entryPoints
-      .filter(ep => !ep.fileName.startsWith('.'))
-      .map(ep => path.relative(tsconfigDir, ep.fileName).replace(/\\\\/g, '/'));
-
-    if (!tsconfig.include) {
-      tsconfig.include = [];
-    }
-
-    for (const ep of filtered) {
-      if (!tsconfig.include.includes(ep)) {
-        tsconfig.include.push(ep);
-      }
+  for (const ep of filtered) {
+    if (!tsconfig.include.includes(ep)) {
+      tsconfig.include.push(ep);
     }
   }
 
   const content = JSON5.stringify(tsconfig, null, 2);
 
-  const tsconfigFedPath = path.join(tsconfigDir, 'tsconfig.federation.json');
-
-  if (!doesFileExistAndJsonEqual(tsconfigFedPath, content)) {
-    fs.writeFileSync(tsconfigFedPath, JSON.stringify(tsconfig, null, 2));
+  if (!doesFileExistAndJsonEqual(fullTsConfigPath, content)) {
+    fs.writeFileSync(fullTsConfigPath, JSON.stringify(tsconfig, null, 2));
   }
-
-  return tsconfigFedPath;
 }
 
 function doesFileExistAndJsonEqual(filePath: string, content: string): boolean {

@@ -86,10 +86,7 @@ const createInternalAngularBuilder =
     // modifications don't reach here. Add NF externals to externalDependencies so
     // Angular routes them to optimizeDeps.exclude, preventing Vite from trying to
     // pre-bundle packages that include native .node binaries.
-    options.externalDependencies = [
-      ...(options.externalDependencies ?? []),
-      ...externals,
-    ];
+    options.externalDependencies = [...(options.externalDependencies ?? []), ...externals];
 
     // Todo: share cache with Angular builder: https://github.com/angular/angular-cli/pull/32527
     // options.codeBundleCache = nfOptions.federationCache.bundlerCache;
@@ -176,6 +173,11 @@ export async function* runBuilder(
     ngBuilderOptions.outputPath = nfBuilderOptions.outputPath;
   }
 
+  const federationTsConfig =
+    !!nfBuilderOptions.tsConfig && nfBuilderOptions.tsConfig.length > 0
+      ? nfBuilderOptions.tsConfig
+      : ngBuilderOptions.tsConfig;
+
   const adapter = createAngularBuildAdapter(ngBuilderOptions, context);
 
   setBuildAdapter(adapter);
@@ -218,7 +220,7 @@ export async function* runBuilder(
   const entryPoints: string[] | undefined =
     nfBuilderOptions.entryPoints && nfBuilderOptions.entryPoints.length > 0
       ? nfBuilderOptions.entryPoints
-      : [path.join(path.dirname(ngBuilderOptions.tsConfig), 'src/main.ts')];
+      : [path.join(path.dirname(federationTsConfig), 'src/main.ts')];
 
   const cachePath = getDefaultCachePath(context.workspaceRoot);
 
@@ -227,8 +229,8 @@ export async function* runBuilder(
       projectName: nfBuilderOptions.projectName,
       workspaceRoot: context.workspaceRoot,
       outputPath: browserOutputPath,
-      federationConfig: inferConfigPath(ngBuilderOptions.tsConfig),
-      tsConfig: ngBuilderOptions.tsConfig,
+      federationConfig: inferConfigPath(federationTsConfig),
+      tsConfig: federationTsConfig,
       verbose: ngBuilderOptions.verbose,
       watch: ngBuilderOptions.watch,
       dev: !!nfBuilderOptions.dev,
@@ -324,7 +326,7 @@ export async function* runBuilder(
     nfBuilderOptions.dev || watch ? createNfWatcher() : undefined;
 
   if (nfWatcher) {
-    nfWatcher.add(path.dirname(path.resolve(context.workspaceRoot, ngBuilderOptions.tsConfig)));
+    nfWatcher.add(path.dirname(path.resolve(context.workspaceRoot, federationTsConfig)));
   }
 
   if (existsSync(normalized.options.outputPath)) {

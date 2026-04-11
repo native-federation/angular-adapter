@@ -1,6 +1,6 @@
 {
   "name": "@angular-architects/native-federation-v4",
-  "version": "20.3.11",
+  "version": "20.3.12",
   "generators": "./collection.json",
   "builders": "./builders.json",
   "schematics": "./collection.json",
@@ -8,6 +8,14 @@
   "author": {
     "name": "Manfred Steyer",
     "url": "http://www.angulararchitects.io"
+  },
+  "peerDependencies": {
+    "@softarc/native-federation": "4.0.0-RC10",
+    "@softarc/native-federation-runtime": "4.0.0-RC10",
+    "@angular-devkit/architect": "^0.2003.1",
+    "@angular-devkit/build-angular": "~20.3.1",
+    "@angular-devkit/core": "~20.3.1",
+    "@angular/build": "~20.3.1"
   },
   "dependencies": {
     "@softarc/native-federation": "4.0.0-RC10",

@@ -60,6 +60,10 @@
       "type": "boolean",
       "description": "can be used to disable the dev server when dev=true"
     },
+    "tsConfig": {
+      "type": "string",
+      "description": "A specific tsconfig file for the nf remotes and exposed modules."
+    },
     "cacheExternalArtifacts": {
       "type": "boolean",
       "default": true,
