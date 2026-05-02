@@ -11,7 +11,7 @@ permissions:
   contents: read
 
 jobs:
-  main:
+  ci:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -20,15 +20,25 @@ jobs:
           fetch-depth: 0
 
       - name: Setup PNPM
-        uses: pnpm/action-setup@v2
+        uses: pnpm/action-setup@v4
         with:
           version: 10
 
       - uses: actions/setup-node@v4
         with:
           node-version: 24
-          cache: 'pnpm'
+          cache: "pnpm"
 
       - run: pnpm install --frozen-lockfile
 
-      - run: npx nx run-many -t lint build typecheck
+      - name: Set SHAs for Nx affected commands
+        uses: nrwl/nx-set-shas@v4
+
+      - name: Lint affected projects
+        run: pnpm exec nx affected -t lint
+
+      - name: Typecheck affected projects
+        run: pnpm exec nx affected -t typecheck
+
+      - name: Build affected projects
+        run: pnpm exec nx affected -t build

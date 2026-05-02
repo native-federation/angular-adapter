@@ -2,6 +2,13 @@
 
 The goal of this small guide is to show the major differences between Native federation v3 and v4. This guide is only for people who want to mess around with the **beta** release, and it expects a (monorepo) setup that contains 1 or multiple Angular micro frontends.
 
+> [!TIP]
+> Prefer to let the tooling do the work? You can run the `update-v4` schematic to apply most of these changes automatically:
+>
+> ```bash
+> ng g @angular-architects/native-federation-v4:update-v4
+> ```
+
 The migration involves changing 4 files:
 
 ```
@@ -10,7 +17,7 @@ The migration involves changing 4 files:
 ├── 📄 angular.json                     // Switching to the v4 builder
 └── 📁 projects/
     └── 📁 <your-project>/
-        ├── 📄 federation.config.json   // Switching from commonJS to ESM
+        ├── 📄 federation.config.mjs    // Renamed to federation.config.mjs & switch from commonJS to ESM
         └── 📁 src/
             └── 📄 main.ts              // optionally: switching to the orchestrator
 ```
@@ -35,18 +42,18 @@ The first step is to update the `package.json` to install the new packages:
 {
   "name": "mfe-test",
   "version": "1.2.3",
-  "type": "module", //  <-- Very important! we're fully ESM now!
+  "type": "module", //  <-- (Optional) NF is fully ESM now.
   "scripts": {
     "ng": "ng"
   },
   "private": true,
   "dependencies": {
     // [...] Dependencies
-    "@softarc/native-federation-runtime": "4.0.0-RC10" // Lock the version to the v4 RC9
+    "@softarc/native-federation-runtime": "~4.0.0" // optional, if you want to keep using the classic runtime
   },
   "devDependencies": {
-    "@angular-architects/native-federation-v4": "20.3.12", // Switch over to the (temporary) v4 package
-    "@softarc/native-federation": "4.0.0-RC10", // Lock the version to the v4 RC6
+    "@angular-architects/native-federation-v4": "20.4.0", // Switch over to the (temporary) v4 package
+    "@softarc/native-federation": "~4.1.0", // Lock the version to the v4
     "@softarc/native-federation-orchestrator": "^4.0.0"
   }
 }
@@ -54,7 +61,7 @@ The first step is to update the `package.json` to install the new packages:
 
 ## 2. Updating the federation.config.js
 
-The `federation.config.js` contains all native-federation related configuration. You don't really need to change it, except for the format. It used to be CommonJS and has been changed to ESM as well for consistency:
+The `federation.config.js` contains all native-federation related configuration. The `update-v4` schematic renames it to `federation.config.mjs` and switches it from CommonJS to ESM for consistency. The builder still falls back to `federation.config.js` if no `.mjs` file is present.
 
 **Before:**
 
@@ -94,8 +101,7 @@ module.exports = withNativeFederation({
 **After:**
 
 ```javascript
-// Our well-known ESM importing types
-// As you can see, USE THE ANGULAR ONES, NOT THE DEFAULT ONES
+// Our well-known ESM importing types, but now imported from @angular-architects/native-federation-v4
 import { withNativeFederation, shareAll } from '@angular-architects/native-federation-v4/config';
 
 // change this line to the default export.
@@ -115,12 +121,6 @@ export default withNativeFederation({
       {
         overrides: {
           '@angular/core': {
-            singleton: true,
-            strictVersion: true,
-            requiredVersion: 'auto',
-            includeSecondaries: { keepAll: true },
-          },
-          '@angular/common': {
             singleton: true,
             strictVersion: true,
             requiredVersion: 'auto',
@@ -178,7 +178,7 @@ In the new version we're moving to an opt-in setup where the user (you) can cust
 }
 ```
 
-> **Note:** Code-splitting (`chunks`) and dense chunking (`denseChunking`) are now configured in `federation.config.js` instead of the angular.json builder options. See the [README](./README.md#code-splitting-for-shared-dependencies) for details.
+> **Note:** Code-splitting (`chunks`) and dense chunking (`denseChunking`) are now configured in `federation.config.mjs` instead of the angular.json builder options. See the [README](./README.md#code-splitting-for-shared-dependencies) for details.
 
 And that's it! Your micro frontend is migrated to the new major! We do have some optional improvements that can be nice:
 

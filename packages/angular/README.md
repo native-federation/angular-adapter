@@ -170,12 +170,12 @@ A dynamic host reads the configuration data at runtime from a `.json` file.
 
 ### Configuring the Host
 
-The host configuration (`projects/shell/federation.config.js`) looks like what you know from our Module Federation plugin:
+The host configuration (`projects/shell/federation.config.mjs`) looks like what you know from our Module Federation plugin:
 
 ```javascript
-const { withNativeFederation, shareAll } = require('@angular-architects/native-federation/config');
+import { withNativeFederation, shareAll } from '@angular-architects/native-federation-v4/config';
 
-module.exports = withNativeFederation({
+export default withNativeFederation({
   name: 'my-host',
   shared: {
     ...shareAll({
@@ -199,12 +199,12 @@ module.exports = withNativeFederation({
 
 ### Configuring the Remote
 
-Also, the remote configuration (`projects/mfe1/federation.config.js`) looks familiar:
+Also, the remote configuration (`projects/mfe1/federation.config.mjs`) looks familiar:
 
 ```javascript
-const { withNativeFederation, shareAll } = require('@angular-architects/native-federation/config');
+import { withNativeFederation, shareAll } from '@angular-architects/native-federation-v4/config';
 
-module.exports = withNativeFederation({
+export default withNativeFederation({
   name: 'mfe1',
 
   exposes: {
@@ -404,7 +404,7 @@ If the preparation of one of these packages fails, you get an error like this on
 
 For this, there are several reasons:
 
-- Perhaps you try to share a package intended for NodeJS/ a package that cannot be converted to EcmaScript modules. This happens if you use `shareAll` in the `federation.config.js` and when the package in question is part of your dependencies in `package.json`. If you don't need (to share) this package at runtime, move it to `devDependencies` or add it to the `skip` section of your `federation.config.js`.
+- Perhaps you try to share a package intended for NodeJS/ a package that cannot be converted to EcmaScript modules. This happens if you use `shareAll` in the `federation.config.mjs` and when the package in question is part of your dependencies in `package.json`. If you don't need (to share) this package at runtime, move it to `devDependencies` or add it to the `skip` section of your `federation.config.mjs`.
 
 - Perhaps your shared packages contain some code esbuild cannot transfer to EcmaScript modules. This should not be the case for packages, built with the Angular CLI or Nx and the underlying package ng-packagr. If this happens, please let us know about the package causing troubles.
 

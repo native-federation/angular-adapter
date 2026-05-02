@@ -1,15 +1,15 @@
 import * as fs from 'fs';
 import * as path from 'path';
 
-import type { Plugin, ViteDevServer, IndexHtmlTransformResult, Connect } from 'vite';
-import { lookup } from 'mrmime';
-import { devExternalsMixin } from './dev-externals-mixin.js';
-import { filterExternals } from './externals-skip-list.js';
 import {
   type BuildHelperParams,
   federationBuilder,
   type FederationInfo,
 } from '@softarc/native-federation';
+import { lookup } from 'mrmime';
+import type { Connect, IndexHtmlTransformResult, Plugin, ViteDevServer } from 'vite';
+import { devExternalsMixin } from './dev-externals-mixin.js';
+import { filterExternals } from './externals-skip-list.js';
 
 type FedInfoRef = { federationInfo: FederationInfo };
 
@@ -71,15 +71,22 @@ const serveFromDist = (dist: string, fedInfoRef: FedInfoRef): Connect.NextHandle
   ]);
 
   return (req, res, next) => {
-    if (!req.url || req.url.endsWith('/index.html') || !fedFiles.has(req.url)) {
+    if (!req.url) {
       next();
       return;
     }
 
-    const file = path.join(dist, req.url);
+    const pathname = new URL(req.url, 'http://localhost').pathname;
+
+    if (pathname.endsWith('/index.html') || !fedFiles.has(pathname)) {
+      next();
+      return;
+    }
+
+    const file = path.join(dist, pathname);
     if (fs.existsSync(file) && fs.lstatSync(file).isFile()) {
       res.setHeader('Access-Control-Allow-Origin', '*');
-      const type = lookup(req.url) || '';
+      const type = lookup(pathname) || '';
       res.setHeader('Content-Type', type);
 
       const content = fs.readFileSync(file, 'utf-8');

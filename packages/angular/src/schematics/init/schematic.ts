@@ -45,7 +45,7 @@ export default function config(options: NfSchematicSchema): Rule {
       tree.create(manifestPath, JSON.stringify(remoteMap, null, '\t'));
     }
 
-    const federationConfigPath = path.join(projectRoot, 'federation.config.js');
+    const federationConfigPath = path.join(projectRoot, 'federation.config.mjs');
 
     const exists = tree.exists(federationConfigPath);
 
