@@ -16,6 +16,7 @@ import type { ApplicationBuilderOptions } from '@angular/build';
 import { createAngularEsbuildContext } from './angular-bundler.js';
 import { createNodeModulesEsbuildContext } from './node-modules-bundler.js';
 import { normalizeContextOptions } from './normalize-context-options.js';
+import type { NfInternalOptions } from '../builders/build/schema.js';
 
 export interface EsbuildContextResult extends NFBuildAdapterContext<esbuild.BuildContext> {
   pluginDisposed: Promise<void>;
@@ -59,7 +60,7 @@ function setNgServerMode(): void {
 }
 
 export function createAngularBuildAdapter(
-  ngBuilderOptions: ApplicationBuilderOptions,
+  ngBuilderOptions: ApplicationBuilderOptions & NfInternalOptions,
   context: BuilderContext
 ): NFBuildAdapter {
   const bundleContextCache = new Map<string, EsbuildContextResult>();

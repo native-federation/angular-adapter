@@ -16,8 +16,7 @@
       "default": false
     },
     "watch": {
-      "type": "boolean",
-      "default": false
+      "type": "boolean"
     },
     "port": {
       "type": "number",

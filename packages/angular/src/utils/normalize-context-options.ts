@@ -7,9 +7,10 @@ import type {
   NFBuildAdapterOptions,
 } from '@softarc/native-federation';
 import type { PathToImport } from '@softarc/native-federation/internal';
+import type { NfInternalOptions } from '../builders/build/schema';
 
 export interface NormalizedContextOptions {
-  builderOptions: ApplicationBuilderOptions;
+  builderOptions: ApplicationBuilderOptions & NfInternalOptions;
   context: BuilderContext;
   entryPoints: EntryPoint[];
   external: string[];
@@ -26,7 +27,7 @@ export interface NormalizedContextOptions {
 }
 
 export function normalizeContextOptions(
-  builderOptions: ApplicationBuilderOptions,
+  builderOptions: ApplicationBuilderOptions & NfInternalOptions,
   context: BuilderContext,
   adapterOptions: NFBuildAdapterOptions<SourceFileCache>
 ): NormalizedContextOptions {

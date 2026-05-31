@@ -49,12 +49,12 @@ The first step is to update the `package.json` to install the new packages:
   "private": true,
   "dependencies": {
     // [...] Dependencies
-    "@softarc/native-federation-runtime": "~4.0.0" // optional, if you want to keep using the classic runtime
+    "@softarc/native-federation-runtime": "~4.1.0" // optional, if you want to keep using the classic runtime
   },
   "devDependencies": {
-    "@angular-architects/native-federation-v4": "~20.4.1", // Switch over to the (temporary) v4 package
-    "@softarc/native-federation": "~4.1.0", // Lock the version to the v4
-    "@softarc/native-federation-orchestrator": "^4.0.0"
+    "@angular-architects/native-federation-v4": "~20.4.2", // Switch over to the (temporary) v4 package
+    "@softarc/native-federation": "~4.1.0",
+    "@softarc/native-federation-orchestrator": "^4.2.2"
   }
 }
 ```
@@ -136,6 +136,7 @@ export default withNativeFederation({
   features: {
     ignoreUnusedDeps: true, // Now enabled by default
     denseChunking: true, // Opt-in: groups chunks in remoteEntry.json for smaller file size
+    versionMapping: true, // Now enabled by default
   },
 });
 ```
@@ -168,6 +169,7 @@ In the new version we're moving to an opt-in setup where the user (you) can cust
             "target": "mfe1:serve-original:development",
             "cacheExternalArtifacts": true, // Cache and re-use external bundled artifacts that don't change (e.g. RxJs) across builds
             "rebuildDelay": 500, // Allows for a grace period between builds when you develop; within this period it can cancel previous builds to save time (500/1000 is good)
+            "integrity": true, // (optional) Adds Subresource Integration
             "dev": true,
             "port": 0
           }
@@ -184,7 +186,7 @@ And that's it! Your micro frontend is migrated to the new major! We do have some
 
 ## Optional: using the orchestrator instead
 
-Here's the `projects/<your-project>/src/main.ts` you've been used to for the last couple of years:
+Here's the `projects/<your-project>/src/main.ts` you've been used to for the last couple of years (before v4):
 
 ```javascript
 import { initFederation } from '@angular-architects/native-federation';
@@ -222,6 +224,8 @@ initFederation(manifest)
 ```
 
 Not a lot of changes right? Sure, now you need to explicitly define the location of the manifest (or the object), but for the rest it's basically the same!
+
+> **Note:** Since v4, the default `initFederation` library is the _orchestrator_, not the previously mentioned _runtime_.
 
 Now, the big difference is that the new orchestrator is a _lot_ more customizable:
 

@@ -15,6 +15,7 @@ import { updateWorkspaceConfig } from './steps/update-workspace-config.js';
 import { addDependencies } from './steps/add-dependencies.js';
 import { makeMainAsync } from './steps/make-main-async.js';
 import { makeServerAsync } from './steps/make-server-async.js';
+import { setServerRenderMode } from './steps/set-server-render-mode.js';
 import { generateTsConfig } from './steps/generate-tsconfig.js';
 
 export { updatePackageJson, patchAngularBuild } from './steps/update-package-json.js';
@@ -77,7 +78,8 @@ export default function config(options: NfSchematicSchema): Rule {
     return chain([
       generateRule,
       makeMainAsync(main, options, remoteMap, manifestRelPath),
-      ssr ? makeServerAsync(server, options, remoteMap) : noop(),
+      ssr ? makeServerAsync(server, options) : noop(),
+      ssr ? setServerRenderMode(projectSourceRoot) : noop(),
     ]);
   };
 }

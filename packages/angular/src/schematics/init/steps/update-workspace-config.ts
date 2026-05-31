@@ -71,6 +71,18 @@ export function updateWorkspaceConfig(
   if (ssr) {
     projectConfig.architect.build.options.ssr = true;
     // projectConfig.architect.esbuild.options.prerender = false;
+
+    // Angular scaffolds `security.allowedHosts: []`, which makes @angular/ssr
+    // reject the localhost Host header (SSRF guard) and silently fall back to
+    // CSR. Allow localhost so SSR actually renders during local development.
+    const esbuildOptions = projectConfig.architect.esbuild.options;
+    esbuildOptions.security ??= {};
+    if (
+      !Array.isArray(esbuildOptions.security.allowedHosts) ||
+      esbuildOptions.security.allowedHosts.length === 0
+    ) {
+      esbuildOptions.security.allowedHosts = ['localhost'];
+    }
   }
 
   const serve = projectConfig.architect.serve;

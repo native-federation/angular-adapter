@@ -40,7 +40,9 @@ import {
 } from '@softarc/native-federation/internal';
 import { type Plugin, type PluginBuild } from 'esbuild';
 import { existsSync, mkdirSync, rmSync } from 'fs';
-import { fstart } from '../../tools/fstart-as-data-url.js';
+import { federationServerEntry } from '../../tools/federation-server-entry.js';
+import { generateDevHostInstancesEntry } from '../../tools/dev-host-instances-entry.js';
+import { devHostInstancesPlugin } from '../../plugin/dev-host-instances-plugin.js';
 import { createAngularBuildAdapter } from '../../utils/angular-esbuild-adapter.js';
 import { getI18nConfig, translateFederationArtifacts } from '../../utils/i18n.js';
 import { updateScriptTags } from '../../utils/update-index-html.js';
@@ -130,13 +132,13 @@ export async function* runBuilder(
   /**
    * Explicitly defined as devServer or if the target contains "serve"
    */
-  const runServer =
+  const runViteServer =
     typeof nfBuilderOptions.devServer !== 'undefined'
       ? !!nfBuilderOptions.devServer
       : target.target.includes('serve');
 
   let ngBuilderOptions = (await context.validateOptions(
-    runServer
+    runViteServer
       ? ({
           ...targetOptions,
           port: nfBuilderOptions.port || targetOptions['port'],
@@ -147,7 +149,8 @@ export async function* runBuilder(
 
   let serverOptions = null;
 
-  const watch = nfBuilderOptions.watch;
+  const watch = nfBuilderOptions.watch ?? ngBuilderOptions.watch ?? runViteServer;
+  ngBuilderOptions.watch = watch;
 
   if (ngBuilderOptions['buildTarget']) {
     serverOptions = await normalizeOptions(
@@ -165,8 +168,6 @@ export async function* runBuilder(
       ApplicationBuilderOptions;
   }
 
-  ngBuilderOptions.watch = watch;
-
   if (nfBuilderOptions.baseHref) {
     ngBuilderOptions.baseHref = nfBuilderOptions.baseHref;
   }
@@ -180,7 +181,13 @@ export async function* runBuilder(
       ? nfBuilderOptions.tsConfig
       : ngBuilderOptions.tsConfig;
 
-  const adapter = createAngularBuildAdapter(ngBuilderOptions, context);
+  const adapter = createAngularBuildAdapter(
+    {
+      ...ngBuilderOptions,
+      plugins: nfBuilderOptions.plugins,
+    },
+    context
+  );
 
   setBuildAdapter(adapter);
 
@@ -201,7 +208,7 @@ export async function* runBuilder(
 
   const i18n = await getI18nConfig(context);
 
-  const localeFilter = getLocaleFilter(ngBuilderOptions, runServer);
+  const localeFilter = getLocaleFilter(ngBuilderOptions, runViteServer);
 
   const sourceLocaleSegment =
     typeof i18n?.sourceLocale === 'string'
@@ -270,7 +277,23 @@ export async function* runBuilder(
     ngBuilderOptions.externalDependencies = externals;
   }
 
-  const isLocalDevelopment = runServer && nfBuilderOptions.dev;
+  const isLocalDevelopment = runViteServer && nfBuilderOptions.dev;
+
+  // Dev SSR: inject a bootstrap that inits federation and bridges the host's
+  // singletons to remotes. The plugin self-gates on platform === 'node', so
+  // it's a no-op for CSR dev servers. (Prod SSR uses writeFederationServerEntry.)
+  if (isLocalDevelopment) {
+    // The bridge fetches the manifest over HTTP from the dev server's origin
+    // (Vite never writes it to disk under `ng serve`).
+    const devServerOrigin = getDevServerOrigin(serverOptions);
+
+    plugins.push(
+      devHostInstancesPlugin(
+        generateDevHostInstancesEntry({ relBrowserPath: browserOutputPath, devServerOrigin }),
+        path.join(cachePath, 'nf-dev-host-instances.mjs')
+      )
+    );
+  }
 
   // Initialize SSE reloader only for local development
   if (isLocalDevelopment && nfBuilderOptions.buildNotifications?.enable) {
@@ -326,8 +349,7 @@ export async function* runBuilder(
 
   let first = true;
 
-  const nfWatcher: NfFileWatcher | undefined =
-    nfBuilderOptions.dev || watch ? createNfWatcher() : undefined;
+  const nfWatcher: NfFileWatcher | undefined = watch ? createNfWatcher() : undefined;
 
   if (nfWatcher) {
     nfWatcher.addPaths(path.dirname(path.resolve(context.workspaceRoot, federationTsConfig)));
@@ -353,10 +375,6 @@ export async function* runBuilder(
     syncNfFileWatcher(nfWatcher, normalized.options.federationCache.bundlerCache);
   }
 
-  if (activateSsr) {
-    writeFstartScript(normalized.options);
-  }
-
   const hasLocales = i18n?.locales && Object.keys(i18n.locales).length > 0;
   if (hasLocales && localeFilter) {
     const start = process.hrtime();
@@ -369,7 +387,7 @@ export async function* runBuilder(
 
   const appBuilderName = '@angular/build:application';
 
-  const builderRun = runServer
+  const builderRun = runViteServer
     ? serveWithVite(
         serverOptions as unknown as Parameters<typeof serveWithVite>[0],
         appBuilderName,
@@ -403,7 +421,7 @@ export async function* runBuilder(
       if (!ngBuildStatus.success) {
         logger.warn('Skipping federation artifacts because Angular build failed.');
         buildResult = await builderIterator.next();
-      } else if (!first && (nfBuilderOptions.dev || watch)) {
+      } else if (!first && watch) {
         const nextOutputPromise = builderIterator.next();
 
         const trackResult = await rebuildQueue.track(async (signal: AbortSignal) => {
@@ -486,7 +504,8 @@ export async function* runBuilder(
 
         if (trackResult.type === 'completed') {
           if (!trackResult.result.cancelled) {
-            yield { success: trackResult.result.success };
+            ngBuildStatus = { success: trackResult.result.success };
+            yield ngBuildStatus;
           }
           buildResult = await nextOutputPromise;
         } else {
@@ -497,6 +516,12 @@ export async function* runBuilder(
       }
       first = false;
     }
+
+    // Rewrite the emitted SSR entry (see writeFederationServerEntry). After the
+    // Angular build so the entry it produced exists on disk.
+    if (activateSsr && ngBuildStatus.success) {
+      writeFederationServerEntry(normalized.options);
+    }
   } finally {
     rebuildQueue.dispose();
     await adapter.dispose();
@@ -505,6 +530,9 @@ export async function* runBuilder(
     if (isLocalDevelopment) {
       federationBuildNotifier.stopEventServer();
     }
+    // ref: https://github.com/angular/angular-cli/issues/33201
+    // becomes a no-op once Angular fixes the leak upstream.
+    setTimeout(() => process.exit(ngBuildStatus.success ? 0 : 1), 100).unref();
   }
 
   yield ngBuildStatus;
@@ -519,22 +547,65 @@ function removeBaseHref(req: { url?: string }, baseHref?: string) {
   return url;
 }
 
-function writeFstartScript(nfOptions: NormalizedFederationOptions) {
+/**
+ * Rename the CLI's emitted `server.mjs` to `bootstrap-server.mjs` and write the
+ * Angular-free {@link federationServerEntry} in its place, so the node loader is
+ * registered before any `@angular/*` is evaluated. See that file for the why.
+ */
+function writeFederationServerEntry(nfOptions: NormalizedFederationOptions) {
   const serverOutpath = path.join(nfOptions.outputPath, '../server');
-  const fstartPath = path.join(serverOutpath, 'fstart.mjs');
-  const buffer = Buffer.from(fstart, 'base64');
-  fs.mkdirSync(serverOutpath, { recursive: true });
-  fs.writeFileSync(fstartPath, buffer, 'utf-8');
+  const emittedEntry = path.join(serverOutpath, 'server.mjs');
+  const bootstrapEntry = path.join(serverOutpath, 'bootstrap-server.mjs');
+
+  if (!fs.existsSync(emittedEntry)) {
+    logger.warn(
+      `SSR: expected '${emittedEntry}' was not found; skipping federation server entry. ` +
+        `Federated remotes may fail to render server-side.`
+    );
+    return;
+  }
+
+  fs.renameSync(emittedEntry, bootstrapEntry);
+
+  // Preserve the source map (if any) and repoint its reference.
+  const emittedMap = `${emittedEntry}.map`;
+  if (fs.existsSync(emittedMap)) {
+    const bootstrapMap = `${bootstrapEntry}.map`;
+    fs.renameSync(emittedMap, bootstrapMap);
+    const bootstrapCode = fs
+      .readFileSync(bootstrapEntry, 'utf-8')
+      .replace(/sourceMappingURL=server\.mjs\.map/g, 'sourceMappingURL=bootstrap-server.mjs.map');
+    fs.writeFileSync(bootstrapEntry, bootstrapCode, 'utf-8');
+  }
+
+  fs.writeFileSync(emittedEntry, federationServerEntry, 'utf-8');
 }
 
-function getLocaleFilter(options: ApplicationBuilderOptions, runServer: boolean) {
+/**
+ * Build the dev server's origin (e.g. `http://localhost:4200`) from the resolved
+ * dev-server options, whose `port` Angular's normalizeOptions already defaults.
+ * Omits the port when none is set, and returns undefined when there are no serve
+ * options at all, so the bridge falls back to the on-disk manifest path.
+ */
+function getDevServerOrigin(
+  serverOptions: { ssl?: boolean; host?: string; port?: number } | null
+): string | undefined {
+  if (!serverOptions) {
+    return undefined;
+  }
+  const protocol = serverOptions.ssl ? 'https' : 'http';
+  const host = serverOptions.host || 'localhost';
+  return serverOptions.port ? `${protocol}://${host}:${serverOptions.port}` : `${protocol}://${host}`;
+}
+
+function getLocaleFilter(options: ApplicationBuilderOptions, runViteServer: boolean) {
   let localize = options.localize || false;
 
-  if (runServer && Array.isArray(localize) && localize.length > 1) {
+  if (runViteServer && Array.isArray(localize) && localize.length > 1) {
     localize = false;
   }
 
-  if (runServer && localize === true) {
+  if (runViteServer && localize === true) {
     localize = false;
   }
   return localize;

@@ -1,2 +1,16 @@
 packages:
   - packages/angular
+overrides:
+  axios: '>=1.16.0'
+allowBuilds:
+  '@parcel/watcher': true
+  '@swc/core': true
+  esbuild: true
+  lmdb: true
+  msgpackr-extract: false
+  msw: true
+  nx: true
+lockfileIncludeTarballUrl: true
+minimumReleaseAge: 4320
+minimumReleaseAgeExclude:
+  - "@softarc/*"
