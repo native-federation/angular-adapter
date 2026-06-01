@@ -1,22 +1,24 @@
-import * as fs from 'fs';
-import * as path from 'path';
+import { fileURLToPath } from 'node:url';
 import type { Plugin } from 'esbuild';
 
 /**
- * Injects the dev-only host-instance bootstrap (see
- * `tools/dev-host-instances-entry.ts`) into the `ng serve` SSR server bundle.
+ * Injects the dev-only host-instance bridge (`tools/dev-host-instances-entry.ts`)
+ * into the `ng serve` SSR server bundle.
  *
  * Gates on `platform === 'node'` — the only reliable SSR signal here, since the
  * serve target carries no `ssr` flag. CSR dev servers are a no-op.
  *
- * `inject` makes the bootstrap run before the app. The orchestrator's Node entry
- * is kept external so its `module.register()` loader hook fires; bundled, the
- * bridge would silently never run.
- *
- * @param bootstrapSource generated bootstrap module source.
- * @param bootstrapFilePath absolute path to write it to (`inject` needs a file).
+ * `inject` makes the bridge run before the app. The orchestrator's Node entry is
+ * kept external so its `module.register()` loader hook fires; bundled, the bridge
+ * would silently never run. The bridge is a real, compiled module (not generated
+ * source) and reads its two per-build values from `process.env`, set by the
+ * builder — so there is nothing to keep correct across a string template.
  */
-export function devHostInstancesPlugin(bootstrapSource: string, bootstrapFilePath: string): Plugin {
+const BRIDGE_MODULE = fileURLToPath(
+  new URL('../tools/dev-host-instances-entry.js', import.meta.url)
+);
+
+export function devHostInstancesPlugin(): Plugin {
   return {
     name: 'nf-dev-host-instances',
     setup(build) {
@@ -26,10 +28,7 @@ export function devHostInstancesPlugin(bootstrapSource: string, bootstrapFilePat
         return;
       }
 
-      fs.mkdirSync(path.dirname(bootstrapFilePath), { recursive: true });
-      fs.writeFileSync(bootstrapFilePath, bootstrapSource, 'utf-8');
-
-      options.inject = [...(options.inject ?? []), bootstrapFilePath];
+      options.inject = [...(options.inject ?? []), BRIDGE_MODULE];
 
       options.external = [
         ...(options.external ?? []),

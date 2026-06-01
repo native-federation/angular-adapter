@@ -66,10 +66,6 @@ function updateWorkspaceConfig(
 }
 
 function normalizeOptions(options: MfSchematicSchema, workspace: any): NormalizedOptions {
-  if (!options.project) {
-    options.project = workspace.defaultProject;
-  }
-
   const projects = Object.keys(workspace.projects);
 
   if (!options.project && projects.length === 0) {

@@ -16,9 +16,9 @@ import { addDependencies } from './steps/add-dependencies.js';
 import { makeMainAsync } from './steps/make-main-async.js';
 import { makeServerAsync } from './steps/make-server-async.js';
 import { setServerRenderMode } from './steps/set-server-render-mode.js';
-import { generateTsConfig } from './steps/generate-tsconfig.js';
+import { wireServeSsrScript } from './steps/wire-serve-ssr-script.js';
 
-export { updatePackageJson, patchAngularBuild } from './steps/update-package-json.js';
+export { updatePackageJson } from './steps/update-package-json.js';
 export { getWorkspaceFileName } from './steps/normalize-options.js';
 
 export default function config(options: NfSchematicSchema): Rule {
@@ -55,8 +55,6 @@ export default function config(options: NfSchematicSchema): Rule {
 
     const appComponent = tree.exists(cand1) ? cand1 : tree.exists(cand2) ? cand2 : 'update-this.ts';
 
-    generateTsConfig(tree, projectRoot, main);
-
     const generateRule = !exists
       ? generateFederationConfig(
           url('./files'),
@@ -80,6 +78,7 @@ export default function config(options: NfSchematicSchema): Rule {
       makeMainAsync(main, options, remoteMap, manifestRelPath),
       ssr ? makeServerAsync(server, options) : noop(),
       ssr ? setServerRenderMode(projectSourceRoot) : noop(),
+      ssr ? wireServeSsrScript(projectName) : noop(),
     ]);
   };
 }

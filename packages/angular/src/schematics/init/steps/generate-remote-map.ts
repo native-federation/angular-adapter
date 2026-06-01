@@ -21,9 +21,7 @@ export function generateRemoteMap(workspace: any, projectName: string) {
     }
   }
 
-  if (Object.keys(result).length === 0) {
-    result['mfe1'] = `http://localhost:3000/remoteEntry.json`;
-  }
-
+  // No sibling projects → emit an empty map for the user to fill in, rather than
+  // injecting a surprising fake `mfe1` remote.
   return result;
 }

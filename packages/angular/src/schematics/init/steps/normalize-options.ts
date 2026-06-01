@@ -36,10 +36,6 @@ export function normalizeOptions(
   workspace: any,
   tree: Tree
 ): NormalizedOptions {
-  if (!options.project) {
-    options.project = workspace.defaultProject;
-  }
-
   const projects = Object.keys(workspace.projects);
 
   if (!options.project && projects.length === 0) {

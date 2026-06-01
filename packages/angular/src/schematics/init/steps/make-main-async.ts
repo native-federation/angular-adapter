@@ -2,20 +2,9 @@ import type { Rule } from '@angular-devkit/schematics';
 import type { NfSchematicSchema } from '../schema.js';
 import * as path from 'path';
 
-const ORCHESTRATOR_IMPORTS = `import { initFederation } from '@softarc/native-federation-orchestrator';
-import {
-  useShimImportMap,
-  consoleLogger,
-  globalThisStorageEntry,
-} from '@softarc/native-federation-orchestrator/options';`;
-
-const ORCHESTRATOR_OPTIONS = `{
-  ...useShimImportMap({ shimMode: true }),
-  logger: consoleLogger,
-  storage: globalThisStorageEntry,
-  hostRemoteEntry: './remoteEntry.json',
-  logLevel: 'debug',
-}`;
+// The adapter's `initFederation` wrapper hides shimMode/logger/storage, so
+// generated apps don't ship internal orchestrator options or `logLevel: 'debug'`.
+const FEDERATION_IMPORT = `import { initFederation } from '@angular-architects/native-federation-v4';`;
 
 function getFederationArg(
   options: NfSchematicSchema,
@@ -54,9 +43,9 @@ export function makeMainAsync(
 
     tree.overwrite(
       main,
-      `${ORCHESTRATOR_IMPORTS}
+      `${FEDERATION_IMPORT}
 
-initFederation(${federationArg}, ${ORCHESTRATOR_OPTIONS})
+initFederation(${federationArg})
   .catch(err => console.error(err))
   .then(_ => import('./bootstrap'))
   .catch(err => console.error(err));

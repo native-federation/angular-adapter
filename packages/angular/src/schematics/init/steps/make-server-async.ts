@@ -2,12 +2,9 @@ import type { Rule, Tree } from '@angular-devkit/schematics';
 import type { NfSchematicSchema } from '../schema.js';
 
 /**
- * Prepare an SSR project's `server.ts` for federated SSR. Federation is *not*
- * initialised here (the build's generated entry does that — see
- * `tools/federation-server-entry.ts`); this step only:
- *  - enables CORS (remotes are served from other origins), and
- *  - makes the server listen when imported (not main) by honouring `pm_id`,
- *    which the generated entry sets.
+ * Enable CORS in an SSR project's `server.ts` (remotes are served from other
+ * origins). Federation itself is initialised at launch by the `--import` preload
+ * (see `src/node-preload.ts`), not here.
  */
 export function makeServerAsync(server: string, options: NfSchematicSchema): Rule {
   return async function (tree: Tree) {
@@ -18,7 +15,7 @@ export function makeServerAsync(server: string, options: NfSchematicSchema): Rul
       return;
     }
 
-    if (content.includes("process.env['pm_id']")) {
+    if (content.includes('app.use(cors())')) {
       console.info(`${server} already prepared for federated SSR.`);
       return;
     }
@@ -30,14 +27,12 @@ const cors = require('cors');
 
     const updatedContent = (cors + content)
       .replace(
-        `const port = process.env['PORT'] || 4000`,
+        // Anchor loosely on Angular's scaffolded `process.env['PORT'] || <n>` so
+        // a whitespace/default-value tweak in the template doesn't silently no-op.
+        /const port = process\.env\['PORT'\]\s*\|\|\s*\d+/,
         `const port = process.env['PORT'] || ${options.port || 4000}`
       )
-      .replace(`const app = express();`, `const app = express();\n  app.use(cors());`)
-      .replace(
-        `if (isMainModule(import.meta.url)) {`,
-        `if (isMainModule(import.meta.url) || process.env['pm_id']) {`
-      );
+      .replace(`const app = express();`, `const app = express();\n  app.use(cors());`);
 
     tree.overwrite(server, updatedContent);
   };

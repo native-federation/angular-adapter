@@ -1,6 +1,5 @@
 import type { Tree } from '@angular-devkit/schematics';
 import type { NormalizedOptions } from './normalize-options.js';
-import * as path from 'path';
 
 export function updateWorkspaceConfig(
   tree: Tree,
@@ -9,34 +8,26 @@ export function updateWorkspaceConfig(
   workspaceFileName: string,
   ssr: boolean
 ) {
-  const { projectConfig, projectName, projectRoot, port, main, projectSourceRoot } = options;
-
-  const entryPoints = main ? [main] : [path.join(projectSourceRoot, 'main.ts')];
-  const tsConfig = path.join(projectRoot, 'tsconfig.federation.json').replace(/\\/g, '/');
+  const { projectConfig, projectName, port } = options;
 
   if (!projectConfig?.architect?.build || !projectConfig?.architect?.serve) {
     throw new Error(`The project doesn't have a build or serve target in angular.json!`);
   }
 
-  if (
-    projectConfig.architect.build.builder === '@angular-architects/native-federation-v4:build' ||
-    projectConfig.architect.build.builder === '@angular-architects/native-federation-v4:build'
-  ) {
+  if (projectConfig.architect.build.builder === '@angular-architects/native-federation-v4:build') {
     console.log('native-federation builder is already set, skipping workspace setup.');
     return;
   }
 
   const originalBuild = projectConfig.architect.build;
 
-  if (
-    originalBuild.builder !== '@angular-devkit/build-angular:application' ||
-    originalBuild.builder !== '@angular/build:application'
-  ) {
-    console.log('Switching project to the application builder using esbuild ...');
-    originalBuild.builder = '@angular/build:application';
-    delete originalBuild.configurations?.development?.buildOptimizer;
-    delete originalBuild.configurations?.development?.vendorChunk;
-  }
+  // Force the esbuild application builder. The build target Angular scaffolds is
+  // either `@angular-devkit/build-angular:application` or `@angular/build:application`;
+  // both normalize to the latter here.
+  console.log('Switching project to the application builder using esbuild ...');
+  originalBuild.builder = '@angular/build:application';
+  delete originalBuild.configurations?.development?.buildOptimizer;
+  delete originalBuild.configurations?.development?.vendorChunk;
 
   if (originalBuild.options.main) {
     const main = originalBuild.options.main;
@@ -51,10 +42,7 @@ export function updateWorkspaceConfig(
   projectConfig.architect.build = {
     builder: '@angular-architects/native-federation-v4:build',
     options: {
-      projectName,
-      tsConfig,
       cacheExternalArtifacts: true,
-      entryPoints,
     },
     configurations: {
       production: {
@@ -70,7 +58,6 @@ export function updateWorkspaceConfig(
 
   if (ssr) {
     projectConfig.architect.build.options.ssr = true;
-    // projectConfig.architect.esbuild.options.prerender = false;
 
     // Angular scaffolds `security.allowedHosts: []`, which makes @angular/ssr
     // reject the localhost Host header (SSRF guard) and silently fall back to
@@ -108,15 +95,12 @@ export function updateWorkspaceConfig(
   projectConfig.architect.serve = {
     builder: '@angular-architects/native-federation-v4:build',
     options: {
-      projectName,
-      tsConfig,
       target: `${projectName}:serve-original:development`,
       rebuildDelay: 500,
       cacheExternalArtifacts: true,
       dev: true,
       devServer: true,
       port: 0,
-      entryPoints,
     },
   };
 
@@ -129,7 +113,5 @@ export function updateWorkspaceConfig(
     serveSsr.options.port = port;
   }
 
-  // projectConfig.architect.serve.builder = serveBuilder;
-  // TODO: Register further builders when ready
   tree.overwrite(workspaceFileName, JSON.stringify(workspace, null, '\t'));
 }
