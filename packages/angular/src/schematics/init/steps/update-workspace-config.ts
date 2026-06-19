@@ -14,7 +14,7 @@ export function updateWorkspaceConfig(
     throw new Error(`The project doesn't have a build or serve target in angular.json!`);
   }
 
-  if (projectConfig.architect.build.builder === '@angular-architects/native-federation:build') {
+  if (projectConfig.architect.build.builder === '@angular-architects/native-federation-v4:build') {
     console.log('native-federation builder is already set, skipping workspace setup.');
     return;
   }
@@ -40,7 +40,7 @@ export function updateWorkspaceConfig(
   projectConfig.architect.esbuild = originalBuild;
 
   projectConfig.architect.build = {
-    builder: '@angular-architects/native-federation:build',
+    builder: '@angular-architects/native-federation-v4:build',
     options: {
       cacheExternalArtifacts: true,
     },
@@ -93,7 +93,7 @@ export function updateWorkspaceConfig(
   projectConfig.architect['serve-original'] = projectConfig.architect.serve;
 
   projectConfig.architect.serve = {
-    builder: '@angular-architects/native-federation:build',
+    builder: '@angular-architects/native-federation-v4:build',
     options: {
       target: `${projectName}:serve-original:development`,
       rebuildDelay: 500,

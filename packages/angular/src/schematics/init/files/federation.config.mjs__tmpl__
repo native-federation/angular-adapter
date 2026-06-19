@@ -1,4 +1,4 @@
-import { withNativeFederation, shareAll } from '@angular-architects/native-federation/config';
+import { withNativeFederation, shareAll } from '@angular-architects/native-federation-v4/config';
 
 export default withNativeFederation({
   name: '<%=project%>',

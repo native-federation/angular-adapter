@@ -79,7 +79,7 @@
         },
         "endpoint": {
           "type": "string",
-          "default": "/@angular-architects/native-federation:build-notifications",
+          "default": "/@angular-architects/native-federation-v4:build-notifications",
           "description": "You can override the default endpoint to send build completion events to."
         }
       }

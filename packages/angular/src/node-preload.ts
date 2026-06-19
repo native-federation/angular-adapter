@@ -2,7 +2,7 @@
  * Node `--import` preload that registers Native Federation's server-side loader
  * before the Angular SSR bundle's module graph is evaluated. Launch with:
  *
- *   node --import @angular-architects/native-federation/node-preload dist/<app>/server/server.mjs
+ *   node --import @angular-architects/native-federation-v4/node-preload dist/<app>/server/server.mjs
  *
  * The CLI prepends `@angular/ssr` into the emitted entry, so its static graph
  * pulls in `@angular/*` before the entry body runs. Since `module.register()`

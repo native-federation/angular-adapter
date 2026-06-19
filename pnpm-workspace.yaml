@@ -17,3 +17,4 @@ minimumReleaseAgeExclude:
   - "@angular/*"
   - "@angular-devkit/*"
   - '@schematics/angular@22.0.0'
+  - '@ngtools/webpack@21.2.16'

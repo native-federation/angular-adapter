@@ -1,6 +1,6 @@
 import type { Rule, Tree } from '@angular-devkit/schematics';
 
-const NODE_PRELOAD = '@angular-architects/native-federation/node-preload';
+const NODE_PRELOAD = '@angular-architects/native-federation-v4/node-preload';
 
 /**
  * Rewrite the target project's `serve:ssr:<project>` npm script to launch through

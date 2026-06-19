@@ -4,7 +4,7 @@ import * as path from 'path';
 
 // The adapter's `initFederation` wrapper hides shimMode/logger/storage, so
 // generated apps don't ship internal orchestrator options or `logLevel: 'debug'`.
-const FEDERATION_IMPORT = `import { initFederation } from '@angular-architects/native-federation';`;
+const FEDERATION_IMPORT = `import { initFederation } from '@angular-architects/native-federation-v4';`;
 
 function getFederationArg(
   options: NfSchematicSchema,

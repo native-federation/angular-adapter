@@ -1,18 +1,12 @@
 # Migration guide
 
-The goal of this small guide is to show the major differences between the previous Native Federation major (v3, Angular ≤ 21) and the new ESM-based major (Angular 22+). It expects a (monorepo) setup that contains 1 or multiple Angular micro frontends.
+The goal of this small guide is to show the major differences between Native federation v3 and v4. This guide is only for people who want to mess around with the **beta** release, and it expects a (monorepo) setup that contains 1 or multiple Angular micro frontends.
 
 > [!TIP]
-> Prefer to let the tooling do the work? Running `ng update` applies most of these changes automatically — its `update22` migration converts your federation config to ESM and updates the builder references for you:
+> Prefer to let the tooling do the work? You can run the `update-v4` schematic to apply most of these changes automatically:
 >
 > ```bash
-> ng update @angular-architects/native-federation
-> ```
->
-> Already updated to the newest version? Just run the schematics!
->
-> ```bash
-> ng update @angular-architects/native-federation --migrate-only update22
+> ng g @angular-architects/native-federation-v4:update-v4
 > ```
 
 The migration involves changing 4 files:
@@ -20,7 +14,7 @@ The migration involves changing 4 files:
 ```
 📁 /
 ├── 📄 package.json                     // Enabling ESM
-├── 📄 angular.json                     // Updating the builder options
+├── 📄 angular.json                     // Switching to the v4 builder
 └── 📁 projects/
     └── 📁 <your-project>/
         ├── 📄 federation.config.mjs    // Renamed to federation.config.mjs & switch from commonJS to ESM
@@ -48,15 +42,17 @@ The first step is to update the `package.json` to install the new packages:
 {
   "name": "mfe-test",
   "version": "1.2.3",
+  "type": "module", //  <-- (Optional) NF is fully ESM now.
   "scripts": {
     "ng": "ng"
   },
   "private": true,
   "dependencies": {
-    // [...] Your dependencies
+    // [...] Dependencies
+    "@softarc/native-federation-runtime": "~4.1.0" // optional, if you want to keep using the classic runtime
   },
   "devDependencies": {
-    "@angular-architects/native-federation": "~22.0.0",
+    "@angular-architects/native-federation-v4": "~21.2.3", // Switch over to the (temporary) v4 package
     "@softarc/native-federation": "~4.1.0",
     "@softarc/native-federation-orchestrator": "^4.2.2"
   }
@@ -65,7 +61,7 @@ The first step is to update the `package.json` to install the new packages:
 
 ## 2. Updating the federation.config.js
 
-The `federation.config.js` contains all native-federation related configuration. The `update22` migration renames it to `federation.config.mjs` and switches it from CommonJS to ESM for consistency. The builder still falls back to `federation.config.js` if no `.mjs` file is present.
+The `federation.config.js` contains all native-federation related configuration. The `update-v4` schematic renames it to `federation.config.mjs` and switches it from CommonJS to ESM for consistency. The builder still falls back to `federation.config.js` if no `.mjs` file is present.
 
 **Before:**
 
@@ -105,8 +101,8 @@ module.exports = withNativeFederation({
 **After:**
 
 ```javascript
-// Our well-known ESM importing types
-import { withNativeFederation, shareAll } from '@angular-architects/native-federation/config';
+// Our well-known ESM importing types, but now imported from @angular-architects/native-federation-v4
+import { withNativeFederation, shareAll } from '@angular-architects/native-federation-v4/config';
 
 // change this line to the default export.
 export default withNativeFederation({
@@ -167,7 +163,8 @@ In the new version we're moving to an opt-in setup where the user (you) can cust
       "prefix": "app",
       "architect": {
         "serve": {
-          "builder": "@angular-architects/native-federation:build",
+          // Of course, make sure you're using the v4 builder if not already!  (for "serve" and "build")
+          "builder": "@angular-architects/native-federation-v4:build",
           "options": {
             "target": "mfe1:serve-original:development",
             "cacheExternalArtifacts": true, // Cache and re-use external bundled artifacts that don't change (e.g. RxJs) across builds
@@ -189,7 +186,7 @@ And that's it! Your micro frontend is migrated to the new major! We do have some
 
 ## Optional: using the orchestrator instead
 
-Here's the `projects/<your-project>/src/main.ts` you've been used to for the last couple of years (before v4). It now automatically bootstraps the new orchestrator:
+Here's the `projects/<your-project>/src/main.ts` you've been used to for the last couple of years (before v4):
 
 ```javascript
 import { initFederation } from '@angular-architects/native-federation';
@@ -200,7 +197,7 @@ initFederation()
   .catch(err => console.error(err));
 ```
 
-However, some projects still use the "legacy runtime" that did the job. But it lacks some modern features like dependency sharing based on a range, shareScopes, in-browser caching etc etc.
+We're changing that to the code you're _actually_ using:
 
 ```javascript
 import { initFederation } from '@softarc/native-federation-runtime'; // Default native-federation runtime
@@ -211,7 +208,7 @@ initFederation()
   .catch(err => console.error(err));
 ```
 
-For optimal performance, from now on we recommend using the orchestrator directly:
+The runtime you see here is the "legacy runtime" that did the job. But it lacks some modern features like dependency sharing based on a range, shareScopes, in-browser caching etc etc. That's why from now on we recommend the orchestrator!
 
 ```javascript
 import { initFederation, NativeFederationResult } from '@softarc/native-federation-orchestrator';

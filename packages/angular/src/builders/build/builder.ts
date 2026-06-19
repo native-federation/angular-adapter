@@ -10,12 +10,7 @@ import * as mrmime from 'mrmime';
 import * as path from 'path';
 
 import { type ApplicationBuilderOptions, buildApplication } from '@angular/build';
-import {
-  buildApplicationInternal,
-  normalizeDevServerOptions,
-  serveWithVite,
-  SourceFileCache,
-} from '@angular/build/private';
+import { buildApplicationInternal, serveWithVite, SourceFileCache } from '@angular/build/private';
 
 import {
   type BuilderContext,
@@ -23,6 +18,9 @@ import {
   createBuilder,
   targetFromTargetString,
 } from '@angular-devkit/architect';
+
+import { normalizeOptions } from '@angular-devkit/build-angular/src/builders/dev-server/options.js';
+import type { Schema as DevServerSchema } from '@angular-devkit/build-angular/src/builders/dev-server/schema.js';
 
 import { type JsonObject } from '@angular-devkit/core';
 import {
@@ -156,10 +154,10 @@ export async function* runBuilder(
   ngBuilderOptions.watch = watch;
 
   if (ngBuilderOptions['buildTarget']) {
-    serverOptions = await normalizeDevServerOptions(
+    serverOptions = await normalizeOptions(
       context,
       context.target!.project,
-      ngBuilderOptions as unknown as Parameters<typeof normalizeDevServerOptions>[2]
+      ngBuilderOptions as unknown as DevServerSchema
     );
 
     target = targetFromTargetString(ngBuilderOptions['buildTarget'] as string);

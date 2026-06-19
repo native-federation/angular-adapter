@@ -173,7 +173,7 @@ A dynamic host reads the configuration data at runtime from a `.json` file.
 The host configuration (`projects/shell/federation.config.mjs`) looks like what you know from our Module Federation plugin:
 
 ```javascript
-import { withNativeFederation, shareAll } from '@angular-architects/native-federation/config';
+import { withNativeFederation, shareAll } from '@angular-architects/native-federation-v4/config';
 
 export default withNativeFederation({
   name: 'my-host',
@@ -202,7 +202,7 @@ export default withNativeFederation({
 Also, the remote configuration (`projects/mfe1/federation.config.mjs`) looks familiar:
 
 ```javascript
-import { withNativeFederation, shareAll } from '@angular-architects/native-federation/config';
+import { withNativeFederation, shareAll } from '@angular-architects/native-federation-v4/config';
 
 export default withNativeFederation({
   name: 'mfe1',
@@ -384,17 +384,6 @@ This option was introduced with version 19.0.14.
 
 Native Federation provides automatic shell reloading when remote Micro Frontends finish rebuilding during development. This feature eliminates manual page refreshes and significantly improves the development experience when working with multiple applications simultaneously.
 
-Pass `{ sse: true }` to `initFederation` to enable it:
-
-```typescript
-import { initFederation } from '@angular-architects/native-federation';
-
-initFederation('/assets/federation.manifest.json', { sse: true })
-  .catch(err => console.error(err))
-  .then(_ => import('./bootstrap'))
-  .catch(err => console.error(err));
-```
-
 For complete implementation details, configuration options, please refer to the article:
 
 **📖 [Fixing DX Friction: Automatic Shell Reloading in Native Federation](https://www.angulararchitects.io/en/blog/fixing-dx-friction-automatic-shell-reloading-in-native-federation/)**
@@ -473,7 +462,7 @@ Native Federation v4 allows you to inject custom esbuild plugins into the build 
 Create `custom-builder.js`:
 
 ```js
-import { runBuilder } from '@angular-architects/native-federation';
+import { runBuilder } from '@angular-architects/native-federation-v4';
 import { createBuilder } from '@angular-devkit/architect';
 
 async function* customBuilder(options, context) {

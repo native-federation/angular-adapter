@@ -2,10 +2,18 @@ import type { SchematicContext, Tree } from '@angular-devkit/schematics';
 import { NodePackageInstallTask } from '@angular-devkit/schematics/tasks/index.js';
 import {
   addPackageJsonDependency,
+  getPackageJsonDependency,
   NodeDependencyType,
 } from '@schematics/angular/utility/dependencies';
 
 export function addDependencies(tree: Tree, context: SchematicContext, ssr: boolean): void {
+  addPackageJsonDependency(tree, {
+    name: '@angular-devkit/build-angular',
+    type: NodeDependencyType.Dev,
+    version: getPackageJsonDependency(tree, '@angular/build')?.version || 'latest',
+    overwrite: false,
+  });
+
   addPackageJsonDependency(tree, {
     name: 'es-module-shims',
     type: NodeDependencyType.Default,

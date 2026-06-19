@@ -22,6 +22,11 @@
       "factory": "./src/schematics/appbuilder/schematic",
       "schema": "./src/schematics/appbuilder/schema.json",
       "description": "Migrates for using the appbuilder"
+    },
+    "update-v4": {
+      "factory": "./src/schematics/update-v4/schematic",
+      "schema": "./src/schematics/update-v4/schema.json",
+      "description": "Migrates from native-federation v3 to v4"
     }
   }
 }

@@ -9,7 +9,7 @@ import {
   Cache,
 } from '@angular/build/private';
 
-import { normalizeSourceMaps } from './normalize-build-options.js';
+import { normalizeSourceMaps } from '@angular-devkit/build-angular/src/utils/index.js';
 
 import type { NormalizedContextOptions } from './normalize-context-options.js';
 
