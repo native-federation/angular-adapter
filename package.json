@@ -1,63 +1,101 @@
 {
-  "name": "@nf-beta/source",
-  "version": "0.0.0",
+  "name": "@angular-architects/native-federation-v4",
+  "version": "21.2.4",
+  "generators": "./collection.json",
+  "builders": "./builders.json",
+  "schematics": "./collection.json",
   "license": "MIT",
-  "scripts": {
-    "test:e2e:runtime": "cd packages/runtime && pnpm test:e2e"
+  "author": {
+    "name": "Manfred Steyer",
+    "url": "http://www.angulararchitects.io"
   },
-  "private": true,
-  "devDependencies": {
-    "@eslint/js": "^9.39.1",
-    "@nx/devkit": "~22.6.0",
-    "@nx/esbuild": "~22.6.0",
-    "@nx/js": "~22.6.0",
-    "@nx/vite": "~22.6.0",
-    "@nx/web": "~22.6.0",
-    "@playwright/test": "^1.56.1",
-    "@swc-node/register": "~1.11.1",
-    "@swc/core": "~1.15.17",
-    "@swc/helpers": "~0.5.11",
-    "@types/node": "~24.10.0",
-    "@typescript-eslint/eslint-plugin": "^8.46.4",
-    "@typescript-eslint/parser": "^8.46.4",
-    "@vitest/browser": "^4.0.0",
-    "@vitest/coverage-v8": "^4.0.0",
-    "@vitest/ui": "^4.0.0",
-    "esbuild": "^0.28.0",
-    "eslint": "^9.39.1",
-    "eslint-config-prettier": "^10.1.8",
-    "eslint-plugin-prettier": "^5.5.4",
-    "globals": "^17.0.0",
-    "jsdom": "^29.0.0",
-    "msw": "^2.12.3",
-    "nx": "~22.6.0",
-    "prettier": "^3.6.2",
-    "tslib": "^2.3.0",
-    "typescript": "~5.9.2",
-    "typescript-eslint": "^8.46.4",
-    "verdaccio": "^6.0.5",
-    "vite": "^7.0.0",
-    "vitest": "^4.0.0"
+  "peerDependencies": {
+    "@softarc/native-federation": "^4.0.0",
+    "@softarc/native-federation-orchestrator": "^4.2.2",
+    "@angular-devkit/architect": ">=0.2102.0",
+    "@angular-devkit/build-angular": ">=21.2.0",
+    "@angular-devkit/core": ">=21.2.0",
+    "@angular/build": ">=21.2.0"
   },
-  "workspaces": [
-    "packages/*"
-  ],
   "dependencies": {
+    "@softarc/native-federation": "^4.0.0",
+    "@softarc/native-federation-orchestrator": "^4.2.2",
     "@angular-devkit/architect": "^0.2102.0",
     "@angular-devkit/build-angular": "^21.2.0",
     "@angular-devkit/core": "^21.2.0",
     "@angular-devkit/schematics": "^21.2.0",
     "@angular/build": "^21.2.0",
-    "@babel/core": "^7.28.5",
-    "@chialab/esbuild-plugin-commonjs": "^0.19.0",
-    "@schematics/angular": "^21.2.0",
-    "@types/babel__core": "^7.20.5",
-    "chalk": "^5.6.2",
-    "fast-glob": "^3.3.3",
-    "json5": "^2.2.3",
-    "mrmime": "^2.0.1"
+    "@chialab/esbuild-plugin-commonjs": "^0.19.0"
   },
-  "nx": {
-    "includedScripts": []
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/native-federation/angular-adapter"
+  },
+  "ng-update": {
+    "migrations": "./migration-collection.json"
+  },
+  "exports": {
+    "./package.json": "./package.json",
+    ".": {
+      "types": "./src/index.d.ts",
+      "import": "./src/index.js",
+      "default": "./src/index.js"
+    },
+    "./config": {
+      "types": "./src/config.d.ts",
+      "import": "./src/config.js",
+      "default": "./src/config.js"
+    },
+    "./internal": {
+      "types": "./src/internal.d.ts",
+      "import": "./src/internal.js",
+      "default": "./src/internal.js"
+    },
+    "./node-preload": {
+      "types": "./src/node-preload.d.ts",
+      "import": "./src/node-preload.js",
+      "default": "./src/node-preload.js"
+    }
+  },
+  "homepage": "https://github.com/native-federation/angular-adapter",
+  "type": "module",
+  "files": [
+    "src",
+    "collection.json",
+    "generators.json",
+    "builders.json",
+    "migration-collection.json",
+    "README.md",
+    "LICENSE",
+    "!**/*.tsbuildinfo"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json && node post-build.mjs",
+    "lint": "eslint src",
+    "typecheck": "tsc -p tsconfig.build.json --noEmit",
+    "knip": "knip --no-config-hints",
+    "test": "vitest"
+  },
+  "devDependencies": {
+    "@angular/build": "^21.2.0",
+    "@angular-devkit/build-angular": "^21.2.0",
+    "@eslint/js": "^9.39.1",
+    "@nx/devkit": "~22.6.0",
+    "@schematics/angular": "^21.2.0",
+    "@types/node": "~24.10.0",
+    "@vitest/coverage-v8": "^4.0.0",
+    "es-module-shims": "^2.8.0",
+    "esbuild": "^0.28.0",
+    "eslint": "^9.39.1",
+    "globals": "^17.0.0",
+    "jiti": "^2.6.0",
+    "json5": "^2.2.3",
+    "knip": "^6.17.1",
+    "mrmime": "^2.0.1",
+    "tslib": "^2.3.0",
+    "typescript": "~5.9.2",
+    "typescript-eslint": "^8.46.4",
+    "vite": "^7.0.0",
+    "vitest": "^4.0.0"
   }
 }

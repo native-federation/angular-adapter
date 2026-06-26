@@ -1,20 +1,20 @@
-packages:
-  - packages/angular
 overrides:
-  axios: '>=1.16.0'
-allowBuilds:
-  '@parcel/watcher': true
-  '@swc/core': true
-  esbuild: true
-  lmdb: true
-  msgpackr-extract: false
-  msw: true
-  nx: true
+  piscina: '>=5.1.5'
+  esbuild: '>=0.28.1'
+  tmp: '>=0.2.7'
+  form-data: '>=4.0.6'
 lockfileIncludeTarballUrl: true
 minimumReleaseAge: 4320
 minimumReleaseAgeExclude:
   - "@softarc/*"
   - "@angular/*"
   - "@angular-devkit/*"
-  - '@schematics/angular@22.0.0'
-  - '@ngtools/webpack@21.2.16'
+  - '@ngtools/webpack'
+allowBuilds:
+  '@parcel/watcher': false
+  '@swc/core': true
+  esbuild: true
+  lmdb: true
+  msgpackr-extract: false
+  msw: true
+  nx: true

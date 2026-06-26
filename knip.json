@@ -1,0 +1,14 @@
+{
+  "$schema": "https://unpkg.com/knip@6/schema.json",
+  "entry": [
+    "src/index.ts",
+    "src/config.ts",
+    "src/internal.ts",
+    "src/node-preload.ts",
+    "src/builders/*/builder.ts",
+    "src/schematics/*/schematic.ts",
+    "src/generators/*/generator.ts",
+    "src/tools/ssr/dev-host-instances-entry.ts"
+  ],
+  "project": ["src/**/*.ts"]
+}

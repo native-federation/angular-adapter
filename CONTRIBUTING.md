@@ -12,7 +12,7 @@ For the smoothest experience, we find that contributions focusing on functionali
 
 1. Fork and clone the repo
 2. Install dependencies: `pnpm install`
-3. Build the library: `nx build angular-adapter`
+3. Build the library: `pnpm build`
 4. Create a branch: `git checkout -b my-feature`
 5. Make your changes
 6. Lint your code: `pnpm lint`

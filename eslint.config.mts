@@ -3,6 +3,9 @@ import globals from 'globals';
 import tseslint from 'typescript-eslint';
 
 export default [
+  {
+    ignores: ['dist/**', 'target-dist/**', 'coverage/**', 'src/**/files/**'],
+  },
   js.configs.recommended,
   ...tseslint.configs.recommended,
   {
@@ -34,6 +37,6 @@ export default [
       'prefer-const': 'error',
       '@typescript-eslint/no-require-imports': 'warn',
     },
-    languageOptions: { globals: globals.browser },
+    languageOptions: { globals: { ...globals.browser, ...globals.node } },
   },
 ];
