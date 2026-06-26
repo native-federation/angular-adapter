@@ -1,4 +1,4 @@
-import '../build/setup-builder-env-variables.js';
+import './setup-builder-env-variables.js';
 
 import * as path from 'path';
 import { existsSync, mkdirSync, rmSync } from 'fs';
