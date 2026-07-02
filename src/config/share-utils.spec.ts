@@ -3,6 +3,7 @@ import {
   shareAll,
   withNativeFederation,
   getDefaultPlatform,
+  getAngularShareScope,
   SERVER_DEPENDENCIES,
 } from './share-utils.js';
 import { NG_SKIP_LIST } from './angular-skip-list.js';
@@ -16,6 +17,16 @@ vi.mock('@softarc/native-federation/config', () => ({
   share: (...args: unknown[]) => mockCoreShare(...args),
   shareAll: (...args: unknown[]) => mockCoreShareAll(...args),
   withNativeFederation: (...args: unknown[]) => mockCoreWithNativeFederation(...args),
+}));
+
+const mockExistsSync = vi.fn((p: string) => p.endsWith('package.json'));
+const mockReadFileSync = vi.fn(() =>
+  JSON.stringify({ dependencies: { '@angular/core': '^21.1.4' } }),
+);
+
+vi.mock('node:fs', () => ({
+  existsSync: (...args: unknown[]) => mockExistsSync(...(args as [string])),
+  readFileSync: () => mockReadFileSync(),
 }));
 
 afterEach(() => {
@@ -137,6 +148,99 @@ describe('withNativeFederation', () => {
       '@angular/core',
       '@angular/common/locales/de',
     ]);
+  });
+});
+
+describe('getAngularShareScope', () => {
+  it('derives ng<major>.<minor> from the declared @angular/core version', () => {
+    mockReadFileSync.mockReturnValueOnce(
+      JSON.stringify({ dependencies: { '@angular/core': '^21.1.4' } }),
+    );
+
+    expect(getAngularShareScope('/project')).toBe('ng21.1');
+  });
+
+  it('strips range prefixes and prerelease suffixes', () => {
+    mockReadFileSync.mockReturnValueOnce(
+      JSON.stringify({ dependencies: { '@angular/core': '~22.0.0-next.3' } }),
+    );
+
+    expect(getAngularShareScope('/project')).toBe('ng22.0');
+  });
+
+  it('falls back to devDependencies and peerDependencies', () => {
+    mockReadFileSync.mockReturnValueOnce(
+      JSON.stringify({ devDependencies: { '@angular/core': '20.2.1' } }),
+    );
+    expect(getAngularShareScope('/project')).toBe('ng20.2');
+
+    mockReadFileSync.mockReturnValueOnce(
+      JSON.stringify({ peerDependencies: { '@angular/core': '19.0.0' } }),
+    );
+    expect(getAngularShareScope('/project')).toBe('ng19.0');
+  });
+
+  it('throws when @angular/core is not a declared dependency', () => {
+    mockReadFileSync.mockReturnValueOnce(
+      JSON.stringify({ dependencies: { rxjs: '7.0.0' } }),
+    );
+
+    expect(() => getAngularShareScope('/project')).toThrow(/@angular\/core/);
+  });
+});
+
+describe('withNativeFederation shareScope: "auto"', () => {
+  beforeEach(() => {
+    mockCoreWithNativeFederation.mockReturnValue({
+      features: { ignoreUnusedDeps: true },
+      shared: {},
+    });
+    mockReadFileSync.mockReturnValue(
+      JSON.stringify({ dependencies: { '@angular/core': '^21.1.4' } }),
+    );
+  });
+
+  it('resolves the top-level shareScope', () => {
+    withNativeFederation({ shareScope: 'auto', shared: {} } as never);
+
+    expect(mockCoreWithNativeFederation.mock.calls[0]![0].shareScope).toBe('ng21.1');
+  });
+
+  it('resolves per-external shareScope entries', () => {
+    withNativeFederation({
+      shared: {
+        '@angular/core': { shareScope: 'auto' },
+        rxjs: { shareScope: 'auto' },
+      },
+    } as never);
+
+    const passed = mockCoreWithNativeFederation.mock.calls[0]![0];
+    expect(passed.shared['@angular/core'].shareScope).toBe('ng21.1');
+    expect(passed.shared['rxjs'].shareScope).toBe('ng21.1');
+  });
+
+  it('leaves an explicitly configured shareScope untouched', () => {
+    withNativeFederation({
+      shareScope: 'custom',
+      shared: { rxjs: { shareScope: 'other' } },
+    } as never);
+
+    const passed = mockCoreWithNativeFederation.mock.calls[0]![0];
+    expect(passed.shareScope).toBe('custom');
+    expect(passed.shared['rxjs'].shareScope).toBe('other');
+    expect(mockReadFileSync).not.toHaveBeenCalled();
+  });
+
+  it('reads package.json at most once regardless of how many entries use "auto"', () => {
+    withNativeFederation({
+      shareScope: 'auto',
+      shared: {
+        '@angular/core': { shareScope: 'auto' },
+        '@angular/common': { shareScope: 'auto' },
+      },
+    } as never);
+
+    expect(mockReadFileSync).toHaveBeenCalledTimes(1);
   });
 });
 

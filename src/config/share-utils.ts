@@ -11,6 +11,9 @@ import {
 } from "@softarc/native-federation/config";
 import { NG_SKIP_LIST } from "./angular-skip-list.js";
 import type { NormalizedSharedExternalsConfig } from "@softarc/native-federation/internal";
+import { existsSync, readFileSync } from "node:fs";
+import * as path from "node:path";
+import { cwd } from "node:process";
 
 export function shareAll(
   config: ShareAllExternalsOptions,
@@ -35,6 +38,8 @@ export function share(
 export function withNativeFederation(cfg: FederationConfig) {
   if (!cfg.platform)
     cfg.platform = getDefaultPlatform(Object.keys(cfg.shared ?? {}));
+
+  resolveAutoShareScope(cfg);
 
   const normalized = coreWithNativeFederation(cfg);
 
@@ -61,6 +66,41 @@ export function getDefaultPlatform(deps: string[]): "browser" | "node" {
     SERVER_DEPENDENCIES.some((server) => dep.startsWith(server)),
   );
   return hasServerDep ? "node" : "browser";
+}
+
+export function getAngularShareScope(projectPath: string = cwd()): string {
+  let dir = projectPath;
+  while (
+    !existsSync(path.join(dir, "package.json")) &&
+    path.dirname(dir) !== dir
+  )
+    dir = path.dirname(dir);
+
+  const pkgPath = path.join(dir, "package.json");
+  const pkg = existsSync(pkgPath)
+    ? JSON.parse(readFileSync(pkgPath, "utf-8"))
+    : {};
+  const version =
+    pkg.dependencies?.["@angular/core"] ??
+    pkg.devDependencies?.["@angular/core"] ??
+    pkg.peerDependencies?.["@angular/core"];
+  const match = version ? /(\d+)\.(\d+)/.exec(version) : null;
+  if (!match)
+    throw new Error(
+      `shareScope:'auto' could not resolve an '@angular/core' version from ${pkgPath}`,
+    );
+
+  return `ng${match[1]}.${match[2]}`;
+}
+
+function resolveAutoShareScope(cfg: FederationConfig): void {
+  let scope: string | undefined;
+  const findAngularRange = () => (scope ??= getAngularShareScope());
+
+  if (cfg.shareScope === "auto") cfg.shareScope = findAngularRange();
+  for (const external of Object.values(cfg.shared ?? {}))
+    if (external?.shareScope === "auto")
+      external.shareScope = findAngularRange();
 }
 
 function removeNgLocales(
