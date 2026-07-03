@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
 const mockInitFederation = vi.fn();
 const mockUseShimImportMap = vi.fn();
+const mockUseDefaultImportMap = vi.fn();
 const mockConsoleLogger = vi.fn();
 const mockGlobalThisStorageEntry = vi.fn();
 
@@ -12,6 +13,7 @@ vi.mock('@softarc/native-federation-orchestrator', () => ({
 
 vi.mock('@softarc/native-federation-orchestrator/options', () => ({
   useShimImportMap: mockUseShimImportMap,
+  useDefaultImportMap: mockUseDefaultImportMap,
   consoleLogger: mockConsoleLogger,
   globalThisStorageEntry: mockGlobalThisStorageEntry,
   LogType: undefined,
@@ -22,6 +24,7 @@ describe('initFederation', () => {
     vi.resetModules();
     mockInitFederation.mockReset();
     mockUseShimImportMap.mockReset();
+    mockUseDefaultImportMap.mockReset();
     mockConsoleLogger.mockReset();
     mockGlobalThisStorageEntry.mockReset();
   });
@@ -72,5 +75,41 @@ describe('initFederation', () => {
 
     const options = mockInitFederation.mock.calls[0]![1];
     expect(options.sse).toBeUndefined();
+  });
+
+  it('uses the shim import map by default', async () => {
+    mockInitFederation.mockReturnValue(Promise.resolve({}));
+    mockUseShimImportMap.mockReturnValue({});
+    mockUseDefaultImportMap.mockReturnValue({});
+    const { initFederation } = await import('./index.js');
+
+    initFederation({});
+
+    expect(mockUseShimImportMap).toHaveBeenCalledWith({ shimMode: true });
+    expect(mockUseDefaultImportMap).not.toHaveBeenCalled();
+  });
+
+  it('uses native import maps when shimMode is false', async () => {
+    mockInitFederation.mockReturnValue(Promise.resolve({}));
+    mockUseShimImportMap.mockReturnValue({});
+    mockUseDefaultImportMap.mockReturnValue({});
+    const { initFederation } = await import('./index.js');
+
+    initFederation({}, { shimMode: false });
+
+    expect(mockUseDefaultImportMap).toHaveBeenCalledTimes(1);
+    expect(mockUseShimImportMap).not.toHaveBeenCalled();
+  });
+
+  it('uses the shim import map when shimMode is true', async () => {
+    mockInitFederation.mockReturnValue(Promise.resolve({}));
+    mockUseShimImportMap.mockReturnValue({});
+    mockUseDefaultImportMap.mockReturnValue({});
+    const { initFederation } = await import('./index.js');
+
+    initFederation({}, { shimMode: true });
+
+    expect(mockUseShimImportMap).toHaveBeenCalledWith({ shimMode: true });
+    expect(mockUseDefaultImportMap).not.toHaveBeenCalled();
   });
 });

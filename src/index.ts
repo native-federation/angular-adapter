@@ -5,6 +5,7 @@ import {
 } from '@softarc/native-federation-orchestrator';
 import {
   useShimImportMap,
+  useDefaultImportMap,
   consoleLogger,
   globalThisStorageEntry,
   type LogType,
@@ -41,6 +42,12 @@ export interface InitFederationOptions {
   cacheTag?: string;
   logging?: LogType;
   sse?: boolean;
+  /**
+   * Use es-module-shims shim mode (default `true`). Set `false` for native
+   * import maps; the build option `esmsInitOptions: { shimMode: false }` must
+   * match. See #70 for when native mode is needed (e.g. DevExtreme).
+   */
+  shimMode?: boolean;
 }
 
 let resolveFirstInit!: (
@@ -59,8 +66,12 @@ export function initFederation(
   remotesOrManifestUrl?: Record<string, string> | string,
   options?: InitFederationOptions
 ) {
+  const importMapProvider =
+    options?.shimMode === false
+      ? useDefaultImportMap()
+      : useShimImportMap({ shimMode: true });
   const p = internalInitFederation(remotesOrManifestUrl ?? {}, {
-    ...useShimImportMap({ shimMode: true }),
+    ...importMapProvider,
     logger: consoleLogger,
     storage: globalThisStorageEntry,
     hostRemoteEntry: { url: './remoteEntry.json', cacheTag: options?.cacheTag },
