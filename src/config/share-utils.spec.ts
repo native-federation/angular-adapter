@@ -3,6 +3,7 @@ import {
   shareAll,
   withNativeFederation,
   getDefaultPlatform,
+  autoShareScope,
   SERVER_DEPENDENCIES,
 } from './share-utils.js';
 import { NG_SKIP_LIST } from './angular-skip-list.js';
@@ -16,6 +17,16 @@ vi.mock('@softarc/native-federation/config', () => ({
   share: (...args: unknown[]) => mockCoreShare(...args),
   shareAll: (...args: unknown[]) => mockCoreShareAll(...args),
   withNativeFederation: (...args: unknown[]) => mockCoreWithNativeFederation(...args),
+}));
+
+const mockExistsSync = vi.fn((p: string) => p.endsWith('package.json'));
+const mockReadFileSync = vi.fn(() =>
+  JSON.stringify({ dependencies: { '@angular/core': '^21.1.4' } }),
+);
+
+vi.mock('node:fs', () => ({
+  existsSync: (...args: unknown[]) => mockExistsSync(...(args as [string])),
+  readFileSync: () => mockReadFileSync(),
 }));
 
 afterEach(() => {
@@ -137,6 +148,74 @@ describe('withNativeFederation', () => {
       '@angular/core',
       '@angular/common/locales/de',
     ]);
+  });
+});
+
+describe('autoShareScope', () => {
+  it('derives ng<major>.<minor> from the declared @angular/core version by default', () => {
+    mockReadFileSync.mockReturnValueOnce(
+      JSON.stringify({ dependencies: { '@angular/core': '^21.1.4' } }),
+    );
+
+    expect(autoShareScope({ projectPath: '/project' })).toBe('ng21.1');
+  });
+
+  it('pins to the major version at level "major"', () => {
+    mockReadFileSync.mockReturnValueOnce(
+      JSON.stringify({ dependencies: { '@angular/core': '^21.1.4' } }),
+    );
+
+    expect(autoShareScope({ level: 'major', projectPath: '/project' })).toBe('ng21');
+  });
+
+  it('pins to the patch version at level "patch"', () => {
+    mockReadFileSync.mockReturnValueOnce(
+      JSON.stringify({ dependencies: { '@angular/core': '^21.1.4' } }),
+    );
+
+    expect(autoShareScope({ level: 'patch', projectPath: '/project' })).toBe('ng21.1.4');
+  });
+
+  it('strips range prefixes and prerelease suffixes', () => {
+    mockReadFileSync.mockReturnValueOnce(
+      JSON.stringify({ dependencies: { '@angular/core': '~22.0.0-next.3' } }),
+    );
+
+    expect(autoShareScope({ projectPath: '/project' })).toBe('ng22.0');
+    mockReadFileSync.mockReturnValueOnce(
+      JSON.stringify({ dependencies: { '@angular/core': '~22.0.0-next.3' } }),
+    );
+    expect(autoShareScope({ level: 'patch', projectPath: '/project' })).toBe('ng22.0.0');
+  });
+
+  it('falls back to devDependencies and peerDependencies', () => {
+    mockReadFileSync.mockReturnValueOnce(
+      JSON.stringify({ devDependencies: { '@angular/core': '20.2.1' } }),
+    );
+    expect(autoShareScope({ projectPath: '/project' })).toBe('ng20.2');
+
+    mockReadFileSync.mockReturnValueOnce(
+      JSON.stringify({ peerDependencies: { '@angular/core': '19.0.0' } }),
+    );
+    expect(autoShareScope({ projectPath: '/project' })).toBe('ng19.0');
+  });
+
+  it('throws when @angular/core is not a declared dependency', () => {
+    mockReadFileSync.mockReturnValueOnce(
+      JSON.stringify({ dependencies: { rxjs: '7.0.0' } }),
+    );
+
+    expect(() => autoShareScope({ projectPath: '/project' })).toThrow(/@angular\/core/);
+  });
+
+  it('throws when the requested level has no matching version segment', () => {
+    mockReadFileSync.mockReturnValueOnce(
+      JSON.stringify({ dependencies: { '@angular/core': '21' } }),
+    );
+
+    expect(() => autoShareScope({ level: 'patch', projectPath: '/project' })).toThrow(
+      /patch/,
+    );
   });
 });
 
