@@ -18,7 +18,7 @@ export function updateFederationTsConfig(
 
   const filtered = entryPoints
     .filter(ep => !ep.fileName.startsWith('.'))
-    .map(ep => path.relative(tsconfigDir, ep.fileName).replace(/\\\\/g, '/'));
+    .map(ep => path.relative(tsconfigDir, ep.fileName).replace(/\\/g, '/'));
 
   if (filtered.length === 0) {
     return;

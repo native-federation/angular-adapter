@@ -1,4 +1,5 @@
 import fs from 'fs';
+import path from 'path';
 import JSON5 from 'json5';
 
 import { updateFederationTsConfig } from './create-federation-tsconfig.js';
@@ -59,6 +60,22 @@ describe('updateFederationTsConfig', () => {
 
     const written = JSON.parse(String(vi.mocked(fs.writeFileSync).mock.calls[0]![1]));
     expect(written.include).toEqual(['src/a.ts']);
+  });
+
+  it('normalizes OS-specific backslash separators to forward slashes', () => {
+    vi.mocked(fs.existsSync).mockReturnValue(true);
+    vi.mocked(fs.readFileSync).mockReturnValue(JSON5.stringify({ include: [] }) as never);
+    // Simulate Windows: path.relative returns single-backslash separators.
+    const relativeSpy = vi
+      .spyOn(path, 'relative')
+      .mockReturnValue('..\\libs\\shared\\src\\index.ts');
+
+    updateFederationTsConfig('/ws', 'tsconfig.fed.json', [entry('/libs/shared/src/index.ts')]);
+
+    const written = JSON.parse(String(vi.mocked(fs.writeFileSync).mock.calls[0]![1]));
+    expect(written.include).toEqual(['../libs/shared/src/index.ts']);
+
+    relativeSpy.mockRestore();
   });
 
   it('does not write when the resulting config is unchanged', () => {
