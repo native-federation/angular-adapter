@@ -39,8 +39,6 @@ export function withNativeFederation(cfg: FederationConfig) {
   if (!cfg.platform)
     cfg.platform = getDefaultPlatform(Object.keys(cfg.shared ?? {}));
 
-  resolveAutoShareScope(cfg);
-
   const normalized = coreWithNativeFederation(cfg);
 
   // This is for being backwards compatible
@@ -68,7 +66,37 @@ export function getDefaultPlatform(deps: string[]): "browser" | "node" {
   return hasServerDep ? "node" : "browser";
 }
 
-export function getAngularShareScope(projectPath: string = cwd()): string {
+export interface PackageShareScopeOptions {
+  level?: "major" | "minor" | "patch";
+  /** Package whose version drives the scope. Defaults to `@angular/core`. */
+  dependency?: string;
+  /** Directory to start resolving `package.json` from. Defaults to `cwd()`. */
+  projectPath?: string;
+  prefix?: string;
+}
+
+/**
+ * Builds a version-pinned share scope (e.g. `"ng21.1"`) from a dependency's
+ * declared version, so internals are only shared between remotes on the same
+ * version line.
+ *
+ * ```ts
+ * withNativeFederation({
+ *   shareScope: autoShareScope({ level: 'patch' }), // e.g. "ng21.1.4"
+ *   shared: { '@angular/core': { shareScope: autoShareScope() } }, // "ng21.1"
+ * });
+ * ```
+ *
+ * @throws when the version can't be resolved or lacks the requested `level`.
+ */
+export function autoShareScope(opts: PackageShareScopeOptions = {}): string {
+  const {
+    level = "minor",
+    projectPath = cwd(),
+    dependency = "@angular/core",
+    prefix = "ng",
+  } = opts;
+
   let dir = projectPath;
   while (
     !existsSync(path.join(dir, "package.json")) &&
@@ -81,26 +109,29 @@ export function getAngularShareScope(projectPath: string = cwd()): string {
     ? JSON.parse(readFileSync(pkgPath, "utf-8"))
     : {};
   const version =
-    pkg.dependencies?.["@angular/core"] ??
-    pkg.devDependencies?.["@angular/core"] ??
-    pkg.peerDependencies?.["@angular/core"];
-  const match = version ? /(\d+)\.(\d+)/.exec(version) : null;
+    pkg.dependencies?.[dependency] ??
+    pkg.devDependencies?.[dependency] ??
+    pkg.peerDependencies?.[dependency];
+  const match = version ? /(\d+)(?:\.(\d+))?(?:\.(\d+))?/.exec(version) : null;
   if (!match)
     throw new Error(
-      `shareScope:'auto' could not resolve an '@angular/core' version from ${pkgPath}`,
+      `autoShareScope() could not resolve an '${dependency}' version from ${pkgPath}`,
     );
 
-  return `ng${match[1]}.${match[2]}`;
-}
-
-function resolveAutoShareScope(cfg: FederationConfig): void {
-  let scope: string | undefined;
-  const findAngularRange = () => (scope ??= getAngularShareScope());
-
-  if (cfg.shareScope === "auto") cfg.shareScope = findAngularRange();
-  for (const external of Object.values(cfg.shared ?? {}))
-    if (external?.shareScope === "auto")
-      external.shareScope = findAngularRange();
+  const [, major, minor, patch] = match;
+  if (level === "major") return `${prefix}${major}`;
+  if (level === "minor") {
+    if (minor === undefined)
+      throw new Error(
+        `autoShareScope({ level: 'minor' }) could not resolve a minor version from '${version}' in ${pkgPath}`,
+      );
+    return `${prefix}${major}.${minor}`;
+  }
+  if (minor === undefined || patch === undefined)
+    throw new Error(
+      `autoShareScope({ level: 'patch' }) could not resolve a patch version from '${version}' in ${pkgPath}`,
+    );
+  return `${prefix}${major}.${minor}.${patch}`;
 }
 
 function removeNgLocales(

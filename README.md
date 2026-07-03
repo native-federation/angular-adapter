@@ -427,6 +427,46 @@ export default withNativeFederation({
 
 When enabled, instead of listing each chunk as a separate shared dependency, chunks are grouped by bundle name in a dedicated `chunks` object. Each shared dependency gets a `bundle` property linking it to its chunk bundle. This results in a smaller `remoteEntry.json` and allows chunks to be skipped if the dependency is not used in the final import map.
 
+### Version-Pinned Share Scopes
+
+A `shareScope` isolates shared dependencies into a named bucket, so packages are only shared between remotes that use the same scope. The `autoShareScope` helper derives that name from a dependency's declared version, letting you pin sharing to a version line without hardcoding the number.
+
+```js
+import { withNativeFederation, shareAll, autoShareScope } from '@angular-architects/native-federation/config';
+
+export default withNativeFederation({
+  // Only share with remotes built against the same Angular minor, e.g. "ng21.1"
+  shareScope: autoShareScope(),
+
+  shared: {
+    ...shareAll({ singleton: true, strictVersion: true, requiredVersion: 'auto' }),
+  },
+});
+```
+
+The `level` option controls the granularity of the generated scope (given `@angular/core` is `21.1.4`):
+
+| `level`   | Result       |
+| --------- | ------------ |
+| `'major'` | `"ng21"`     |
+| `'minor'` | `"ng21.1"` (default) |
+| `'patch'` | `"ng21.1.4"` |
+
+You can also point it at another package or set a per-dependency scope:
+
+```js
+export default withNativeFederation({
+  shareScope: autoShareScope({ level: 'patch' }),
+
+  shared: {
+    // Override the scope for a single package
+    rxjs: { singleton: true, shareScope: autoShareScope({ dependency: 'rxjs' }) },
+  },
+});
+```
+
+The version is read from `dependencies`, `devDependencies` or `peerDependencies` in your `package.json`. `autoShareScope` throws if the dependency isn't declared, or if the declared version lacks enough segments for the requested `level`.
+
 ### SSR and Hydration
 
 We support Angular's SSR and (Incremental) Hydration. Please find [more information here](https://www.angulararchitects.io/blog/ssr-and-hydration-with-native-federation-for-angular/).
