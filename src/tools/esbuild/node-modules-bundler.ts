@@ -45,7 +45,16 @@ function createAngularLinkerPlugin(
 
         const needsLinking = requiresLinking(args.path, contents);
 
-        if (!needsLinking && !advancedOptimizations) {
+        // Genuine ESM vendor files may skip the transform in dev (advancedOptimizations=false)
+        // to keep the dev server fast. CommonJS files may not: esbuild resolves their named
+        // exports via the CJS->ESM interop that `jsTransformer.transformData` performs, so
+        // skipping it makes `import { named } from '<cjs-pkg>'` fail with "No matching export"
+        // during `ng serve` (while `ng build`, where advancedOptimizations=true, transforms every
+        // file and works). Only skip the transform for non-CommonJS files, so CJS interop no
+        // longer depends on the optimization level.
+        const maybeCommonjs = /\bmodule\.exports\b|\bexports\.[A-Za-z_$]/.test(contents);
+
+        if (!needsLinking && !advancedOptimizations && !maybeCommonjs) {
           return null;
         }
 
