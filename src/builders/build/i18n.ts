@@ -69,7 +69,9 @@ export async function translateFederationArtifacts(
   const translationOutPath = path.join(outputPath, 'browser', '{{LOCALE}}');
 
   const federationFiles = [
-    ...federationResult.shared.map(s => s.outFileName),
+    ...federationResult.shared.flatMap(s =>
+      'entries' in s ? Object.values(s.entries) : [s.outFileName]
+    ),
     ...federationResult.exposes.map(e => e.outFileName),
     ...Object.values(federationResult.chunks ?? {}).flat(),
   ];

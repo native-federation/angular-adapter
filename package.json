@@ -17,8 +17,8 @@
     "@angular-devkit/core": "~22.0.0",
     "@angular-devkit/schematics": "~22.0.0",
     "@chialab/esbuild-plugin-commonjs": "^0.19.0",
-    "@softarc/native-federation": "^4.0.0",
-    "@softarc/native-federation-orchestrator": "^4.2.2",
+    "@softarc/native-federation": "^4.3.0",
+    "@softarc/native-federation-orchestrator": "^4.5.0",
     "es-module-shims": "^2.8.0",
     "esbuild": "^0.28.0",
     "mrmime": "^2.0.1"
