@@ -49,11 +49,11 @@ The first step is to update the `package.json` to install the new packages:
   "private": true,
   "dependencies": {
     // [...] Dependencies
-    "@softarc/native-federation-runtime": "~4.1.0" // optional, if you want to keep using the classic runtime
+    "@softarc/native-federation-runtime": "~4.5.0" // optional, if you want to keep using the classic runtime
   },
   "devDependencies": {
     "@angular-architects/native-federation-v4": "~21.2.3", // Switch over to the (temporary) v4 package
-    "@softarc/native-federation": "~4.1.0",
+    "@softarc/native-federation": "~4.3.0",
     "@softarc/native-federation-orchestrator": "^4.2.2"
   }
 }
@@ -102,14 +102,17 @@ module.exports = withNativeFederation({
 
 ```javascript
 // Our well-known ESM importing types, but now imported from @angular-architects/native-federation-v4
-import { withNativeFederation, shareAll } from '@angular-architects/native-federation-v4/config';
+import {
+  withNativeFederation,
+  shareAll,
+} from "@angular-architects/native-federation-v4/config";
 
 // change this line to the default export.
 export default withNativeFederation({
-  name: 'team/mfe1',
+  name: "team/mfe1",
 
   exposes: {
-    './Component': './projects/mfe1/src/bootstrap.ts',
+    "./Component": "./projects/mfe1/src/bootstrap.ts",
   },
   shared: {
     // This still works! But how about overrides?
@@ -117,21 +120,21 @@ export default withNativeFederation({
 
     // Here's an alternative, you can merge the overrides _into_ the shareAll!
     ...shareAll(
-      { singleton: true, strictVersion: true, requiredVersion: 'auto' },
+      { singleton: true, strictVersion: true, requiredVersion: "auto" },
       {
         overrides: {
-          '@angular/core': {
+          "@angular/core": {
             singleton: true,
             strictVersion: true,
-            requiredVersion: 'auto',
+            requiredVersion: "auto",
             includeSecondaries: { keepAll: true },
           },
         },
-      }
+      },
     ),
   },
 
-  skip: ['rxjs/ajax', 'rxjs/fetch', 'rxjs/testing', 'rxjs/webSocket'],
+  skip: ["rxjs/ajax", "rxjs/fetch", "rxjs/testing", "rxjs/webSocket"],
 
   features: {
     ignoreUnusedDeps: true, // Now enabled by default
@@ -189,38 +192,41 @@ And that's it! Your micro frontend is migrated to the new major! We do have some
 Here's the `projects/<your-project>/src/main.ts` you've been used to for the last couple of years (before v4):
 
 ```javascript
-import { initFederation } from '@angular-architects/native-federation';
+import { initFederation } from "@angular-architects/native-federation";
 
 initFederation()
-  .catch(err => console.error(err))
-  .then(_ => import('./bootstrap'))
-  .catch(err => console.error(err));
+  .catch((err) => console.error(err))
+  .then((_) => import("./bootstrap"))
+  .catch((err) => console.error(err));
 ```
 
 We're changing that to the code you're _actually_ using:
 
 ```javascript
-import { initFederation } from '@softarc/native-federation-runtime'; // Default native-federation runtime
+import { initFederation } from "@softarc/native-federation-runtime"; // Default native-federation runtime
 
 initFederation()
-  .catch(err => console.error(err))
-  .then(_ => import('./bootstrap'))
-  .catch(err => console.error(err));
+  .catch((err) => console.error(err))
+  .then((_) => import("./bootstrap"))
+  .catch((err) => console.error(err));
 ```
 
 The runtime you see here is the "legacy runtime" that did the job. But it lacks some modern features like dependency sharing based on a range, shareScopes, in-browser caching etc etc. That's why from now on we recommend the orchestrator!
 
 ```javascript
-import { initFederation, NativeFederationResult } from '@softarc/native-federation-orchestrator';
+import {
+  initFederation,
+  NativeFederationResult,
+} from "@softarc/native-federation-orchestrator";
 
 const manifest = {
-  mfe1: 'http://localhost:4201/remoteEntry.json',
+  mfe1: "http://localhost:4201/remoteEntry.json",
 };
 
 initFederation(manifest)
-  .catch(err => console.error(err))
-  .then(_ => import('./bootstrap'))
-  .catch(err => console.error(err));
+  .catch((err) => console.error(err))
+  .then((_) => import("./bootstrap"))
+  .catch((err) => console.error(err));
 ```
 
 Not a lot of changes right? Sure, now you need to explicitly define the location of the manifest (or the object), but for the rest it's basically the same!
@@ -230,27 +236,30 @@ Not a lot of changes right? Sure, now you need to explicitly define the location
 Now, the big difference is that the new orchestrator is a _lot_ more customizable:
 
 ```javascript
-import { initFederation, NativeFederationResult } from '@softarc/native-federation-orchestrator';
+import {
+  initFederation,
+  NativeFederationResult,
+} from "@softarc/native-federation-orchestrator";
 import {
   useShimImportMap,
   consoleLogger,
   globalThisStorageEntry,
-} from '@softarc/native-federation-orchestrator/options';
+} from "@softarc/native-federation-orchestrator/options";
 
 const manifest = {
-  mfe1: 'http://localhost:4201/remoteEntry.json',
+  mfe1: "http://localhost:4201/remoteEntry.json",
 };
 
 initFederation(manifest, {
   ...useShimImportMap({ shimMode: true }),
   logger: consoleLogger,
   storage: globalThisStorageEntry,
-  hostRemoteEntry: './remoteEntry.json',
-  logLevel: 'debug',
+  hostRemoteEntry: "./remoteEntry.json",
+  logLevel: "debug",
 })
-  .catch(err => console.error(err))
-  .then(_ => import('./bootstrap'))
-  .catch(err => console.error(err));
+  .catch((err) => console.error(err))
+  .then((_) => import("./bootstrap"))
+  .catch((err) => console.error(err));
 ```
 
 You see that? Now you can choose which logger you want, and if you want to use the "shimImportMap" instead of the browser-native importmap (spoiler alert: 90% chance you do).

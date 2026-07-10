@@ -416,6 +416,27 @@ export default withNativeFederation({
 
 When enabled, instead of listing each chunk as a separate shared dependency, chunks are grouped by bundle name in a dedicated `chunks` object. Each shared dependency gets a `bundle` property linking it to its chunk bundle. This results in a smaller `remoteEntry.json` and allows chunks to be skipped if the dependency is not used in the final import map.
 
+#### Dense Externals
+
+The `denseExternals` feature flag applies the same compaction to shared externals themselves:
+
+```js
+export default withNativeFederation({
+  shared: {
+    ...shareAll({
+      singleton: true,
+      strictVersion: true,
+      requiredVersion: 'auto',
+    }),
+  },
+  features: {
+    denseExternals: true,
+  },
+});
+```
+
+When enabled, each shared external is emitted as a single dense entry that carries its output filenames in an `entries` map, rather than one flat record per file. This further shrinks the `remoteEntry.json`. The Angular I18N build understands both the flat and dense shapes, so localization keeps translating shared bundles either way.
+
 ### Version-Pinned Share Scopes
 
 A `shareScope` isolates shared dependencies into a named bucket, so packages are only shared between remotes that use the same scope. The `autoShareScope` helper derives that name from a dependency's declared version, letting you pin sharing to a version line without hardcoding the number.
@@ -455,6 +476,36 @@ export default withNativeFederation({
 ```
 
 The version is read from `dependencies`, `devDependencies` or `peerDependencies` in your `package.json`. `autoShareScope` throws if the dependency isn't declared, or if the declared version lacks enough segments for the requested `level`.
+
+### Building the Shared Config from `package.json`
+
+As an alternative to `shareAll`, the `fromPackageJson` helper builds the shared config from your `package.json` and returns a fluent builder you can refine before handing it to `withNativeFederation`:
+
+```js
+import { withNativeFederation, fromPackageJson } from '@angular-architects/native-federation/config';
+
+export default withNativeFederation({
+  shared: fromPackageJson({
+    singleton: true,
+    strictVersion: true,
+    requiredVersion: 'auto',
+  })
+    .skip(['rxjs/ajax', 'rxjs/fetch'])
+    .override({ 'large-lib': { singleton: false } })
+    .get(),
+});
+```
+
+The builder exposes:
+
+| Method | Purpose |
+| ------ | ------- |
+| `.skip(externals)` | Add packages to the skip list, on top of the ones seeded by default. |
+| `.override(externals)` | Replace the sharing options for specific packages. |
+| `.patch(externals, cfg)` | Merge a partial config into the given packages. |
+| `.get()` | Resolve the builder into the shared config object. |
+
+Unlike the core `fromPackageJson`, this adapter's version pre-seeds the Angular skip list (`NG_SKIP_LIST`) — the same list `shareAll` uses — so Angular-internal and localization packages are skipped for you out of the box.
 
 ### SSR and Hydration
 

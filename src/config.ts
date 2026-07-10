@@ -1,6 +1,7 @@
 export {
   share,
   shareAll,
+  fromPackageJson,
   withNativeFederation,
   autoShareScope,
   type PackageShareScopeOptions,
