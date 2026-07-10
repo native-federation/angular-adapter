@@ -7,6 +7,7 @@ import type {
 import {
   share as coreShare,
   shareAll as coreShareAll,
+  fromPackageJson as coreFromPackageJson,
   withNativeFederation as coreWithNativeFederation,
 } from "@softarc/native-federation/config";
 import { NG_SKIP_LIST } from "./angular-skip-list.js";
@@ -33,6 +34,19 @@ export function share(
   skipList = NG_SKIP_LIST,
 ) {
   return coreShare(configuredShareObjects, projectPath, skipList);
+}
+
+/**
+ * Angular-flavored {@link coreFromPackageJson}: builds a shared-externals config
+ * from `package.json` and pre-seeds the Angular skip list, so the returned
+ * fluent builder (`.skip()`, `.override()`, `.patch()`, `.get()`) starts from
+ * {@link NG_SKIP_LIST} instead of core's `DEFAULT_SKIP_LIST`.
+ */
+export function fromPackageJson(
+  baseCfg: ShareAllExternalsOptions,
+  projectPath = "",
+) {
+  return coreFromPackageJson(baseCfg, projectPath).skip(NG_SKIP_LIST);
 }
 
 export function withNativeFederation(cfg: FederationConfig) {

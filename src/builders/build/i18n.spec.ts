@@ -98,6 +98,19 @@ describe('translateFederationArtifacts', () => {
     expect(cmd).toContain('["a.xlf","b.xlf"]');
   });
 
+  it('collects dense shared entries when denseExternals is enabled', async () => {
+    const denseResult = {
+      shared: [{ entries: { esm: 'dep1.js', legacy: 'dep1.legacy.js' } }],
+      exposes: [{ outFileName: './cmp.js' }],
+      chunks: { c1: ['chunk1.js'] },
+    } as unknown as FederationInfo;
+
+    await translateFederationArtifacts(i18n, true, '/dist', denseResult);
+
+    const cmd = vi.mocked(execSync).mock.calls[0]![0] as string;
+    expect(cmd).toContain('-s "{dep1.js,dep1.legacy.js,./cmp.js,chunk1.js}"');
+  });
+
   it('uses sourceLocale.code when the source locale is an object', async () => {
     const objLocaleI18n: I18nConfig = {
       sourceLocale: { code: 'en-US' },

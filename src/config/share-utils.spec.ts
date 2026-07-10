@@ -1,6 +1,7 @@
 import {
   share,
   shareAll,
+  fromPackageJson,
   withNativeFederation,
   getDefaultPlatform,
   autoShareScope,
@@ -11,11 +12,14 @@ import { NG_SKIP_LIST } from './angular-skip-list.js';
 const mockCoreShare = vi.fn((cfg: unknown) => cfg);
 const mockCoreShareAll = vi.fn((cfg: unknown) => cfg);
 const mockCoreWithNativeFederation = vi.fn();
+const mockFromPackageJsonSkip = vi.fn(() => ({ get: () => 'resolved' }));
+const mockCoreFromPackageJson = vi.fn(() => ({ skip: mockFromPackageJsonSkip }));
 
 vi.mock('@softarc/native-federation/config', () => ({
   DEFAULT_SKIP_LIST: [],
   share: (...args: unknown[]) => mockCoreShare(...args),
   shareAll: (...args: unknown[]) => mockCoreShareAll(...args),
+  fromPackageJson: (...args: unknown[]) => mockCoreFromPackageJson(...args),
   withNativeFederation: (...args: unknown[]) => mockCoreWithNativeFederation(...args),
 }));
 
@@ -60,6 +64,27 @@ describe('shareAll', () => {
     mockCoreShareAll.mockReturnValueOnce(expected);
 
     expect(shareAll({} as never)).toBe(expected);
+  });
+});
+
+describe('fromPackageJson', () => {
+  it('delegates to core with default projectPath and pre-seeds the Angular skip list', () => {
+    const baseCfg = { singleton: true } as never;
+
+    fromPackageJson(baseCfg);
+
+    expect(mockCoreFromPackageJson).toHaveBeenCalledWith(baseCfg, '');
+    expect(mockFromPackageJsonSkip).toHaveBeenCalledWith(NG_SKIP_LIST);
+  });
+
+  it('passes through an explicit projectPath', () => {
+    fromPackageJson({} as never, '/project');
+
+    expect(mockCoreFromPackageJson).toHaveBeenCalledWith({}, '/project');
+  });
+
+  it('returns the skip-seeded builder from core', () => {
+    expect(fromPackageJson({} as never)).toEqual({ get: expect.any(Function) });
   });
 });
 
