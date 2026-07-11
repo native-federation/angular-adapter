@@ -48,7 +48,11 @@ import { checkForInvalidImports } from "./../../utils/check-for-invalid-imports.
 import { federationBuildNotifier } from "./federation-build-notifier.js";
 import type { NfBuilderSchema, NfInternalOptions } from "./schema.js";
 import { createAngularBuildAdapter } from "../../tools/esbuild/angular-esbuild-adapter.js";
-import { getI18nConfig, translateFederationArtifacts } from "./i18n.js";
+import {
+  getI18nConfig,
+  registerAngularLocaleDataInFederationConfig,
+  translateFederationArtifacts,
+} from "./i18n.js";
 import { updateScriptTags } from "./update-index-html.js";
 
 const originalWrite = process.stderr.write.bind(process.stderr);
@@ -288,6 +292,17 @@ export async function* runBuilder(
     "shared mappings",
   );
   checkForInvalidImports(Object.keys(normalized.config.shared), "externals");
+
+  // Surface Angular's `@angular/common/locales/global/<code>` locale data
+  // through the federation config for non-English locales. Must run before
+  // `getExternals` so the entries are marked external and bundled/mapped.
+  const inlineLocaleFilter = Array.isArray(localeFilter) ? localeFilter : [];
+  registerAngularLocaleDataInFederationConfig(
+    normalized.config,
+    i18n,
+    context.workspaceRoot,
+    inlineLocaleFilter,
+  );
 
   const activateSsr = nfBuilderOptions.ssr && !nfBuilderOptions.dev;
 
