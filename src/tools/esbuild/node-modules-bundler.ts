@@ -129,6 +129,11 @@ export async function createNodeModulesEsbuildContext(options: NormalizedContext
   );
 
   const config: esbuild.BuildOptions = {
+    // Named exports of CommonJS/UMD shared externals (issue #83, e.g. `import { isDayjs }
+    // from 'dayjs'`) are handled in core: `bundleSharedCore` runtime-enumerates each CJS
+    // external and hands us a synthetic entry (`ep.fileName` under `<cache>/.nf-cjs-entries/`)
+    // that re-exports `default` plus every named binding. We just bundle whatever entry core
+    // gives us — no adapter-side plugin needed (core >= 4.4.0, `synthesizeCjsExports`).
     entryPoints: entryPoints.map(ep => ({
       in: ep.fileName,
       out: path.parse(ep.outName).name,
