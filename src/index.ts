@@ -1,15 +1,14 @@
-export * from '@softarc/native-federation/domain';
+export * from "@softarc/native-federation/domain";
 import {
   initFederation as internalInitFederation,
   type NativeFederationResult,
-} from '@softarc/native-federation-orchestrator';
+} from "@softarc/native-federation-orchestrator";
 import {
   useShimImportMap,
   useDefaultImportMap,
   consoleLogger,
-  globalThisStorageEntry,
-  type LogType,
-} from '@softarc/native-federation-orchestrator/options';
+  type NFOptions,
+} from "@softarc/native-federation-orchestrator/options";
 
 export type Imports = Record<string, string>;
 export type Scopes = Record<string, Imports>;
@@ -38,20 +37,26 @@ export type LoadRemoteModuleOptions<T = any> = {
   fallback?: T;
 };
 
-export interface InitFederationOptions {
+export type NgOrchestratorOptions = {
+  /**
+   * @deprecated Use `hostRemoteEntry` instead and pass the cache tag there:
+   *   ```ts
+   *   hostRemoteEntry: { url: "./remoteEntry.json", cacheTag: "your-cache-tag" }
+   *   ```
+   */
   cacheTag?: string;
-  logging?: LogType;
-  sse?: boolean;
   /**
    * Use es-module-shims shim mode (default `true`). Set `false` for native
    * import maps; the build option `esmsInitOptions: { shimMode: false }` must
    * match. See #70 for when native mode is needed (e.g. DevExtreme).
    */
   shimMode?: boolean;
-}
+};
+
+export type NgNFOptions = NgOrchestratorOptions & NFOptions;
 
 let resolveFirstInit!: (
-  value: NativeFederationResult | PromiseLike<NativeFederationResult>
+  value: NativeFederationResult | PromiseLike<NativeFederationResult>,
 ) => void;
 let rejectFirstInit!: (reason?: unknown) => void;
 let firstInitCaptured = false;
@@ -59,24 +64,27 @@ let federationPromise: Promise<NativeFederationResult> = new Promise(
   (resolve, reject) => {
     resolveFirstInit = resolve;
     rejectFirstInit = reject;
-  }
+  },
 );
 
 export function initFederation(
   remotesOrManifestUrl?: Record<string, string> | string,
-  options?: InitFederationOptions
+  options: NgNFOptions = {},
 ) {
+  const { cacheTag, shimMode, ...nfOpts } = options as Omit<
+    NgNFOptions,
+    "cacheTag"
+  > & { cacheTag?: string };
+
   const importMapProvider =
-    options?.shimMode === false
+    shimMode === false
       ? useDefaultImportMap()
       : useShimImportMap({ shimMode: true });
   const p = internalInitFederation(remotesOrManifestUrl ?? {}, {
     ...importMapProvider,
     logger: consoleLogger,
-    storage: globalThisStorageEntry,
-    hostRemoteEntry: { url: './remoteEntry.json', cacheTag: options?.cacheTag },
-    logLevel: options?.logging ?? 'debug',
-    sse: options?.sse,
+    hostRemoteEntry: { url: "./remoteEntry.json", cacheTag },
+    ...nfOpts,
   });
   if (!firstInitCaptured) {
     firstInitCaptured = true;
@@ -88,30 +96,32 @@ export function initFederation(
 
 function normalizeOptions<T>(
   optionsOrRemoteName: LoadRemoteModuleOptions<T> | string,
-  exposedModule?: string
+  exposedModule?: string,
 ): LoadRemoteModuleOptions<T> {
-  if (typeof optionsOrRemoteName === 'string' && exposedModule) {
+  if (typeof optionsOrRemoteName === "string" && exposedModule) {
     return { remoteName: optionsOrRemoteName, exposedModule };
   }
-  if (typeof optionsOrRemoteName === 'object' && !exposedModule) {
+  if (typeof optionsOrRemoteName === "object" && !exposedModule) {
     return optionsOrRemoteName;
   }
   throw new Error(
-    'unexpected arguments: please pass options or a remoteName/exposedModule-pair'
+    "unexpected arguments: please pass options or a remoteName/exposedModule-pair",
   );
 }
 
 function logClientError(error: string): void {
-  if (typeof window !== 'undefined') {
+  if (typeof window !== "undefined") {
     console.error(error);
   }
 }
 
-async function resolveRemoteNameFromEntry(remoteEntry: string): Promise<string> {
+async function resolveRemoteNameFromEntry(
+  remoteEntry: string,
+): Promise<string> {
   const res = await fetch(remoteEntry);
   if (!res.ok) {
     throw new Error(
-      `Failed to fetch remoteEntry at ${remoteEntry}: ${res.status} ${res.statusText}`
+      `Failed to fetch remoteEntry at ${remoteEntry}: ${res.status} ${res.statusText}`,
     );
   }
   const info = (await res.json()) as { name?: string };
@@ -152,17 +162,17 @@ async function resolveRemoteNameFromEntry(remoteEntry: string): Promise<string> 
  */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export async function loadRemoteModule<T = any>(
-  options: LoadRemoteModuleOptions<T>
+  options: LoadRemoteModuleOptions<T>,
 ): Promise<T>;
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export async function loadRemoteModule<T = any>(
   remoteName: string,
-  exposedModule: string
+  exposedModule: string,
 ): Promise<T>;
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export async function loadRemoteModule<T = any>(
   optionsOrRemoteName: LoadRemoteModuleOptions<T> | string,
-  exposedModule?: string
+  exposedModule?: string,
 ): Promise<T> {
   const options = normalizeOptions<T>(optionsOrRemoteName, exposedModule);
   const { fallback } = options;
@@ -171,18 +181,20 @@ export async function loadRemoteModule<T = any>(
     let federation = await federationPromise;
 
     if (!options.remoteName && options.remoteEntry) {
-      options.remoteName = await resolveRemoteNameFromEntry(options.remoteEntry);
+      options.remoteName = await resolveRemoteNameFromEntry(
+        options.remoteEntry,
+      );
     }
 
     if (options.remoteEntry) {
       federation = await federation.initRemoteEntry(
         options.remoteEntry,
-        options.remoteName
+        options.remoteName,
       );
     }
 
     if (!options.remoteName) {
-      const err = 'unexpected arguments: Please pass remoteName or remoteEntry';
+      const err = "unexpected arguments: Please pass remoteName or remoteEntry";
       if (!fallback) throw new Error(err);
       logClientError(err);
       return fallback;
@@ -190,13 +202,13 @@ export async function loadRemoteModule<T = any>(
 
     return await federation.loadRemoteModule<T>(
       options.remoteName,
-      options.exposedModule
+      options.exposedModule,
     );
   } catch (err) {
     if (fallback) {
       logClientError(
-        'error loading remote module: ' +
-          (err instanceof Error ? err.message : String(err))
+        "error loading remote module: " +
+          (err instanceof Error ? err.message : String(err)),
       );
       return fallback;
     }
@@ -204,4 +216,4 @@ export async function loadRemoteModule<T = any>(
   }
 }
 
-export { type NativeFederationResult } from '@softarc/native-federation-orchestrator';
+export { type NativeFederationResult } from "@softarc/native-federation-orchestrator";
