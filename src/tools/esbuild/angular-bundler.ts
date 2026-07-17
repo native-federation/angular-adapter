@@ -155,6 +155,7 @@ export async function createAngularEsbuildContext(options: NormalizedContextOpti
       'object-rest-spread': false,
     },
     splitting: chunks,
+    preserveSymlinks: builderOptions.preserveSymlinks,
     platform: platform ?? 'browser',
     format: 'esm',
     target: target,
