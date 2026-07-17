@@ -22,6 +22,7 @@ import {
   AbortedError,
   getDefaultCachePath,
   syncNfFileWatcher,
+  linkedSharedDirs,
 } from '@softarc/native-federation/internal';
 
 import { createAngularBuildAdapter } from '../../tools/esbuild/angular-esbuild-adapter.js';
@@ -96,6 +97,10 @@ export async function* runRemoteBuilder(
 
   const externals = getExternals(normalized.config);
 
+  // Realpath'd dirs of npm-linked shared packages (`[]` if none, making the
+  // syncNfFileWatcher calls below a no-op) so the linked lib's real source is watched.
+  const linkedDirs = linkedSharedDirs(normalized.config, normalized.options);
+
   const assetEntries = normalizeRemoteAssetEntries(
     nfBuilderOptions.assets,
     context.workspaceRoot,
@@ -131,7 +136,11 @@ export async function* runRemoteBuilder(
   await copyAllAssets(assetEntries, absoluteBrowserOutput, context.workspaceRoot);
 
   if (changeWatcher) {
-    syncNfFileWatcher(changeWatcher.watcher, normalized.options.federationCache.bundlerCache);
+    syncNfFileWatcher(
+      changeWatcher.watcher,
+      normalized.options.federationCache.bundlerCache,
+      linkedDirs
+    );
   }
 
   const rebuildQueue = new RebuildQueue();
@@ -188,7 +197,11 @@ export async function* runRemoteBuilder(
           // remain in pendingPaths and will drive the next iteration.
           for (const p of changedFiles) changeWatcher.pendingPaths.delete(p);
 
-          syncNfFileWatcher(changeWatcher.watcher, normalized.options.federationCache.bundlerCache);
+          syncNfFileWatcher(
+            changeWatcher.watcher,
+            normalized.options.federationCache.bundlerCache,
+            linkedDirs
+          );
 
           if (signal?.aborted) {
             throw new AbortedError('[remote-builder] After federation build.');

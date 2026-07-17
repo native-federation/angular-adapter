@@ -581,6 +581,42 @@ For complete implementation details, configuration options, please refer to the 
 
 **📖 [Fixing DX Friction: Automatic Shell Reloading in Native Federation](https://www.angulararchitects.io/en/blog/fixing-dx-friction-automatic-shell-reloading-in-native-federation/)**
 
+### Developing `npm link`ed shared libraries
+
+A common local-development setup is to build a shared library in its own repo (with `ng build --watch`, which runs ng-packagr) and pull it into your host via [`npm link`](https://docs.npmjs.com/cli/commands/npm-link). This symlinks the library's `dist/` into your host's `node_modules`, so you can iterate on the library and the host together.
+
+Since Native Federation shares such a library as an *external* (it is excluded from Angular's own build), a plain `ng serve` used to ignore edits to it — the change lived under `node_modules`, which the build watcher skips, so you had to clear the cache or restart the dev server to see it. Since version `22.0.5` (requires `@softarc/native-federation` ≥ `4.3.2`), the adapter detects linked shared packages and re-bundles them automatically on change.
+
+#### Requirements
+
+- The library is listed in your `federation.config.*` `shared` section (via `shareAll`, an explicit `shared` entry, or `sharedMappings`).
+- Its package directory under `node_modules` is a **symlink** — i.e. it was linked with `npm link` (or your package manager's equivalent), not installed from a registry.
+- The library is rebuilt on change so the symlink target actually updates. With an Angular library this means running `ng build --watch` (ng-packagr) in the library's repo.
+
+#### Workflow
+
+```bash
+# 1. In the shared library's repo — build to dist/ and keep watching
+ng build --watch
+
+# 2. Publish the built package to the local npm link registry
+cd dist/my-lib && npm link
+
+# 3. In the host repo — link the package into node_modules
+npm link @my-scope/my-lib
+
+# 4. Run the host as usual
+ng serve
+```
+
+Now edit a source file in the library. ng-packagr rebuilds its `dist/`, and the adapter picks up the change, re-bundles the affected shared external, and logs `Done!` — no manual cache clear or dev-server restart needed.
+
+To also refresh the browser automatically when the rebuild finishes, enable SSE-based reloading as described in [Shell reloading when MFE finishes building for local development](#shell-reloading-when-mfe-finishes-building-for-local-development) (`initFederation(manifest, { sse: true })`). Otherwise, a manual browser refresh will show the update.
+
+#### How it works
+
+The adapter resolves the real path of each symlinked shared package and adds it to the federation file watcher. Because linked packages live under `node_modules`, they are watched via polling, and a short debounce coalesces ng-packagr's atomic multi-file writes into a single rebuild. Only the shared externals affected by the change are re-bundled; regular (registry-installed) dependencies keep the version-only cache fast path, so there is no rebuild churn or performance regression for non-linked packages.
+
 ## FAQ
 
 ### When to use this package?
