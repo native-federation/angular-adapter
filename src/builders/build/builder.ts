@@ -36,6 +36,7 @@ import {
   AbortedError,
   createNfWatcher,
   getDefaultCachePath,
+  linkedSharedDirs,
   logger,
   type NfFileWatcher,
   RebuildQueue,
@@ -295,6 +296,11 @@ export async function* runBuilder(
   logger.measure(start, "To load the federation config.");
 
   const externals = getExternals(normalized.config);
+
+  // Realpath'd dirs of npm-linked shared packages (`[]` if none, making the
+  // syncNfFileWatcher calls below a no-op) so the linked lib's real source is watched.
+  const linkedDirs = linkedSharedDirs(normalized.config, normalized.options);
+
   const plugins = [
     {
       name: "externals",
@@ -402,9 +408,39 @@ export async function* runBuilder(
 
   let first = true;
 
+  // A linked shared-package edit never makes Angular's iterator emit (it's an external),
+  // so we wake the watch loop directly: notifyChange resolves changeSignal, which the
+  // loop races against Angular's next output to drive a federation-only rebuild.
+  let notifyChange: () => void = () => {};
+  let changeSignal: Promise<void> = new Promise<void>(
+    (r) => (notifyChange = r),
+  );
+  let changeTagged: Promise<{ kind: "watcher" }> = changeSignal.then(() => ({
+    kind: "watcher" as const,
+  }));
+  const resetChangeSignal = (): void => {
+    changeSignal = new Promise<void>((r) => (notifyChange = r));
+    changeTagged = changeSignal.then(() => ({ kind: "watcher" as const }));
+  };
+  const isUnderLinkedDir = (p: string): boolean =>
+    linkedDirs.some((d) => p === d || p.startsWith(d + path.sep));
+
+  // watcherRef lets onChange reach the watcher without a const self-reference.
+  const watcherRef: { current?: NfFileWatcher } = {};
   const nfWatcher: NfFileWatcher | undefined = watch
-    ? createNfWatcher()
+    ? createNfWatcher({
+        // Coalesce ng-packagr's atomic multi-write bursts into one rebuild.
+        debounceMs: 100,
+        onChange: (p) => {
+          // Core stops filling the dirty buffer once onChange is set, so refill it
+          // here (Set.add stays idempotent if core is later fixed). Only wake the
+          // loop for linked edits; others ride the next Angular-driven rebuild.
+          watcherRef.current?.mutate((s) => s.add(p));
+          if (isUnderLinkedDir(p)) notifyChange();
+        },
+      })
     : undefined;
+  watcherRef.current = nfWatcher;
 
   if (nfWatcher) {
     nfWatcher.addPaths(
@@ -442,6 +478,7 @@ export async function* runBuilder(
     syncNfFileWatcher(
       nfWatcher,
       normalized.options.federationCache.bundlerCache,
+      linkedDirs,
     );
   }
 
@@ -498,129 +535,174 @@ export async function* runBuilder(
 
   let ngBuildStatus: { success: boolean } = { success: false };
 
-  try {
-    let buildResult = await builderIterator.next();
+  // Shared by both rebuild triggers. RebuildQueue serializes calls (aborts + awaits the
+  // previous build before starting the next), so the two drivers never run this at once.
+  const runFederationRebuild = async (
+    signal: AbortSignal,
+  ): Promise<{ success: boolean; cancelled?: boolean }> => {
+    try {
+      if (signal?.aborted) {
+        throw new AbortedError("Build canceled before starting");
+      }
 
-    while (!buildResult.done) {
+      await new Promise((resolve, reject) => {
+        const timeout = setTimeout(
+          resolve,
+          Math.max(10, nfBuilderOptions.rebuildDelay),
+        );
+
+        if (signal) {
+          const abortHandler = () => {
+            clearTimeout(timeout);
+            reject(new AbortedError("[builder] During delay."));
+          };
+          signal.addEventListener("abort", abortHandler, {
+            once: true,
+          });
+        }
+      });
+
+      if (signal?.aborted) {
+        throw new AbortedError("[builder] Before federation build.");
+      }
+
+      // Invalidate only files that changed since the last rebuild, falling back to all
+      // source files when the buffer is empty (e.g. first watch rebuild). Unlike the
+      // remote builder, the buffer is cleared eagerly here because Angular's iterator —
+      // not this buffer — re-triggers the next Angular-driven rebuild.
+      const changedFiles = nfWatcher ? [...nfWatcher.get()] : [];
+
+      if (nfWatcher) nfWatcher.clear();
+
+      federationResult = await rebuildForFederation(
+        normalized.config,
+        normalized.options,
+        externals,
+        changedFiles,
+        signal,
+      );
+
+      if (nfWatcher) {
+        syncNfFileWatcher(
+          nfWatcher,
+          normalized.options.federationCache.bundlerCache,
+          linkedDirs,
+        );
+      }
+
+      if (signal?.aborted) {
+        throw new AbortedError("[builder] After federation build.");
+      }
+
+      if (hasLocales && localeFilter) {
+        translateFederationArtifacts(
+          i18n,
+          localeFilter,
+          outputOptions.base,
+          federationResult,
+        );
+      }
+
+      if (signal?.aborted) {
+        throw new AbortedError("[builder] After federation translations.");
+      }
+
+      logger.info("Done!");
+
+      if (isLocalDevelopment) {
+        federationBuildNotifier.broadcastBuildCompletion();
+      }
+      return { success: true };
+    } catch (error) {
+      if (error instanceof AbortedError) {
+        logger.verbose(
+          "Rebuild was canceled. Cancellation point: " + error?.message,
+        );
+        federationBuildNotifier.broadcastBuildCancellation();
+        return { success: false, cancelled: true };
+      }
+      logger.error("Federation rebuild failed!");
+      if (ngBuilderOptions.verbose) console.error(error);
+      if (isLocalDevelopment) {
+        federationBuildNotifier.broadcastBuildError(error);
+      }
+      return { success: false };
+    }
+  };
+
+  try {
+    // In-flight Angular output, tagged for the race below and only reassigned when
+    // consumed (so a linked-package rebuild preserves it). The tag captures a rejected
+    // iterator instead of rejecting — re-thrown on consume — so a losing race can't leak
+    // an unhandled rejection.
+    let angularNext = builderIterator.next();
+    let angularTagged = angularNext.then(
+      (r) => ({ kind: "angular" as const, r, err: undefined as unknown }),
+      (err) => ({ kind: "angular" as const, r: undefined, err }),
+    );
+    const advanceAngular = (): void => {
+      angularNext = builderIterator.next();
+      angularTagged = angularNext.then(
+        (r) => ({ kind: "angular" as const, r, err: undefined as unknown }),
+        (err) => ({ kind: "angular" as const, r: undefined, err }),
+      );
+    };
+
+    while (true) {
+      const trigger = await Promise.race([angularTagged, changeTagged]);
+
+      // A linked shared-package edit: Angular produced nothing, so rebuild federation
+      // only and leave the pending Angular output in flight for the next race.
+      if (trigger.kind === "watcher") {
+        resetChangeSignal();
+        if (first || !nfWatcher || nfWatcher.get().size === 0) continue;
+
+        // Interrupt on the next linked edit so a fresh save folds into one rebuild.
+        const trackResult = await rebuildQueue.track(
+          runFederationRebuild,
+          changeSignal,
+        );
+        if (trackResult.type === "completed" && !trackResult.result.cancelled) {
+          yield { success: trackResult.result.success };
+        }
+        continue;
+      }
+
+      if (trigger.err) throw trigger.err;
+      const buildResult = trigger.r!;
+      if (buildResult.done) break;
       if (buildResult.value) ngBuildStatus = buildResult.value;
+
+      // Consume this output and prime the next; the primed promise doubles as the
+      // interrupt for the rebuild below (a fresh Angular build aborts the stale one).
+      advanceAngular();
 
       if (!ngBuildStatus.success) {
         logger.warn(
           "Skipping federation artifacts because Angular build failed.",
         );
-        buildResult = await builderIterator.next();
-      } else if (!first && watch) {
-        const nextOutputPromise = builderIterator.next();
+        first = false;
+        continue;
+      }
 
-        const trackResult = await rebuildQueue.track(
-          async (signal: AbortSignal) => {
-            try {
-              if (signal?.aborted) {
-                throw new AbortedError("Build canceled before starting");
-              }
+      // The initial output's federation artifacts were already built above; only
+      // rebuild on subsequent outputs, and only in watch mode.
+      if (first || !watch) {
+        first = false;
+        continue;
+      }
 
-              await new Promise((resolve, reject) => {
-                const timeout = setTimeout(
-                  resolve,
-                  Math.max(10, nfBuilderOptions.rebuildDelay),
-                );
+      const trackResult = await rebuildQueue.track(
+        runFederationRebuild,
+        angularNext,
+      );
 
-                if (signal) {
-                  const abortHandler = () => {
-                    clearTimeout(timeout);
-                    reject(new AbortedError("[builder] During delay."));
-                  };
-                  signal.addEventListener("abort", abortHandler, {
-                    once: true,
-                  });
-                }
-              });
-
-              if (signal?.aborted) {
-                throw new AbortedError("[builder] Before federation build.");
-              }
-
-              // Invalidate only files that changed since the last rebuild, falling back to all
-              // source files when the buffer is empty (e.g. first watch rebuild). Unlike the
-              // remote builder, the buffer is cleared eagerly here because Angular's iterator —
-              // not this buffer — re-triggers the next rebuild.
-              const changedFiles = nfWatcher ? [...nfWatcher.get()] : [];
-
-              if (nfWatcher) nfWatcher.clear();
-
-              federationResult = await rebuildForFederation(
-                normalized.config,
-                normalized.options,
-                externals,
-                changedFiles,
-                signal,
-              );
-
-              if (nfWatcher) {
-                syncNfFileWatcher(
-                  nfWatcher,
-                  normalized.options.federationCache.bundlerCache,
-                );
-              }
-
-              if (signal?.aborted) {
-                throw new AbortedError("[builder] After federation build.");
-              }
-
-              if (hasLocales && localeFilter) {
-                translateFederationArtifacts(
-                  i18n,
-                  localeFilter,
-                  outputOptions.base,
-                  federationResult,
-                );
-              }
-
-              if (signal?.aborted) {
-                throw new AbortedError(
-                  "[builder] After federation translations.",
-                );
-              }
-
-              logger.info("Done!");
-
-              if (isLocalDevelopment) {
-                federationBuildNotifier.broadcastBuildCompletion();
-              }
-              return { success: true };
-            } catch (error) {
-              if (error instanceof AbortedError) {
-                logger.verbose(
-                  "Rebuild was canceled. Cancellation point: " + error?.message,
-                );
-                federationBuildNotifier.broadcastBuildCancellation();
-                return { success: false, cancelled: true };
-              }
-              logger.error("Federation rebuild failed!");
-              if (ngBuilderOptions.verbose) console.error(error);
-              if (isLocalDevelopment) {
-                federationBuildNotifier.broadcastBuildError(error);
-              }
-              return { success: false };
-            }
-          },
-          nextOutputPromise,
-        );
-
-        // Same trackResult shape as the remote builder, plus the iterator pump:
-        // the 'interrupted' branch feeds Angular's next output back into the loop
-        // (the remote builder has no iterator, so it just loops on its watcher).
-        if (trackResult.type === "completed") {
-          if (!trackResult.result.cancelled) {
-            ngBuildStatus = { success: trackResult.result.success };
-            yield ngBuildStatus;
-          }
-          buildResult = await nextOutputPromise;
-        } else {
-          buildResult = trackResult.value;
-        }
-      } else {
-        buildResult = await builderIterator.next();
+      // 'completed': the primed output is still pending — the next race consumes it.
+      // 'interrupted': the primed output resolved (a newer Angular build) — the next
+      // race consumes that resolved promise immediately, matching the old feed-back.
+      if (trackResult.type === "completed" && !trackResult.result.cancelled) {
+        ngBuildStatus = { success: trackResult.result.success };
+        yield ngBuildStatus;
       }
       first = false;
     }
