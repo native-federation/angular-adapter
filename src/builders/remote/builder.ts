@@ -135,13 +135,33 @@ export async function* runRemoteBuilder(
 
   await copyAllAssets(assetEntries, absoluteBrowserOutput, context.workspaceRoot);
 
-  if (changeWatcher) {
+  // Angular's SourceFileCache extends Map but keeps what it actually tracked in
+  // `typeScriptFileCache` (.ts) and `referencedFiles` (templates/styles); the
+  // outer Map stays empty. Reading only `keys()` therefore watches NOTHING, so
+  // shared-mapping and exposed sources never invalidate and the dev server keeps
+  // serving stale bundles until it is restarted.
+  const syncFederationWatcher = (): void => {
+    if (!changeWatcher) return;
+    const cache = normalized.options.federationCache.bundlerCache as {
+      keys(): IterableIterator<string>;
+      typeScriptFileCache?: Map<string, unknown>;
+      referencedFiles?: readonly string[];
+    };
+    const files = [
+      ...new Set<string>([
+        ...cache.keys(),
+        ...(cache.typeScriptFileCache?.keys() ?? []),
+        ...(cache.referencedFiles ?? [])
+      ])
+    ].filter((file) => !file.includes('node_modules'));
     syncNfFileWatcher(
       changeWatcher.watcher,
-      normalized.options.federationCache.bundlerCache,
+      { keys: () => files[Symbol.iterator]() },
       linkedDirs
     );
-  }
+  };
+
+  syncFederationWatcher();
 
   const rebuildQueue = new RebuildQueue();
 
@@ -197,11 +217,7 @@ export async function* runRemoteBuilder(
           // remain in pendingPaths and will drive the next iteration.
           for (const p of changedFiles) changeWatcher.pendingPaths.delete(p);
 
-          syncNfFileWatcher(
-            changeWatcher.watcher,
-            normalized.options.federationCache.bundlerCache,
-            linkedDirs
-          );
+          syncFederationWatcher();
 
           if (signal?.aborted) {
             throw new AbortedError('[remote-builder] After federation build.');

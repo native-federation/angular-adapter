@@ -425,6 +425,38 @@ export async function* runBuilder(
   const isUnderLinkedDir = (p: string): boolean =>
     linkedDirs.some((d) => p === d || p.startsWith(d + path.sep));
 
+  // Angular's SourceFileCache extends Map but keeps what it actually tracked in
+  // `typeScriptFileCache` (.ts) and `referencedFiles` (templates/styles); the
+  // outer Map stays empty. Reading only `keys()` therefore watches NOTHING, so
+  // shared-mapping and exposed sources never invalidate and the dev server keeps
+  // serving stale bundles until it is restarted.
+  const federationSourceFiles = (cache: {
+    keys(): IterableIterator<string>;
+    typeScriptFileCache?: Map<string, unknown>;
+    referencedFiles?: readonly string[];
+  }): string[] =>
+    [
+      ...new Set<string>([
+        ...cache.keys(),
+        ...(cache.typeScriptFileCache?.keys() ?? []),
+        ...(cache.referencedFiles ?? []),
+      ]),
+    ].filter((file) => !file.includes("node_modules"));
+
+  const federationWatchedFiles = new Set<string>();
+  const syncFederationWatcher = (): void => {
+    if (!nfWatcher) return;
+    const files = federationSourceFiles(
+      normalized.options.federationCache.bundlerCache,
+    );
+    for (const file of files) federationWatchedFiles.add(path.normalize(file));
+    syncNfFileWatcher(
+      nfWatcher,
+      { keys: () => files[Symbol.iterator]() },
+      linkedDirs,
+    );
+  };
+
   // watcherRef lets onChange reach the watcher without a const self-reference.
   const watcherRef: { current?: NfFileWatcher } = {};
   const nfWatcher: NfFileWatcher | undefined = watch
@@ -433,10 +465,16 @@ export async function* runBuilder(
         debounceMs: 100,
         onChange: (p) => {
           // Core stops filling the dirty buffer once onChange is set, so refill it
-          // here (Set.add stays idempotent if core is later fixed). Only wake the
-          // loop for linked edits; others ride the next Angular-driven rebuild.
+          // here (Set.add stays idempotent if core is later fixed). Wake the loop
+          // for edits the Angular-driven rebuild will NOT cover: linked dirs and
+          // the federation's own tracked sources, which are externals to the app
+          // build and so never reach Angular's rebuild iterator.
           watcherRef.current?.mutate((s) => s.add(p));
-          if (isUnderLinkedDir(p)) notifyChange();
+          if (
+            isUnderLinkedDir(p) ||
+            federationWatchedFiles.has(path.normalize(p))
+          )
+            notifyChange();
         },
       })
     : undefined;
@@ -474,13 +512,7 @@ export async function* runBuilder(
     await adapter.dispose("mapping-or-exposed").catch(() => undefined);
   }
 
-  if (nfWatcher) {
-    syncNfFileWatcher(
-      nfWatcher,
-      normalized.options.federationCache.bundlerCache,
-      linkedDirs,
-    );
-  }
+  syncFederationWatcher();
 
   const hasLocales = i18n?.locales && Object.keys(i18n.locales).length > 0;
   if (hasLocales && localeFilter) {
@@ -582,13 +614,7 @@ export async function* runBuilder(
         signal,
       );
 
-      if (nfWatcher) {
-        syncNfFileWatcher(
-          nfWatcher,
-          normalized.options.federationCache.bundlerCache,
-          linkedDirs,
-        );
-      }
+      syncFederationWatcher();
 
       if (signal?.aborted) {
         throw new AbortedError("[builder] After federation build.");
