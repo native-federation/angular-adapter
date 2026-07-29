@@ -25,7 +25,8 @@
     "@angular-devkit/core": "~20.3.1",
     "@angular-devkit/schematics": "~20.3.1",
     "@angular/build": "~20.3.1",
-    "@chialab/esbuild-plugin-commonjs": "^0.19.0"
+    "@chialab/esbuild-plugin-commonjs": "^0.19.0",
+    "mrmime": "^2.0.1"
   },
   "repository": {
     "type": "git",
