@@ -86,7 +86,10 @@ function migrateFederationConfigs(tree: Tree, workspace: any, options: UpdateV4S
     const requireRegex = /const\s+(\{[^}]+\})\s*=\s*require\(\s*['"]([^'"]+)['"]\s*\)\s*;?/g;
     const imports: string[] = [];
     content = content.replace(requireRegex, (_match, bindings: string, modulePath: string) => {
-      const updatedPath = modulePath.replace(V3_PACKAGE, V4_PACKAGE);
+      const updatedPath = modulePath.replace(
+        new RegExp(escapeRegExp(V3_PACKAGE) + '(?!-v4)'),
+        V4_PACKAGE
+      );
       imports.push(`import ${bindings} from '${updatedPath}';`);
       return ''; // Remove the require line; import will be prepended
     });
@@ -105,7 +108,7 @@ function migrateFederationConfigs(tree: Tree, workspace: any, options: UpdateV4S
       new RegExp(escapeRegExp(V3_PACKAGE + '/config'), 'g'),
       V4_PACKAGE + '/config'
     );
-    content = content.replace(new RegExp(escapeRegExp(V3_PACKAGE) + '(?!/)', 'g'), V4_PACKAGE);
+    content = content.replace(new RegExp(escapeRegExp(V3_PACKAGE) + '(?!/|-v4)', 'g'), V4_PACKAGE);
 
     if (content !== originalContent) {
       tree.delete(configPath);
