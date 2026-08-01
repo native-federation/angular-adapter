@@ -1,6 +1,6 @@
 {
   "name": "@angular-architects/native-federation",
-  "version": "22.0.5",
+  "version": "22.0.6",
   "generators": "./collection.json",
   "builders": "./builders.json",
   "schematics": "./collection.json",
@@ -18,7 +18,7 @@
     "@angular-devkit/schematics": "~22.0.0",
     "@chialab/esbuild-plugin-commonjs": "^0.19.0",
     "@softarc/native-federation": "^4.4.0",
-    "@softarc/native-federation-orchestrator": "^4.5.0",
+    "@softarc/native-federation-orchestrator": "^4.5.2",
     "es-module-shims": "^2.8.0",
     "esbuild": "^0.28.0",
     "mrmime": "^2.0.1"
