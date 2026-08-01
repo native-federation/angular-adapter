@@ -54,9 +54,9 @@ npm install @angular-architects/native-federation-v4
 
 ## Demo Repo
 
-In this [demo repo](https://github.com/Aukevanoost/native-federation-examples-ng/tree/v4), we test the new Native Federation major. For this, we compile demo apps build with them with Native Federation.
+In this [demo repo](https://github.com/native-federation/playground), we test the new Native Federation major. For this, we compile demo apps build with them with Native Federation.
 
-<a href="https://github.com/Aukevanoost/native-federation-examples-ng/tree/v4" target="_blank">
+<a href="https://github.com/native-federation/playground" target="_blank">
 <img width="500" src="https://github.com/angular-architects/module-federation-plugin/blob/main/libs/native-federation/demo-repo.png">
 </a>
 
