@@ -1,4 +1,4 @@
-import { createTreeWithEmptyWorkspace } from '@nx/devkit/testing.js';
+import { createTreeWithEmptyWorkspace } from '@nx/devkit/testing';
 import { type Tree, readProjectConfiguration } from '@nx/devkit';
 
 import generator from './generator.js';

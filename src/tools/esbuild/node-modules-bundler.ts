@@ -1,19 +1,19 @@
-import * as esbuild from 'esbuild';
-import * as path from 'path';
-import * as fs from 'fs';
+import * as esbuild from "esbuild";
+import * as path from "path";
+import * as fs from "fs";
 
 import {
   transformSupportedBrowsersToTargets,
   getSupportedBrowsers,
   JavaScriptTransformer,
   Cache,
-} from '@angular/build/private';
+} from "@angular/build/private";
 
-import { normalizeSourceMaps } from '../../utils/normalize-build-options.js';
+import { normalizeSourceMaps } from "../../utils/normalize-build-options.js";
 
-import type { NormalizedContextOptions } from '../../utils/normalize-context-options.js';
+import type { NormalizedContextOptions } from "../../utils/normalize-context-options.js";
 
-const LINKER_DECLARATION_PREFIX = 'ɵɵngDeclare';
+const LINKER_DECLARATION_PREFIX = "ɵɵngDeclare";
 
 /**
  * Excludes @angular/core and @angular/compiler which define the declarations
@@ -33,32 +33,32 @@ export function requiresLinking(filePath: string, source: string): boolean {
  *
  * Uses Angular's JavaScriptTransformer which handles linking internally.
  */
-function createAngularLinkerPlugin(
+export function createAngularLinkerPlugin(
   jsTransformer: JavaScriptTransformer,
-  advancedOptimizations: boolean
+  advancedOptimizations: boolean,
 ): esbuild.Plugin {
   return {
-    name: 'angular-linker',
+    name: "angular-linker",
     setup(build) {
-      build.onLoad({ filter: /\.m?js$/ }, async args => {
-        const contents = await fs.promises.readFile(args.path, 'utf-8');
+      build.onLoad({ filter: /\.m?js$/ }, async (args) => {
+        const contents = await fs.promises.readFile(args.path, "utf-8");
 
         const needsLinking = requiresLinking(args.path, contents);
 
         if (!needsLinking && !advancedOptimizations) {
-          return null;
+          return { contents, loader: "js" };
         }
 
         const result = await jsTransformer.transformData(
           args.path,
           contents,
           !needsLinking,
-          undefined
+          undefined,
         );
 
         return {
-          contents: Buffer.from(result).toString('utf-8'),
-          loader: 'js',
+          contents: Buffer.from(result).toString("utf-8"),
+          loader: "js",
         };
       });
     },
@@ -67,7 +67,9 @@ function createAngularLinkerPlugin(
 
 const jsTransformerCacheStores = new Map<string, Map<string, Uint8Array>>();
 
-function getOrCreateJsTransformerCacheStore(cachePath: string): Map<string, Uint8Array> {
+function getOrCreateJsTransformerCacheStore(
+  cachePath: string,
+): Map<string, Uint8Array> {
   let store = jsTransformerCacheStores.get(cachePath);
   if (!store) {
     store = new Map<string, Uint8Array>();
@@ -76,7 +78,9 @@ function getOrCreateJsTransformerCacheStore(cachePath: string): Map<string, Uint
   return store;
 }
 
-export async function createNodeModulesEsbuildContext(options: NormalizedContextOptions): Promise<{
+export async function createNodeModulesEsbuildContext(
+  options: NormalizedContextOptions,
+): Promise<{
   ctx: esbuild.BuildContext;
   pluginDisposed: Promise<void>;
 }> {
@@ -95,18 +99,23 @@ export async function createNodeModulesEsbuildContext(options: NormalizedContext
 
   const workspaceRoot = context.workspaceRoot;
 
-  const projectMetadata = await context.getProjectMetadata(context.target!.project);
+  const projectMetadata = await context.getProjectMetadata(
+    context.target!.project,
+  );
   const projectRoot = path.join(
     workspaceRoot,
-    (projectMetadata['root'] as string | undefined) ?? ''
+    (projectMetadata["root"] as string | undefined) ?? "",
   );
 
-  const browsers = getSupportedBrowsers(projectRoot, context.logger as unknown as Console);
+  const browsers = getSupportedBrowsers(
+    projectRoot,
+    context.logger as unknown as Console,
+  );
   const target = transformSupportedBrowsersToTargets(browsers);
 
   const sourcemapOptions = normalizeSourceMaps(builderOptions.sourceMap!);
 
-  const commonjsPluginModule = await import('@chialab/esbuild-plugin-commonjs');
+  const commonjsPluginModule = await import("@chialab/esbuild-plugin-commonjs");
   const commonjsPlugin = commonjsPluginModule.default;
 
   const customPlugins = Array.isArray(options.builderOptions.plugins)
@@ -115,8 +124,13 @@ export async function createNodeModulesEsbuildContext(options: NormalizedContext
 
   // Create JavaScriptTransformer for handling Angular partial compilation linking
   const advancedOptimizations = !dev;
-  const jsTransformerCacheStore = getOrCreateJsTransformerCacheStore(cache.cachePath);
-  const jsTransformerCache = new Cache<Uint8Array>(jsTransformerCacheStore, 'jstransformer');
+  const jsTransformerCacheStore = getOrCreateJsTransformerCacheStore(
+    cache.cachePath,
+  );
+  const jsTransformerCache = new Cache<Uint8Array>(
+    jsTransformerCacheStore,
+    "jstransformer",
+  );
   const jsTransformer = new JavaScriptTransformer(
     {
       sourcemap: !!sourcemapOptions.scripts,
@@ -125,29 +139,29 @@ export async function createNodeModulesEsbuildContext(options: NormalizedContext
       jit: false,
     },
     1, // maxThreads - keep low for node_modules bundling
-    jsTransformerCache
+    jsTransformerCache,
   );
 
   const config: esbuild.BuildOptions = {
-    entryPoints: entryPoints.map(ep => ({
+    entryPoints: entryPoints.map((ep) => ({
       in: ep.fileName,
       out: path.parse(ep.outName).name,
     })),
     outdir,
-    entryNames: hash ? '[name]-[hash]' : '[name]',
+    entryNames: hash ? "[name]-[hash]" : "[name]",
     write: false,
     external,
-    logLevel: 'warning',
+    logLevel: "warning",
     bundle: true,
     sourcemap: sourcemapOptions.scripts,
     minify: !dev,
     supported: {
-      'async-await': false,
-      'object-rest-spread': false,
+      "async-await": false,
+      "object-rest-spread": false,
     },
     splitting: chunks,
-    platform: platform ?? 'browser',
-    format: 'esm',
+    platform: platform ?? "browser",
+    format: "esm",
     target: target,
     logLimit: 1,
     plugins: [
@@ -156,11 +170,11 @@ export async function createNodeModulesEsbuildContext(options: NormalizedContext
       ...customPlugins,
     ],
     define: {
-      ...(dev ? {} : { ngDevMode: 'false' }),
-      ngJitMode: 'false',
+      ...(dev ? {} : { ngDevMode: "false" }),
+      ngJitMode: "false",
     },
     ...(builderOptions.loader ? { loader: builderOptions.loader } : {}),
-    resolveExtensions: ['.mjs', '.js', '.cjs'],
+    resolveExtensions: [".mjs", ".js", ".cjs"],
   };
 
   const ctx = await esbuild.context(config);
