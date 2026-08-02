@@ -27,6 +27,10 @@ import {
 
 import { createAngularBuildAdapter } from '../../tools/esbuild/angular-esbuild-adapter.js';
 import { checkForInvalidImports } from '../../utils/check-for-invalid-imports.js';
+import {
+  describeFederationCache,
+  federationSourceFiles
+} from '../../utils/federation-source-files.js';
 
 import type { NfRemoteBuilderSchema, NfRemoteInternalOptions } from './schema.js';
 import { resolveNgBuilderOptions } from './resolve-ng-options.js';
@@ -95,6 +99,11 @@ export async function* runRemoteBuilder(
   const start = process.hrtime();
   logger.measure(start, 'To load the federation config.');
 
+  // Which TS compilation path the build takes is decided by module-load order
+  // (see the note in build/builder.ts); pair this with the "SourceFileCache
+  // tracked files" line to see which path actually ran.
+  logger.verbose(`NG_BUILD_PARALLEL_TS=${process.env['NG_BUILD_PARALLEL_TS'] ?? '(unset)'}`);
+
   const externals = getExternals(normalized.config);
 
   // Realpath'd dirs of npm-linked shared packages (`[]` if none, making the
@@ -135,25 +144,12 @@ export async function* runRemoteBuilder(
 
   await copyAllAssets(assetEntries, absoluteBrowserOutput, context.workspaceRoot);
 
-  // Angular's SourceFileCache extends Map but keeps what it actually tracked in
-  // `typeScriptFileCache` (.ts) and `referencedFiles` (templates/styles); the
-  // outer Map stays empty. Reading only `keys()` therefore watches NOTHING, so
-  // shared-mapping and exposed sources never invalidate and the dev server keeps
-  // serving stale bundles until it is restarted.
+  // Watch what the federation compilation actually tracked — where the cache
+  // records it depends on the TS compilation path; see federationSourceFiles.
   const syncFederationWatcher = (): void => {
     if (!changeWatcher) return;
-    const cache = normalized.options.federationCache.bundlerCache as {
-      keys(): IterableIterator<string>;
-      typeScriptFileCache?: Map<string, unknown>;
-      referencedFiles?: readonly string[];
-    };
-    const files = [
-      ...new Set<string>([
-        ...cache.keys(),
-        ...(cache.typeScriptFileCache?.keys() ?? []),
-        ...(cache.referencedFiles ?? [])
-      ])
-    ].filter((file) => !file.includes('node_modules'));
+    logger.verbose(describeFederationCache(normalized.options.federationCache.bundlerCache));
+    const files = federationSourceFiles(normalized.options.federationCache.bundlerCache);
     syncNfFileWatcher(
       changeWatcher.watcher,
       { keys: () => files[Symbol.iterator]() },
