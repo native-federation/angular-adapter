@@ -31,6 +31,7 @@ import {
   describeFederationCache,
   federationSourceFiles
 } from '../../utils/federation-source-files.js';
+import { createStaleWatchEventFilter } from '../../utils/stale-watch-event-filter.js';
 
 import type { NfRemoteBuilderSchema, NfRemoteInternalOptions } from './schema.js';
 import { resolveNgBuilderOptions } from './resolve-ng-options.js';
@@ -117,8 +118,12 @@ export async function* runRemoteBuilder(
     projectSourceRoot
   );
 
+  // staleEvents guards the wide watch list: macOS FSEvents replays events for
+  // recently-edited files without a content change, and unguarded that replay
+  // rebuilds forever (see stale-watch-event-filter.ts).
+  const staleEvents = createStaleWatchEventFilter();
   const changeWatcher = nfBuilderOptions.watch
-    ? createDebouncedChangeWatcher(nfBuilderOptions.rebuildDelay)
+    ? createDebouncedChangeWatcher(nfBuilderOptions.rebuildDelay, staleEvents.isRealChange)
     : undefined;
 
   if (changeWatcher) {
@@ -150,6 +155,7 @@ export async function* runRemoteBuilder(
     if (!changeWatcher) return;
     logger.verbose(describeFederationCache(normalized.options.federationCache.bundlerCache));
     const files = federationSourceFiles(normalized.options.federationCache.bundlerCache);
+    for (const file of files) staleEvents.seed(file);
     syncNfFileWatcher(
       changeWatcher.watcher,
       { keys: () => files[Symbol.iterator]() },

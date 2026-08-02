@@ -50,6 +50,7 @@ import {
   describeFederationCache,
   federationSourceFiles,
 } from "./../../utils/federation-source-files.js";
+import { createStaleWatchEventFilter } from "./../../utils/stale-watch-event-filter.js";
 import { federationBuildNotifier } from "./federation-build-notifier.js";
 import type { NfBuilderSchema, NfInternalOptions } from "./schema.js";
 import { createAngularBuildAdapter } from "../../tools/esbuild/angular-esbuild-adapter.js";
@@ -446,7 +447,11 @@ export async function* runBuilder(
 
   // Watch what the federation compilation actually tracked — where the cache
   // records it depends on the TS compilation path; see federationSourceFiles.
+  // staleEvents guards the wide watch list: macOS FSEvents replays events for
+  // recently-edited files without a content change, and unguarded that replay
+  // wakes the loop forever (see stale-watch-event-filter.ts).
   const federationWatchedFiles = new Set<string>();
+  const staleEvents = createStaleWatchEventFilter();
   const syncFederationWatcher = (): void => {
     if (!nfWatcher) return;
     logger.verbose(
@@ -455,7 +460,13 @@ export async function* runBuilder(
     const files = federationSourceFiles(
       normalized.options.federationCache.bundlerCache,
     );
-    for (const file of files) federationWatchedFiles.add(path.normalize(file));
+    for (const file of files) {
+      const normalizedFile = path.normalize(file);
+      if (!federationWatchedFiles.has(normalizedFile)) {
+        federationWatchedFiles.add(normalizedFile);
+        staleEvents.seed(normalizedFile);
+      }
+    }
     syncNfFileWatcher(
       nfWatcher,
       { keys: () => files[Symbol.iterator]() },
@@ -470,6 +481,9 @@ export async function* runBuilder(
         // Coalesce ng-packagr's atomic multi-write bursts into one rebuild.
         debounceMs: 100,
         onChange: (p) => {
+          // Same-mtime replays never reach the dirty buffer — buffering them
+          // would rebuild federation outputs for files that did not change.
+          if (!staleEvents.isRealChange(p)) return;
           // Core stops filling the dirty buffer once onChange is set, so refill it
           // here (Set.add stays idempotent if core is later fixed). Wake the loop
           // for edits the Angular-driven rebuild will NOT cover: linked dirs and
