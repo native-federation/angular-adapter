@@ -142,6 +142,29 @@ describe("shouldWakeFederation", () => {
     ).toBe(false);
   });
 
+  // Regression: the wake dirs arrive with native separators while core delivers
+  // posix paths, so comparing against `dir + path.sep` was always false on
+  // Windows. Backslash dirs make that reproducible off Windows.
+  it("wakes for a posix event path against a backslash wake dir", () => {
+    expect(
+      shouldWakeFederation(
+        "C:/ws/libs/internal/src/logging/audit.service.ts",
+        new Set<string>(),
+        ["C:\\ws\\libs\\internal\\src\\logging"],
+      ),
+    ).toBe(true);
+  });
+
+  it("still rejects a sibling name prefix across separator styles", () => {
+    expect(
+      shouldWakeFederation(
+        "C:/ws/libs/internal/src/logging-other/thing.ts",
+        new Set<string>(),
+        ["C:\\ws\\libs\\internal\\src\\logging"],
+      ),
+    ).toBe(false);
+  });
+
   it("matches tracked files regardless of path separators in the event", () => {
     expect(
       shouldWakeFederation(

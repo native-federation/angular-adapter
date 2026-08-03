@@ -1,5 +1,7 @@
 import * as path from "path";
 
+import { isUnderAnyDir } from "@softarc/native-federation/internal";
+
 export interface FederationFreshness {
   /** Record the outcome of a watcher-driven federation rebuild. */
   mark(success: boolean): void;
@@ -46,14 +48,17 @@ export function shouldRunWatcherRebuild(
  * what that set cannot: linked shared packages (externals to the app build) and
  * shared-mapping source dirs, where a *newly created* file is by definition
  * absent from any compiled-inputs set and is not yet imported by the app.
+ *
+ * Core's `isUnderAnyDir` rather than a `path.sep` comparison: it delivers posix
+ * paths, so splicing in the native separator is always false on Windows.
  */
 export function shouldWakeFederation(
   changedPath: string,
   watchedFiles: ReadonlySet<string>,
   wakeDirs: readonly string[],
 ): boolean {
-  const underWakeDir = wakeDirs.some(
-    (d) => changedPath === d || changedPath.startsWith(d + path.sep),
+  return (
+    isUnderAnyDir(changedPath, wakeDirs) ||
+    watchedFiles.has(path.normalize(changedPath))
   );
-  return underWakeDir || watchedFiles.has(path.normalize(changedPath));
 }
