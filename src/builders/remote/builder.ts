@@ -27,6 +27,11 @@ import {
 
 import { createAngularBuildAdapter } from '../../tools/esbuild/angular-esbuild-adapter.js';
 import { checkForInvalidImports } from '../../utils/check-for-invalid-imports.js';
+import {
+  describeFederationCache,
+  federationSourceFiles
+} from '../../utils/federation-source-files.js';
+import { createStaleWatchEventFilter } from '../../utils/stale-watch-event-filter.js';
 
 import type { NfRemoteBuilderSchema, NfRemoteInternalOptions } from './schema.js';
 import { resolveNgBuilderOptions } from './resolve-ng-options.js';
@@ -95,6 +100,11 @@ export async function* runRemoteBuilder(
   const start = process.hrtime();
   logger.measure(start, 'To load the federation config.');
 
+  // Which TS compilation path the build takes is decided by module-load order
+  // (see the note in build/builder.ts); pair this with the "SourceFileCache
+  // tracked files" line to see which path actually ran.
+  logger.verbose(`NG_BUILD_PARALLEL_TS=${process.env['NG_BUILD_PARALLEL_TS'] ?? '(unset)'}`);
+
   const externals = getExternals(normalized.config);
 
   // Realpath'd dirs of npm-linked shared packages (`[]` if none, making the
@@ -108,8 +118,12 @@ export async function* runRemoteBuilder(
     projectSourceRoot
   );
 
+  // staleEvents guards the wide watch list: macOS FSEvents replays events for
+  // recently-edited files without a content change, and unguarded that replay
+  // rebuilds forever (see stale-watch-event-filter.ts).
+  const staleEvents = createStaleWatchEventFilter();
   const changeWatcher = nfBuilderOptions.watch
-    ? createDebouncedChangeWatcher(nfBuilderOptions.rebuildDelay)
+    ? createDebouncedChangeWatcher(nfBuilderOptions.rebuildDelay, staleEvents.isRealChange)
     : undefined;
 
   if (changeWatcher) {
@@ -135,13 +149,21 @@ export async function* runRemoteBuilder(
 
   await copyAllAssets(assetEntries, absoluteBrowserOutput, context.workspaceRoot);
 
-  if (changeWatcher) {
+  // Watch what the federation compilation actually tracked — where the cache
+  // records it depends on the TS compilation path; see federationSourceFiles.
+  const syncFederationWatcher = (): void => {
+    if (!changeWatcher) return;
+    logger.verbose(describeFederationCache(normalized.options.federationCache.bundlerCache));
+    const files = federationSourceFiles(normalized.options.federationCache.bundlerCache);
+    for (const file of files) staleEvents.seed(file);
     syncNfFileWatcher(
       changeWatcher.watcher,
-      normalized.options.federationCache.bundlerCache,
+      { keys: () => files[Symbol.iterator]() },
       linkedDirs
     );
-  }
+  };
+
+  syncFederationWatcher();
 
   const rebuildQueue = new RebuildQueue();
 
@@ -197,11 +219,7 @@ export async function* runRemoteBuilder(
           // remain in pendingPaths and will drive the next iteration.
           for (const p of changedFiles) changeWatcher.pendingPaths.delete(p);
 
-          syncNfFileWatcher(
-            changeWatcher.watcher,
-            normalized.options.federationCache.bundlerCache,
-            linkedDirs
-          );
+          syncFederationWatcher();
 
           if (signal?.aborted) {
             throw new AbortedError('[remote-builder] After federation build.');

@@ -8,7 +8,10 @@ export interface DebouncedChangeWatcher {
   dispose: () => void;
 }
 
-export function createDebouncedChangeWatcher(rebuildDelay: number): DebouncedChangeWatcher {
+export function createDebouncedChangeWatcher(
+  rebuildDelay: number,
+  isRealChange?: (path: string) => boolean
+): DebouncedChangeWatcher {
   const pendingPaths = new Set<string>();
 
   let notifyChange: () => void = () => {};
@@ -30,6 +33,10 @@ export function createDebouncedChangeWatcher(rebuildDelay: number): DebouncedCha
 
   const watcher = createNfWatcher({
     onChange: p => {
+      // Same-mtime replays (macOS FSEvents re-delivers events for recently
+      // edited files) must not enter pendingPaths: each entry drives a full
+      // rebuild cycle, so unfiltered replays rebuild forever.
+      if (isRealChange && !isRealChange(p)) return;
       pendingPaths.add(p);
       scheduleNotify();
     },
