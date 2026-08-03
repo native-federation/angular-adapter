@@ -612,6 +612,7 @@ export async function* runBuilder(
       if (isLocalDevelopment) {
         federationBuildNotifier.broadcastBuildCompletion();
       }
+
       return { success: true };
     } catch (error) {
       if (error instanceof AbortedError) {
@@ -714,6 +715,9 @@ export async function* runBuilder(
     if (isLocalDevelopment) {
       federationBuildNotifier.stopEventServer();
     }
+
+    // TODO: fix retry issue from #106
+    setTimeout(() => process.exit(ngBuildStatus.success ? 0 : 1), 500).unref();
   }
 
   yield ngBuildStatus;
