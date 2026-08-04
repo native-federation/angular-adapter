@@ -1,3 +1,5 @@
+// Must stay the first import: it sets NG_BUILD_* before @angular/build snapshots them,
+// and its detection must not see this file's own @angular/build imports.
 import './setup-builder-env-variables.js';
 
 import * as path from 'path';
@@ -27,10 +29,7 @@ import {
 
 import { createAngularBuildAdapter } from '../../tools/esbuild/angular-esbuild-adapter.js';
 import { checkForInvalidImports } from '../../utils/check-for-invalid-imports.js';
-import {
-  describeFederationCache,
-  federationSourceFiles
-} from '../../utils/federation-source-files.js';
+import { federationSourceFiles } from '../../utils/federation-source-files.js';
 import { createStaleWatchEventFilter } from '../../utils/stale-watch-event-filter.js';
 
 import type { NfRemoteBuilderSchema, NfRemoteInternalOptions } from './schema.js';
@@ -153,7 +152,6 @@ export async function* runRemoteBuilder(
   // records it depends on the TS compilation path; see federationSourceFiles.
   const syncFederationWatcher = (): void => {
     if (!changeWatcher) return;
-    logger.verbose(describeFederationCache(normalized.options.federationCache.bundlerCache));
     const files = federationSourceFiles(normalized.options.federationCache.bundlerCache);
     for (const file of files) staleEvents.seed(file);
     syncNfFileWatcher(

@@ -1,7 +1,7 @@
 import { SourceFileCache } from '@angular/build/private';
 import type ts from 'typescript';
 
-import { describeFederationCache, federationSourceFiles } from './federation-source-files.js';
+import { federationSourceFiles } from './federation-source-files.js';
 
 function cacheWith(options: {
   outer?: readonly string[];
@@ -63,18 +63,5 @@ describe('federationSourceFiles', () => {
     const cache = cacheWith({ typeScript: ['/app/only.ts'] });
 
     expect(federationSourceFiles(cache)).toEqual(['/app/only.ts']);
-  });
-});
-
-describe('describeFederationCache', () => {
-  it('reports the size of each tracking source', () => {
-    const cache = cacheWith({
-      typeScript: ['/app/a.ts', '/app/b.ts'],
-      referenced: ['/app/a.html'],
-    });
-
-    expect(describeFederationCache(cache)).toBe(
-      'SourceFileCache tracked files: outer=0, typeScript=2, referenced=1',
-    );
   });
 });
