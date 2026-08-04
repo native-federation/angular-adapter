@@ -158,10 +158,12 @@ describe("shouldWakeFederation", () => {
     ).toBe(false);
   });
 
-  // With `sharedMappings` unset core promotes every tsconfig `paths` entry, so an
-  // entry point near the workspace root yields a wake dir containing dist. The
+  // A wake dir is the dir of a mapping's resolved entry point, so a mapping whose
+  // entry point sits beside the build output yields a wake dir containing it. The
   // rebuild writes there with a fresh mtime — not a replay, so core delivers it —
-  // and without the guard that wake drives the next rebuild, forever.
+  // and without the guard that wake drives the next rebuild, forever. Measured on
+  // the nx playground with the output moved into a mapping dir: one source edit
+  // produced 88 rebuilds in 60s and still climbing, vs 1 with the guard on.
   it("does not wake for the output it just wrote, under a workspace-root wake dir", () => {
     const rootWakeDirs = [path.normalize("/ws")];
 

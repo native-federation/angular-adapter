@@ -52,12 +52,12 @@ export function shouldRunWatcherRebuild(
  * Core's `isUnderAnyDir` rather than a `path.sep` comparison: it delivers posix
  * paths, so splicing in the native separator is always false on Windows.
  *
- * `outputPath` is excluded first: with `sharedMappings` unset core promotes every
- * tsconfig `paths` entry to a mapping, so an entry point near the workspace root
- * yields a wake dir containing the federation output — and a rebuild writes there
- * with a fresh mtime, which is not a replay, so the loop would wake itself forever.
- * Filtering the event rather than dropping the dir keeps the rest of that dir's
- * sources woken.
+ * `outputPath` is excluded first. A wake dir is the directory of a mapping's
+ * resolved entry point, so a mapping whose entry point sits beside the build
+ * output yields a wake dir that contains it — and a rebuild writes there with a
+ * fresh mtime, which is no replay, so the loop would wake itself forever.
+ * Filtering the event rather than dropping the dir keeps that dir's real sources
+ * woken.
  */
 export function shouldWakeFederation(
   changedPath: string,
