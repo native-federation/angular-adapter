@@ -24,17 +24,3 @@ export function federationSourceFiles(cache: SourceFileCache): string[] {
     ]),
   ].filter((file) => !file.includes('node_modules'));
 }
-
-/**
- * One-line fingerprint of where the cache tracked its files, for diagnosing
- * which compilation path a dev server is on: a populated outer Map means
- * in-process type checking (`NG_BUILD_PARALLEL_TS=0`); an empty outer Map
- * alongside a populated `typeScriptFileCache` means the parallel-TS path.
- */
-export function describeFederationCache(cache: SourceFileCache): string {
-  return (
-    `SourceFileCache tracked files: outer=${cache.size}, ` +
-    `typeScript=${cache.typeScriptFileCache.size}, ` +
-    `referenced=${cache.referencedFiles?.length ?? 0}`
-  );
-}
