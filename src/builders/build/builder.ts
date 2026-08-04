@@ -458,6 +458,10 @@ export async function* runBuilder(
   // nor linkedDirs, so without it core buffers the change and nothing consumes it.
   const sharedDirs = sharedMappingDirs(normalized.config);
   const wakeDirs = [...linkedDirs, ...sharedDirs];
+  const federationOutputPath = path.resolve(
+    context.workspaceRoot,
+    normalized.options.outputPath,
+  );
 
   const nfWatcher: NfFileWatcher | undefined = watch
     ? createNfWatcher({
@@ -467,7 +471,14 @@ export async function* runBuilder(
           // Core has already buffered p (and dropped it if it was a replay); this
           // only wakes the loop for edits the Angular-driven rebuild will NOT
           // cover — see shouldWakeFederation.
-          if (shouldWakeFederation(p, federationWatchedFiles, wakeDirs)) {
+          if (
+            shouldWakeFederation(
+              p,
+              federationWatchedFiles,
+              wakeDirs,
+              federationOutputPath,
+            )
+          ) {
             notifyChange();
           }
         },

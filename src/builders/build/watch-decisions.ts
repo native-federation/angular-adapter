@@ -1,6 +1,6 @@
 import * as path from "path";
 
-import { isUnderAnyDir } from "@softarc/native-federation/internal";
+import { isUnderAnyDir, isUnderDir } from "@softarc/native-federation/internal";
 
 export interface FederationFreshness {
   /** Record the outcome of a watcher-driven federation rebuild. */
@@ -51,12 +51,22 @@ export function shouldRunWatcherRebuild(
  *
  * Core's `isUnderAnyDir` rather than a `path.sep` comparison: it delivers posix
  * paths, so splicing in the native separator is always false on Windows.
+ *
+ * `outputPath` is excluded first: with `sharedMappings` unset core promotes every
+ * tsconfig `paths` entry to a mapping, so an entry point near the workspace root
+ * yields a wake dir containing the federation output — and a rebuild writes there
+ * with a fresh mtime, which is not a replay, so the loop would wake itself forever.
+ * Filtering the event rather than dropping the dir keeps the rest of that dir's
+ * sources woken.
  */
 export function shouldWakeFederation(
   changedPath: string,
   watchedFiles: ReadonlySet<string>,
   wakeDirs: readonly string[],
+  outputPath: string,
 ): boolean {
+  if (isUnderDir(changedPath, outputPath)) return false;
+
   return (
     isUnderAnyDir(changedPath, wakeDirs) ||
     watchedFiles.has(path.normalize(changedPath))

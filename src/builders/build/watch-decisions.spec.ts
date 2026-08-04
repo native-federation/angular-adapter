@@ -92,6 +92,7 @@ describe("shouldWakeFederation", () => {
   const linkedDir = path.normalize("/ws/node_modules/.links/my-lib");
   const sharedDir = path.normalize("/ws/libs/internal/src/logging");
   const wakeDirs = [linkedDir, sharedDir];
+  const outDir = path.normalize("/ws/dist/host");
 
   it("wakes for a federation-tracked source", () => {
     expect(
@@ -99,6 +100,7 @@ describe("shouldWakeFederation", () => {
         "/ws/apps/host/src/app/app.component.ts",
         watched,
         wakeDirs,
+        outDir,
       ),
     ).toBe(true);
   });
@@ -109,12 +111,15 @@ describe("shouldWakeFederation", () => {
         path.join(linkedDir, "src", "lib", "thing.ts"),
         watched,
         wakeDirs,
+        outDir,
       ),
     ).toBe(true);
   });
 
   it("wakes for a wake dir itself", () => {
-    expect(shouldWakeFederation(linkedDir, watched, wakeDirs)).toBe(true);
+    expect(shouldWakeFederation(linkedDir, watched, wakeDirs, outDir)).toBe(
+      true,
+    );
   });
 
   // The reason sharedMappingDirs is in the wake set: a file created since the
@@ -125,21 +130,74 @@ describe("shouldWakeFederation", () => {
         path.join(sharedDir, "audit.service.ts"),
         watched,
         wakeDirs,
+        outDir,
       ),
     ).toBe(true);
   });
 
   it("does not wake for an unrelated path", () => {
     expect(
-      shouldWakeFederation("/ws/apps/host/src/styles.css", watched, wakeDirs),
+      shouldWakeFederation(
+        "/ws/apps/host/src/styles.css",
+        watched,
+        wakeDirs,
+        outDir,
+      ),
     ).toBe(false);
   });
 
   // A sibling whose name merely starts with a wake dir's name is outside it.
   it("does not wake for a wake-dir name prefix", () => {
     expect(
-      shouldWakeFederation(sharedDir + "-other/src/index.ts", watched, wakeDirs),
+      shouldWakeFederation(
+        sharedDir + "-other/src/index.ts",
+        watched,
+        wakeDirs,
+        outDir,
+      ),
     ).toBe(false);
+  });
+
+  // With `sharedMappings` unset core promotes every tsconfig `paths` entry, so an
+  // entry point near the workspace root yields a wake dir containing dist. The
+  // rebuild writes there with a fresh mtime — not a replay, so core delivers it —
+  // and without the guard that wake drives the next rebuild, forever.
+  it("does not wake for the output it just wrote, under a workspace-root wake dir", () => {
+    const rootWakeDirs = [path.normalize("/ws")];
+
+    expect(
+      shouldWakeFederation(
+        path.join(outDir, "remoteEntry.json"),
+        watched,
+        rootWakeDirs,
+        outDir,
+      ),
+    ).toBe(false);
+  });
+
+  it("still wakes for a source under that same workspace-root wake dir", () => {
+    const rootWakeDirs = [path.normalize("/ws")];
+
+    expect(
+      shouldWakeFederation(
+        "/ws/libs/internal/src/logging/audit.service.ts",
+        watched,
+        rootWakeDirs,
+        outDir,
+      ),
+    ).toBe(true);
+  });
+
+  // The guard is containment, not a string prefix: `dist/host-e2e` is not output.
+  it("wakes for a sibling of the output dir", () => {
+    expect(
+      shouldWakeFederation(
+        outDir + "-e2e/src/app.po.ts",
+        watched,
+        [path.normalize("/ws")],
+        outDir,
+      ),
+    ).toBe(true);
   });
 
   // Regression: the wake dirs arrive with native separators while core delivers
@@ -151,6 +209,7 @@ describe("shouldWakeFederation", () => {
         "C:/ws/libs/internal/src/logging/audit.service.ts",
         new Set<string>(),
         ["C:\\ws\\libs\\internal\\src\\logging"],
+        "C:\\ws\\dist\\host",
       ),
     ).toBe(true);
   });
@@ -161,6 +220,19 @@ describe("shouldWakeFederation", () => {
         "C:/ws/libs/internal/src/logging-other/thing.ts",
         new Set<string>(),
         ["C:\\ws\\libs\\internal\\src\\logging"],
+        "C:\\ws\\dist\\host",
+      ),
+    ).toBe(false);
+  });
+
+  // The output path reaches the guard with native separators too.
+  it("rejects a posix output event against a backslash output path", () => {
+    expect(
+      shouldWakeFederation(
+        "C:/ws/dist/host/remoteEntry.json",
+        new Set<string>(),
+        ["C:\\ws"],
+        "C:\\ws\\dist\\host",
       ),
     ).toBe(false);
   });
@@ -171,6 +243,7 @@ describe("shouldWakeFederation", () => {
         "/ws/apps/host/src/app/../app/app.component.ts",
         watched,
         wakeDirs,
+        outDir,
       ),
     ).toBe(true);
   });
