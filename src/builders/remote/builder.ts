@@ -1,3 +1,5 @@
+// Must stay the first import: it sets NG_BUILD_* before @angular/build snapshots them,
+// and its detection must not see this file's own @angular/build imports.
 import './setup-builder-env-variables.js';
 
 import * as path from 'path';
@@ -28,10 +30,7 @@ import {
 
 import { createAngularBuildAdapter } from '../../tools/esbuild/angular-esbuild-adapter.js';
 import { checkForInvalidImports } from '../../utils/check-for-invalid-imports.js';
-import {
-  describeFederationCache,
-  federationSourceFiles
-} from '../../utils/federation-source-files.js';
+import { federationSourceFiles } from '../../utils/federation-source-files.js';
 
 import type { NfRemoteBuilderSchema, NfRemoteInternalOptions } from './schema.js';
 import { resolveNgBuilderOptions } from './resolve-ng-options.js';
@@ -100,11 +99,6 @@ export async function* runRemoteBuilder(
   const start = process.hrtime();
   logger.measure(start, 'To load the federation config.');
 
-  // Which TS compilation path the build takes is decided by module-load order
-  // (see the note in build/builder.ts); pair this with the "SourceFileCache
-  // tracked files" line to see which path actually ran.
-  logger.verbose(`NG_BUILD_PARALLEL_TS=${process.env['NG_BUILD_PARALLEL_TS'] ?? '(unset)'}`);
-
   const externals = getExternals(normalized.config);
 
   // Realpath'd dirs of npm-linked shared packages (`[]` if none, making the
@@ -153,7 +147,6 @@ export async function* runRemoteBuilder(
   // records it depends on the TS compilation path; see federationSourceFiles.
   const syncFederationWatcher = (): void => {
     if (!changeWatcher) return;
-    logger.verbose(describeFederationCache(normalized.options.federationCache.bundlerCache));
     const files = federationSourceFiles(normalized.options.federationCache.bundlerCache);
     syncNfFileWatcher(changeWatcher.watcher, files, linkedDirs);
   };

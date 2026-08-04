@@ -1,3 +1,5 @@
+// Must stay the first import: it sets NG_BUILD_* before @angular/build snapshots them,
+// and its detection must not see this file's own @angular/build imports.
 import "./setup-builder-env-variables.js";
 
 import * as fs from "fs";
@@ -47,10 +49,7 @@ import {
 import { type Plugin, type PluginBuild } from "esbuild";
 import { devHostInstancesPlugin } from "../../plugin/dev-host-instances-plugin.js";
 import { checkForInvalidImports } from "./../../utils/check-for-invalid-imports.js";
-import {
-  describeFederationCache,
-  federationSourceFiles,
-} from "./../../utils/federation-source-files.js";
+import { federationSourceFiles } from "./../../utils/federation-source-files.js";
 import { federationBuildNotifier } from "./federation-build-notifier.js";
 import {
   createFederationFreshness,
@@ -305,16 +304,6 @@ export async function* runBuilder(
   const start = process.hrtime();
   logger.measure(start, "To load the federation config.");
 
-  // Which TS compilation path the build takes is decided by module-load order:
-  // setup-builder-env-variables.ts sets NG_BUILD_PARALLEL_TS=0, but
-  // @angular/build captures it in a module-level const, so anything importing
-  // @angular/build first (common under Nx) wins. Pair this with the
-  // "SourceFileCache tracked files" line to see which path actually ran:
-  // outer=0 with typeScript>0 means the parallel path despite the env value.
-  logger.verbose(
-    `NG_BUILD_PARALLEL_TS=${process.env["NG_BUILD_PARALLEL_TS"] ?? "(unset)"}`,
-  );
-
   const externals = getExternals(normalized.config);
 
   // Realpath'd dirs of npm-linked shared packages (`[]` if none, making the
@@ -453,9 +442,6 @@ export async function* runBuilder(
   const federationWatchedFiles = new Set<string>();
   const syncFederationWatcher = (): void => {
     if (!nfWatcher) return;
-    logger.verbose(
-      describeFederationCache(normalized.options.federationCache.bundlerCache),
-    );
     const files = federationSourceFiles(
       normalized.options.federationCache.bundlerCache,
     );
