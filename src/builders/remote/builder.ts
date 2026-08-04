@@ -25,12 +25,12 @@ import {
   getDefaultCachePath,
   syncNfFileWatcher,
   linkedSharedDirs,
+  sharedMappingDirs,
 } from '@softarc/native-federation/internal';
 
 import { createAngularBuildAdapter } from '../../tools/esbuild/angular-esbuild-adapter.js';
 import { checkForInvalidImports } from '../../utils/check-for-invalid-imports.js';
 import { federationSourceFiles } from '../../utils/federation-source-files.js';
-import { createStaleWatchEventFilter } from '../../utils/stale-watch-event-filter.js';
 
 import type { NfRemoteBuilderSchema, NfRemoteInternalOptions } from './schema.js';
 import { resolveNgBuilderOptions } from './resolve-ng-options.js';
@@ -99,11 +99,6 @@ export async function* runRemoteBuilder(
   const start = process.hrtime();
   logger.measure(start, 'To load the federation config.');
 
-  // Which TS compilation path the build takes is decided by module-load order
-  // (see the note in build/builder.ts); pair this with the "SourceFileCache
-  // tracked files" line to see which path actually ran.
-  logger.verbose(`NG_BUILD_PARALLEL_TS=${process.env['NG_BUILD_PARALLEL_TS'] ?? '(unset)'}`);
-
   const externals = getExternals(normalized.config);
 
   // Realpath'd dirs of npm-linked shared packages (`[]` if none, making the
@@ -117,18 +112,18 @@ export async function* runRemoteBuilder(
     projectSourceRoot
   );
 
-  // staleEvents guards the wide watch list: macOS FSEvents replays events for
-  // recently-edited files without a content change, and unguarded that replay
-  // rebuilds forever (see stale-watch-event-filter.ts).
-  const staleEvents = createStaleWatchEventFilter();
   const changeWatcher = nfBuilderOptions.watch
-    ? createDebouncedChangeWatcher(nfBuilderOptions.rebuildDelay, staleEvents.isRealChange)
+    ? createDebouncedChangeWatcher(nfBuilderOptions.rebuildDelay)
     : undefined;
 
   if (changeWatcher) {
-    changeWatcher.watcher.addPaths(
-      path.dirname(path.resolve(context.workspaceRoot, federationTsConfig))
-    );
+    // sharedMappingDirs is derived from config, not from a build's inputs, so it
+    // also covers files added to a shared lib since the last build — which a
+    // compiled-inputs watch set structurally cannot.
+    changeWatcher.watcher.addPaths([
+      path.dirname(path.resolve(context.workspaceRoot, federationTsConfig)),
+      ...sharedMappingDirs(normalized.config),
+    ]);
     for (const assetDir of getAssetWatchDirs(assetEntries, context.workspaceRoot)) {
       changeWatcher.watcher.addPaths(assetDir);
     }
@@ -153,12 +148,7 @@ export async function* runRemoteBuilder(
   const syncFederationWatcher = (): void => {
     if (!changeWatcher) return;
     const files = federationSourceFiles(normalized.options.federationCache.bundlerCache);
-    for (const file of files) staleEvents.seed(file);
-    syncNfFileWatcher(
-      changeWatcher.watcher,
-      { keys: () => files[Symbol.iterator]() },
-      linkedDirs
-    );
+    syncNfFileWatcher(changeWatcher.watcher, files, linkedDirs);
   };
 
   syncFederationWatcher();
