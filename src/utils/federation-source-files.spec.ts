@@ -1,7 +1,13 @@
 import { SourceFileCache } from '@angular/build/private';
 import type ts from 'typescript';
 
-import { describeFederationCache, federationSourceFiles } from './federation-source-files.js';
+import * as path from 'path';
+
+import {
+  describeFederationCache,
+  federationSourceFiles,
+  federationWatchPaths,
+} from './federation-source-files.js';
 
 function cacheWith(options: {
   outer?: readonly string[];
@@ -75,6 +81,60 @@ describe('describeFederationCache', () => {
 
     expect(describeFederationCache(cache)).toBe(
       'SourceFileCache tracked files: outer=0, typeScript=2, referenced=1',
+    );
+  });
+});
+
+describe('federationWatchPaths', () => {
+  const root = path.resolve('/workspace');
+
+  it('collapses workspace files into their top-level source trees', () => {
+    const paths = federationWatchPaths(
+      [
+        path.join(root, 'libs', 'a', 'src', 'index.ts'),
+        path.join(root, 'libs', 'b', 'src', 'index.ts'),
+        path.join(root, 'apps', 'shell', 'main.ts'),
+      ],
+      root,
+    );
+
+    expect(paths.sort()).toEqual([path.join(root, 'apps'), path.join(root, 'libs')].sort());
+  });
+
+  it('keeps files outside the workspace as single-file watches', () => {
+    const outside = path.resolve('/elsewhere/lib/index.ts');
+
+    expect(federationWatchPaths([outside], root)).toEqual([outside]);
+  });
+
+  it('never watches dot dirs, node_modules or build outputs recursively', () => {
+    const dotFile = path.join(root, '.cache', 'x.ts');
+    const nodeModulesFile = path.join(root, 'node_modules', 'pkg', 'index.ts');
+    const distFile = path.join(root, 'dist', 'main.js');
+
+    const paths = federationWatchPaths([dotFile, nodeModulesFile, distFile], root);
+
+    expect(paths.sort()).toEqual([dotFile, nodeModulesFile, distFile].sort());
+  });
+
+  it('keeps a workspace-root-level file as itself', () => {
+    const rootFile = path.join(root, 'tsconfig.base.json');
+
+    expect(federationWatchPaths([rootFile], root)).toEqual([rootFile]);
+  });
+
+  it('deduplicates nested candidates: a parent tree covers its children', () => {
+    const paths = federationWatchPaths(
+      [
+        path.join(root, 'libs', 'a', 'src', 'index.ts'),
+        path.resolve('/elsewhere/libs-extra/index.ts'),
+        path.join(root, 'libs', 'deep', 'nested', 'file.ts'),
+      ],
+      root,
+    );
+
+    expect(paths.sort()).toEqual(
+      [path.join(root, 'libs'), path.resolve('/elsewhere/libs-extra/index.ts')].sort(),
     );
   });
 });

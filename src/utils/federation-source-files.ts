@@ -1,3 +1,5 @@
+import * as path from 'path';
+
 import type { SourceFileCache } from '@angular/build/private';
 
 /**
@@ -23,6 +25,63 @@ export function federationSourceFiles(cache: SourceFileCache): string[] {
       ...(cache.referencedFiles ?? []),
     ]),
   ].filter((file) => !file.includes('node_modules'));
+}
+
+/**
+ * Collapse tracked source files into bounded top-level workspace source trees
+ * so Native Federation does not create one fs watcher per source file.
+ *
+ * A large workspace tracks thousands of sources; per-file watchers do not
+ * scale (macOS FSEvents in particular replays and throttles under that many
+ * streams, and every platform pays an fd per watcher). Watching the few
+ * top-level directories that CONTAIN those files (`libs`, `apps`, ...) keeps
+ * the watcher count flat while the callers' relevance filter (is the event
+ * path a tracked federation source?) keeps rebuild triggers exact.
+ *
+ * Files outside the workspace root, at the workspace root itself, or under
+ * top-level directories that must never be watched recursively (dot dirs,
+ * `node_modules`, build outputs) stay as single-file watches. Nested
+ * candidates are deduplicated: a parent directory covers its children.
+ */
+export function federationWatchPaths(
+  files: readonly string[],
+  workspaceRoot: string,
+): string[] {
+  const root = path.resolve(workspaceRoot);
+  const candidates = new Set<string>();
+  for (const file of files) {
+    const resolvedFile = path.resolve(file);
+    const relative = path.relative(root, resolvedFile);
+    const isInWorkspace =
+      relative !== '' &&
+      relative !== '..' &&
+      !relative.startsWith(`..${path.sep}`) &&
+      !path.isAbsolute(relative);
+    if (!isInWorkspace) {
+      candidates.add(resolvedFile);
+      continue;
+    }
+    const segments = relative.split(path.sep);
+    const topLevel = segments[0] ?? relative;
+    const canWatchSourceTree =
+      segments.length > 1 &&
+      !topLevel.startsWith('.') &&
+      !['node_modules', 'dist', 'out-tsc'].includes(topLevel);
+    candidates.add(canWatchSourceTree ? path.join(root, topLevel) : resolvedFile);
+  }
+  const ordered = [...candidates].sort((left, right) => left.length - right.length);
+  const watchPaths: string[] = [];
+  for (const candidate of ordered) {
+    if (
+      watchPaths.some(
+        (parent) =>
+          candidate === parent || candidate.startsWith(`${parent}${path.sep}`),
+      )
+    )
+      continue;
+    watchPaths.push(candidate);
+  }
+  return watchPaths;
 }
 
 /**

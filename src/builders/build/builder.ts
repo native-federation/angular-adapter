@@ -49,6 +49,7 @@ import { checkForInvalidImports } from "./../../utils/check-for-invalid-imports.
 import {
   describeFederationCache,
   federationSourceFiles,
+  federationWatchPaths,
 } from "./../../utils/federation-source-files.js";
 import { createStaleWatchEventFilter } from "./../../utils/stale-watch-event-filter.js";
 import { federationBuildNotifier } from "./federation-build-notifier.js";
@@ -460,6 +461,11 @@ export async function* runBuilder(
     const files = federationSourceFiles(
       normalized.options.federationCache.bundlerCache,
     );
+    // Watch a handful of top-level source trees, not one watcher per file —
+    // per-file watchers do not scale (macOS FSEvents replays/throttles under
+    // thousands of streams). Relevance stays exact via federationWatchedFiles
+    // in onChange below.
+    const watchPaths = federationWatchPaths(files, context.workspaceRoot);
     for (const file of files) {
       const normalizedFile = path.normalize(file);
       if (!federationWatchedFiles.has(normalizedFile)) {
@@ -467,9 +473,12 @@ export async function* runBuilder(
         staleEvents.seed(normalizedFile);
       }
     }
+    logger.verbose(
+      `Federation watch paths: files=${files.length}, roots=${watchPaths.length}`,
+    );
     syncNfFileWatcher(
       nfWatcher,
-      { keys: () => files[Symbol.iterator]() },
+      { keys: () => watchPaths[Symbol.iterator]() },
       linkedDirs,
     );
   };
@@ -481,20 +490,22 @@ export async function* runBuilder(
         // Coalesce ng-packagr's atomic multi-write bursts into one rebuild.
         debounceMs: 100,
         onChange: (p) => {
+          // Directory-tree watches surface EVERY event under the roots; only
+          // tracked federation sources and linked-dir edits are relevant.
+          const normalizedPath = path.normalize(p);
+          const isFederationSource = federationWatchedFiles.has(normalizedPath);
+          const isLinkedSource = isUnderLinkedDir(normalizedPath);
+          if (!isFederationSource && !isLinkedSource) return;
           // Same-mtime replays never reach the dirty buffer — buffering them
           // would rebuild federation outputs for files that did not change.
-          if (!staleEvents.isRealChange(p)) return;
+          if (!staleEvents.isRealChange(normalizedPath)) return;
           // Core stops filling the dirty buffer once onChange is set, so refill it
           // here (Set.add stays idempotent if core is later fixed). Wake the loop
           // for edits the Angular-driven rebuild will NOT cover: linked dirs and
           // the federation's own tracked sources, which are externals to the app
           // build and so never reach Angular's rebuild iterator.
-          watcherRef.current?.mutate((s) => s.add(p));
-          if (
-            isUnderLinkedDir(p) ||
-            federationWatchedFiles.has(path.normalize(p))
-          )
-            notifyChange();
+          watcherRef.current?.mutate((s) => s.add(normalizedPath));
+          notifyChange();
         },
       })
     : undefined;

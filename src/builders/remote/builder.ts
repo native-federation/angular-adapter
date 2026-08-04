@@ -29,7 +29,8 @@ import { createAngularBuildAdapter } from '../../tools/esbuild/angular-esbuild-a
 import { checkForInvalidImports } from '../../utils/check-for-invalid-imports.js';
 import {
   describeFederationCache,
-  federationSourceFiles
+  federationSourceFiles,
+  federationWatchPaths
 } from '../../utils/federation-source-files.js';
 import { createStaleWatchEventFilter } from '../../utils/stale-watch-event-filter.js';
 
@@ -122,14 +123,32 @@ export async function* runRemoteBuilder(
   // recently-edited files without a content change, and unguarded that replay
   // rebuilds forever (see stale-watch-event-filter.ts).
   const staleEvents = createStaleWatchEventFilter();
+  // Directory-tree watches (federationWatchPaths below) surface every event
+  // under the roots; only project files, linked-dir edits and tracked
+  // federation sources are relevant rebuild triggers.
+  const federationProjectRoot = path.dirname(
+    path.resolve(context.workspaceRoot, federationTsConfig)
+  );
+  const federationWatchedFiles = new Set<string>();
+  const isUnder = (file: string, directory: string): boolean =>
+    file === directory || file.startsWith(directory + path.sep);
+  const isRelevantChange = (file: string): boolean => {
+    const normalizedFile = path.normalize(file);
+    return (
+      isUnder(normalizedFile, federationProjectRoot) ||
+      linkedDirs.some((directory) => isUnder(normalizedFile, directory)) ||
+      federationWatchedFiles.has(normalizedFile)
+    );
+  };
   const changeWatcher = nfBuilderOptions.watch
-    ? createDebouncedChangeWatcher(nfBuilderOptions.rebuildDelay, staleEvents.isRealChange)
+    ? createDebouncedChangeWatcher(
+        nfBuilderOptions.rebuildDelay,
+        (file) => isRelevantChange(file) && staleEvents.isRealChange(file)
+      )
     : undefined;
 
   if (changeWatcher) {
-    changeWatcher.watcher.addPaths(
-      path.dirname(path.resolve(context.workspaceRoot, federationTsConfig))
-    );
+    changeWatcher.watcher.addPaths(federationProjectRoot);
     for (const assetDir of getAssetWatchDirs(assetEntries, context.workspaceRoot)) {
       changeWatcher.watcher.addPaths(assetDir);
     }
@@ -155,10 +174,19 @@ export async function* runRemoteBuilder(
     if (!changeWatcher) return;
     logger.verbose(describeFederationCache(normalized.options.federationCache.bundlerCache));
     const files = federationSourceFiles(normalized.options.federationCache.bundlerCache);
-    for (const file of files) staleEvents.seed(file);
+    // Watch a handful of top-level source trees, not one watcher per file —
+    // per-file watchers do not scale (macOS FSEvents replays/throttles under
+    // thousands of streams). Relevance stays exact via isRelevantChange above.
+    const watchPaths = federationWatchPaths(files, context.workspaceRoot);
+    for (const file of files) {
+      const normalizedFile = path.normalize(file);
+      federationWatchedFiles.add(normalizedFile);
+      staleEvents.seed(normalizedFile);
+    }
+    logger.verbose(`Federation watch paths: files=${files.length}, roots=${watchPaths.length}`);
     syncNfFileWatcher(
       changeWatcher.watcher,
-      { keys: () => files[Symbol.iterator]() },
+      { keys: () => watchPaths[Symbol.iterator]() },
       linkedDirs
     );
   };
