@@ -8,7 +8,7 @@
   "properties": {
     "tsConfig": {
       "type": "string",
-      "description": "Path to the tsconfig used to compile the exposed modules and shared mappings."
+      "description": "Path to the tsconfig used to compile the exposed modules and shared mappings. It also drives esbuild's module resolution, so it must declare or extend the workspace baseUrl/paths."
     },
     "dev": {
       "type": "boolean",
