@@ -539,6 +539,42 @@ The builder exposes:
 
 Unlike the core `fromPackageJson`, this adapter's version pre-seeds the Angular skip list (`NG_SKIP_LIST`) — the same list `shareAll` uses — so Angular-internal and localization packages are skipped for you out of the box.
 
+### Configuring Shared Mappings
+
+Workspace libraries mapped in `compilerOptions.paths` are shared via `sharedMappings`. Besides plain strings, an entry can pair a list of patterns with a config, so a mapped path carries the same metadata as a shared npm package:
+
+```js
+export default withNativeFederation({
+  sharedMappings: ["@my-org/auth-lib", [["@my-org/ui/*"], { singleton: false }]],
+});
+```
+
+Entries are matched as patterns rather than exact keys, so `'@my-org/*'` selects every mapped path under that scope. When several entries match the same mapped path, the first one wins — put the specific entries before the general ones.
+
+For more than a couple of entries, `mappingsFromWorkspace` builds that array for you:
+
+```js
+import {
+  withNativeFederation,
+  mappingsFromWorkspace,
+} from "@angular-architects/native-federation/config";
+
+export default withNativeFederation({
+  sharedMappings: mappingsFromWorkspace({ singleton: true, strictVersion: true })
+    .filter(["@my-org/ui/*", "@my-org/auth-lib"])
+    .patch(["@my-org/ui/*"], { singleton: false })
+    .get(),
+});
+```
+
+| Method                  | Purpose                                                                     |
+| ----------------------- | --------------------------------------------------------------------------- |
+| `.filter(patterns)`     | Narrow the selection. Omit it to select every mapped path.                   |
+| `.patch(patterns, cfg)` | Merge a partial config into the matching mappings; never widens the selection. |
+| `.get()`                | Resolve the builder into the `sharedMappings` array.                        |
+
+Requires `@softarc/native-federation` ≥ `4.4.0`. See the [core README](https://github.com/native-federation/native-federation-core#configuring-shared-mappings) for which `ExternalConfig` properties a mapping honours, how `includeSecondaries: { keepAll: true, resolveGlob: true }` keeps mappings nothing imports, and why only barrel imports can be shared as a mapped path.
+
 ### SSR and Hydration
 
 We support Angular's SSR and (Incremental) Hydration. Please find [more information here](https://www.angulararchitects.io/blog/ssr-and-hydration-with-native-federation-for-angular/).

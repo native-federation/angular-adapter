@@ -293,10 +293,8 @@ export async function* runBuilder(
     createFederationCache(cachePath, new SourceFileCache(cachePath)),
   );
 
-  checkForInvalidImports(
-    Object.values(normalized.config.sharedMappings),
-    "shared mappings",
-  );
+  // Mapped paths are checked by core's normalizeFederationOptions, which sees the
+  // pruned/glob-expanded set and skips paths that were never going to be published.
   checkForInvalidImports(Object.keys(normalized.config.shared), "externals");
 
   const activateSsr = nfBuilderOptions.ssr && !nfBuilderOptions.dev;
