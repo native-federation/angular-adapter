@@ -52,9 +52,9 @@ The first step is to update the `package.json` to install the new packages:
     "@softarc/native-federation-runtime": "~4.5.0" // optional, if you want to keep using the classic runtime
   },
   "devDependencies": {
-    "@angular-architects/native-federation-v4": "~21.2.3", // Switch over to the (temporary) v4 package
-    "@softarc/native-federation": "~4.3.0",
-    "@softarc/native-federation-orchestrator": "^4.2.2"
+    "@angular-architects/native-federation-v4": "~21.2.8", // Switch over to the (temporary) v4 package
+    "@softarc/native-federation": "~4.4.0",
+    "@softarc/native-federation-orchestrator": "^4.6.0"
   }
 }
 ```
@@ -139,10 +139,56 @@ export default withNativeFederation({
   features: {
     ignoreUnusedDeps: true, // Now enabled by default
     denseChunking: true, // Opt-in: groups chunks in remoteEntry.json for smaller file size
-    versionMapping: true, // Now enabled by default
+    denseExternals: true, // Opt-in: groups entrypoints by dependency for more performance and less crowded remoteEntry files.
+    mappingVersion: true, // Now enabled by default
   },
 });
 ```
+
+### Optional: the config builders
+
+Both halves of the config have a builder-style alternative to the `shareAll` + `skip` + `share` stack. `fromPackageJson` starts from your `package.json` dependencies, and `mappingsFromWorkspace` (new in `21.2.9`) starts from the workspace libraries in your root tsconfig's `compilerOptions.paths`. Written with both, the config above becomes:
+
+```javascript
+import {
+  withNativeFederation,
+  fromPackageJson,
+  mappingsFromWorkspace,
+} from "@angular-architects/native-federation-v4/config";
+
+export default withNativeFederation({
+  name: "team/mfe1",
+
+  exposes: {
+    "./Component": "./projects/mfe1/src/bootstrap.ts",
+  },
+
+  // Same starting point as shareAll, but refined in place instead of spreading
+  // a second share() over it. The Angular skip list is pre-seeded, so .skip()
+  // only lists what is specific to your app.
+  shared: fromPackageJson({
+    singleton: true,
+    strictVersion: true,
+    requiredVersion: "auto",
+  })
+    .skip(["rxjs/ajax", "rxjs/fetch", "rxjs/testing", "rxjs/webSocket"])
+    .patch(["@angular/core"], { includeSecondaries: { keepAll: true } })
+    .get(),
+
+  // Your workspace libs (@my-org/*), previously a plain string array.
+  // Omit .filter() to share every mapped path — the same default as leaving
+  // sharedMappings out entirely.
+  sharedMappings: mappingsFromWorkspace({
+    singleton: true,
+    strictVersion: true,
+  })
+    .filter(["@my-org/ui/*", "@my-org/auth-lib"])
+    .patch(["@my-org/ui/*"], { singleton: false })
+    .get(),
+});
+```
+
+Nothing is lost by not using them: each `.get()` returns exactly the object or array you could have written by hand, so the old forms keep working and the two styles can be mixed per project. See the README for the [shared builder](./README.md#building-the-shared-config-from-packagejson) and the [mappings builder](./README.md#configuring-shared-mappings).
 
 ## 3. Updating the angular.json
 

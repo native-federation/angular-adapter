@@ -1,3 +1,5 @@
+// Must stay the first import: it sets NG_BUILD_* before @angular/build snapshots them,
+// and its detection must not see this file's own @angular/build imports.
 import "./setup-builder-env-variables.js";
 
 import {
@@ -48,6 +50,7 @@ import {
   type NfFileWatcher,
   RebuildQueue,
   setLogLevel,
+  sharedMappingDirs,
   syncNfFileWatcher,
 } from "@softarc/native-federation/internal";
 import { type Plugin, type PluginBuild } from "esbuild";
@@ -59,7 +62,13 @@ import {
 } from "../../utils/i18n.js";
 import { updateScriptTags } from "../../utils/update-index-html.js";
 import { checkForInvalidImports } from "./../../utils/check-for-invalid-imports.js";
+import { federationSourceFiles } from "./../../utils/federation-source-files.js";
 import { federationBuildNotifier } from "./federation-build-notifier.js";
+import {
+  createFederationFreshness,
+  shouldRunWatcherRebuild,
+  shouldWakeFederation,
+} from "./watch-decisions.js";
 import type { NfBuilderSchema, NfInternalOptions } from "./schema.js";
 
 const originalWrite = process.stderr.write.bind(process.stderr);
@@ -284,10 +293,8 @@ export async function* runBuilder(
     createFederationCache(cachePath, new SourceFileCache(cachePath)),
   );
 
-  checkForInvalidImports(
-    Object.values(normalized.config.sharedMappings),
-    "shared mappings",
-  );
+  // Mapped paths are checked by core's normalizeFederationOptions, which sees the
+  // pruned/glob-expanded set and skips paths that were never going to be published.
   checkForInvalidImports(Object.keys(normalized.config.shared), "externals");
 
   const activateSsr = nfBuilderOptions.ssr && !nfBuilderOptions.dev;
@@ -408,6 +415,11 @@ export async function* runBuilder(
 
   let first = true;
 
+  // Set when a watcher-driven federation rebuild completed and no Angular output
+  // has been consumed since; lets the loop skip the redundant Angular-driven
+  // rebuild that follows an ordinary save (the watcher usually wins that race).
+  const freshness = createFederationFreshness();
+
   // A linked shared-package edit never makes Angular's iterator emit (it's an external),
   // so we wake the watch loop directly: notifyChange resolves changeSignal, which the
   // loop races against Angular's next output to drive a federation-only rebuild.
@@ -422,30 +434,60 @@ export async function* runBuilder(
     changeSignal = new Promise<void>((r) => (notifyChange = r));
     changeTagged = changeSignal.then(() => ({ kind: "watcher" as const }));
   };
-  const isUnderLinkedDir = (p: string): boolean =>
-    linkedDirs.some((d) => p === d || p.startsWith(d + path.sep));
 
-  // watcherRef lets onChange reach the watcher without a const self-reference.
-  const watcherRef: { current?: NfFileWatcher } = {};
+  // Watch what the federation compilation actually tracked — where the cache
+  // records it depends on the TS compilation path; see federationSourceFiles.
+  const federationWatchedFiles = new Set<string>();
+  const syncFederationWatcher = (): void => {
+    if (!nfWatcher) return;
+    const files = federationSourceFiles(
+      normalized.options.federationCache.bundlerCache,
+    );
+    for (const file of files) {
+      federationWatchedFiles.add(path.normalize(file));
+    }
+    syncNfFileWatcher(nfWatcher, files, linkedDirs);
+  };
+
+  // sharedMappingDirs is derived from config, not from a build's inputs, so it
+  // also covers files added to a shared lib since the last build — which a
+  // compiled-inputs watch set structurally cannot. It has to be in the wake-up
+  // set as well as the watch set: a new file matches neither federationWatchedFiles
+  // nor linkedDirs, so without it core buffers the change and nothing consumes it.
+  const sharedDirs = sharedMappingDirs(normalized.config);
+  const wakeDirs = [...linkedDirs, ...sharedDirs];
+  const federationOutputPath = path.resolve(
+    context.workspaceRoot,
+    normalized.options.outputPath,
+  );
+
   const nfWatcher: NfFileWatcher | undefined = watch
     ? createNfWatcher({
         // Coalesce ng-packagr's atomic multi-write bursts into one rebuild.
         debounceMs: 100,
         onChange: (p) => {
-          // Core stops filling the dirty buffer once onChange is set, so refill it
-          // here (Set.add stays idempotent if core is later fixed). Only wake the
-          // loop for linked edits; others ride the next Angular-driven rebuild.
-          watcherRef.current?.mutate((s) => s.add(p));
-          if (isUnderLinkedDir(p)) notifyChange();
+          // Core has already buffered p (and dropped it if it was a replay); this
+          // only wakes the loop for edits the Angular-driven rebuild will NOT
+          // cover — see shouldWakeFederation.
+          if (
+            shouldWakeFederation(
+              p,
+              federationWatchedFiles,
+              wakeDirs,
+              federationOutputPath,
+            )
+          ) {
+            notifyChange();
+          }
         },
       })
     : undefined;
-  watcherRef.current = nfWatcher;
 
   if (nfWatcher) {
-    nfWatcher.addPaths(
+    nfWatcher.addPaths([
       path.dirname(path.resolve(context.workspaceRoot, federationTsConfig)),
-    );
+      ...sharedDirs,
+    ]);
   }
 
   if (fs.existsSync(normalized.options.outputPath)) {
@@ -468,13 +510,7 @@ export async function* runBuilder(
     process.exit(1);
   }
 
-  if (nfWatcher) {
-    syncNfFileWatcher(
-      nfWatcher,
-      normalized.options.federationCache.bundlerCache,
-      linkedDirs,
-    );
-  }
+  syncFederationWatcher();
 
   const hasLocales = i18n?.locales && Object.keys(i18n.locales).length > 0;
   if (hasLocales && localeFilter) {
@@ -565,13 +601,7 @@ export async function* runBuilder(
         signal,
       );
 
-      if (nfWatcher) {
-        syncNfFileWatcher(
-          nfWatcher,
-          normalized.options.federationCache.bundlerCache,
-          linkedDirs,
-        );
-      }
+      syncFederationWatcher();
 
       if (signal?.aborted) {
         throw new AbortedError("[builder] After federation build.");
@@ -595,6 +625,7 @@ export async function* runBuilder(
       if (isLocalDevelopment) {
         federationBuildNotifier.broadcastBuildCompletion();
       }
+
       return { success: true };
     } catch (error) {
       if (error instanceof AbortedError) {
@@ -638,7 +669,7 @@ export async function* runBuilder(
       // only and leave the pending Angular output in flight for the next race.
       if (trigger.kind === "watcher") {
         resetChangeSignal();
-        if (first || !nfWatcher || nfWatcher.get().size === 0) continue;
+        if (!shouldRunWatcherRebuild(first, nfWatcher?.get().size)) continue;
 
         // Interrupt on the next linked edit so a fresh save folds into one rebuild.
         const trackResult = await rebuildQueue.track(
@@ -646,6 +677,7 @@ export async function* runBuilder(
           changeSignal,
         );
         if (trackResult.type === "completed" && !trackResult.result.cancelled) {
+          freshness.mark(trackResult.result.success);
           yield { success: trackResult.result.success };
         }
         continue;
@@ -660,6 +692,17 @@ export async function* runBuilder(
       // interrupt for the rebuild below (a fresh Angular build aborts the stale one).
       advanceAngular();
 
+      // An ordinary save reaches this loop twice: the file watcher usually wins
+      // the race (federationWatchedFiles covers most app sources), so the
+      // federation rebuild already ran, and this Angular output is the same save
+      // arriving second. With nothing new in the dirty buffer, rerunning would
+      // only re-link and rewrite identical federation outputs after another
+      // rebuildDelay — pass the Angular result through instead. Consumed here,
+      // beside advanceAngular, so every path below leaves the flag cleared.
+      const federationCoversThisOutput = freshness.consume(
+        nfWatcher?.get().size,
+      );
+
       if (!ngBuildStatus.success) {
         logger.warn(
           "Skipping federation artifacts because Angular build failed.",
@@ -672,6 +715,11 @@ export async function* runBuilder(
       // rebuild on subsequent outputs, and only in watch mode.
       if (first || !watch) {
         first = false;
+        continue;
+      }
+
+      if (federationCoversThisOutput) {
+        yield ngBuildStatus;
         continue;
       }
 
@@ -697,6 +745,9 @@ export async function* runBuilder(
     if (isLocalDevelopment) {
       federationBuildNotifier.stopEventServer();
     }
+
+    // TODO: fix retry issue from #106
+    setTimeout(() => process.exit(ngBuildStatus.success ? 0 : 1), 500).unref();
   }
 
   yield ngBuildStatus;

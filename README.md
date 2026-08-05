@@ -528,6 +528,48 @@ The builder exposes:
 
 Unlike the core `fromPackageJson`, this adapter's version pre-seeds the Angular skip list (`NG_SKIP_LIST`) — the same list `shareAll` uses — so Angular-internal and localization packages are skipped for you out of the box.
 
+### Configuring Shared Mappings
+
+Workspace libraries mapped in `compilerOptions.paths` are shared via `sharedMappings`. Besides plain strings, an entry can pair a list of patterns with a config, so a mapped path carries the same metadata as a shared npm package:
+
+```js
+export default withNativeFederation({
+  sharedMappings: [
+    "@my-org/auth-lib",
+    [["@my-org/ui/*"], { singleton: false }],
+  ],
+});
+```
+
+Entries are matched as patterns rather than exact keys, so `'@my-org/*'` selects every mapped path under that scope. When several entries match the same mapped path, the first one wins — put the specific entries before the general ones.
+
+For more than a couple of entries, `mappingsFromWorkspace` builds that array for you:
+
+```js
+import {
+  withNativeFederation,
+  mappingsFromWorkspace,
+} from "@angular-architects/native-federation/config";
+
+export default withNativeFederation({
+  sharedMappings: mappingsFromWorkspace({
+    singleton: true,
+    strictVersion: true,
+  })
+    .filter(["@my-org/ui/*", "@my-org/auth-lib"])
+    .patch(["@my-org/ui/*"], { singleton: false })
+    .get(),
+});
+```
+
+| Method                  | Purpose                                                                        |
+| ----------------------- | ------------------------------------------------------------------------------ |
+| `.filter(patterns)`     | Narrow the selection. Omit it to select every mapped path.                     |
+| `.patch(patterns, cfg)` | Merge a partial config into the matching mappings; never widens the selection. |
+| `.get()`                | Resolve the builder into the `sharedMappings` array.                           |
+
+Requires `@softarc/native-federation` ≥ `4.4.0`. See the [core README](https://github.com/native-federation/native-federation-core#configuring-shared-mappings) for which `ExternalConfig` properties a mapping honours, how `includeSecondaries: { keepAll: true, resolveGlob: true }` keeps mappings nothing imports, and why only barrel imports can be shared as a mapped path.
+
 ### SSR and Hydration
 
 We support Angular's SSR and (Incremental) Hydration. Please find [more information here](https://www.angulararchitects.io/blog/ssr-and-hydration-with-native-federation-for-angular/).
@@ -646,6 +688,30 @@ For this, there are several reasons:
 - Perhaps you try to share a package intended for NodeJS/ a package that cannot be converted to EcmaScript modules. This happens if you use `shareAll` in the `federation.config.mjs` and when the package in question is part of your dependencies in `package.json`. If you don't need (to share) this package at runtime, move it to `devDependencies` or add it to the `skip` section of your `federation.config.mjs`.
 
 - Perhaps your shared packages contain some code esbuild cannot transfer to EcmaScript modules. This should not be the case for packages, built with the Angular CLI or Nx and the underlying package ng-packagr. If this happens, please let us know about the package causing troubles.
+
+### Why do I get `ɵɵdefineComponent is not a function` in an Nx workspace?
+
+The builder disables two of Angular's build features by setting environment variables before `@angular/build` loads:
+
+- `NG_BUILD_OPTIMIZE_CHUNKS=0` — Angular's chunk optimization pass (opt-in on Angular 21, on by default from Angular 22) re-bundles the esbuild output _after_ Native Federation has computed its import map, so shared externals such as `@angular/core` are no longer resolved as singletons. At runtime that surfaces as `ɵɵdefineComponent is not a function`.
+- `NG_BUILD_PARALLEL_TS=0` — lets the compilation steps share one cache, which is much faster here.
+
+`@angular/build` reads those variables **once**, when it is first loaded, so this only works if the builder is loaded first. Under the Angular CLI it is. Nx loads `@angular/build` before it resolves the builder (`nx/src/adapter/compat.js` requires `@angular/build/private` to stub a version assertion), so the variables arrive too late and both features stay on — see [#107](https://github.com/native-federation/angular-adapter/issues/107) / [#114](https://github.com/native-federation/angular-adapter/issues/114).
+
+The builder detects this and re-applies both settings to the already-loaded `@angular/build`, logging:
+
+```
+INFO  @angular/build was already loaded when this builder started (Nx preloads it),
+      so its build environment was stale; re-applied useParallelTs=false,
+      shouldOptimizeChunks=false.
+```
+
+That line is informational — it means the problem was corrected, and no action is needed. Two things worth knowing:
+
+- **Run one uncached build after upgrading** (`nx build my-app --skip-nx-cache`). Artifacts that Nx cached from a broken build are still replayed on a cache hit.
+- If you would rather set the variables yourself, put them in a workspace-root `.env` file — Nx loads dotenv files before `@angular/build` — and add `{ "env": "NG_BUILD_OPTIMIZE_CHUNKS" }` to the target's `inputs` so the cache reacts to changes. Setting `NF_NG_BUILD_ENV_REPLAY=0` then keeps the builder from touching the loaded module at all.
+
+If the builder instead warns that it _could not_ re-apply a setting, `@angular/build` has changed internally: use the `.env` approach above and please report it.
 
 ### How to deal with CommonJS Packages?
 

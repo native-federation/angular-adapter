@@ -42,8 +42,8 @@ describe('checkForInvalidImports', () => {
   it('throws for invalid dot imports and logs warnings', () => {
     const imports = ['lodash.merge', '@scope/lib.v2'];
 
-    expect(() => checkForInvalidImports(imports, 'shared mappings')).toThrow(
-      "Invalid 'shared mappings' config. Invalid imports paths detected, consider using a barrel import instead. "
+    expect(() => checkForInvalidImports(imports, 'externals')).toThrow(
+      "Invalid 'externals' config. Invalid imports paths detected, consider using a barrel import instead. "
     );
     expect(warnSpy).toHaveBeenCalledTimes(imports.length);
     expect(warnSpy).toHaveBeenNthCalledWith(

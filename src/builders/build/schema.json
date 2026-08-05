@@ -61,7 +61,7 @@
     },
     "tsConfig": {
       "type": "string",
-      "description": "A specific tsconfig file for the nf remotes and exposed modules."
+      "description": "A specific tsconfig file for the nf remotes and exposed modules. It also drives esbuild's module resolution, so it must declare or extend the workspace baseUrl/paths."
     },
     "cacheExternalArtifacts": {
       "type": "boolean",
