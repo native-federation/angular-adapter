@@ -52,7 +52,7 @@ The first step is to update the `package.json` to install the new packages:
     "@softarc/native-federation-runtime": "~4.5.0" // optional, if you want to keep using the classic runtime
   },
   "devDependencies": {
-    "@angular-architects/native-federation-v4": "~21.2.8", // Switch over to the (temporary) v4 package
+    "@angular-architects/native-federation-v4": "~21.2.9", // Switch over to the (temporary) v4 package
     "@softarc/native-federation": "~4.4.0",
     "@softarc/native-federation-orchestrator": "^4.6.0"
   }
