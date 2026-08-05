@@ -167,6 +167,9 @@ export async function createAngularEsbuildContext(options: NormalizedContextOpti
     },
     ...(builderOptions.loader ? { loader: builderOptions.loader } : {}),
     resolveExtensions: ['.ts', '.tsx', '.mjs', '.js', '.cjs'],
+    // The compiler plugin only hooks onLoad; esbuild resolves bare specifiers itself
+    // and would otherwise only honour paths from an auto-discovered `tsconfig.json`.
+    tsconfig: tsConfigPath,
   };
 
   const ctx = await esbuild.context(config);
