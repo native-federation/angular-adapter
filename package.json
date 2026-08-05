@@ -1,6 +1,6 @@
 {
   "name": "@angular-architects/native-federation",
-  "version": "22.1.0-RC1",
+  "version": "22.1.0",
   "generators": "./collection.json",
   "builders": "./builders.json",
   "schematics": "./collection.json",

@@ -56,9 +56,9 @@ The first step is to update the `package.json` to install the new packages:
     // [...] Your dependencies
   },
   "devDependencies": {
-    "@angular-architects/native-federation": "~22.0.0",
-    "@softarc/native-federation": "~4.1.0",
-    "@softarc/native-federation-orchestrator": "^4.2.2"
+    "@angular-architects/native-federation": "~22.1.0",
+    "@softarc/native-federation": "~4.4.0",
+    "@softarc/native-federation-orchestrator": "^4.6.0"
   }
 }
 ```
@@ -106,14 +106,17 @@ module.exports = withNativeFederation({
 
 ```javascript
 // Our well-known ESM importing types
-import { withNativeFederation, shareAll } from '@angular-architects/native-federation/config';
+import {
+  withNativeFederation,
+  shareAll,
+} from "@angular-architects/native-federation/config";
 
 // change this line to the default export.
 export default withNativeFederation({
-  name: 'team/mfe1',
+  name: "team/mfe1",
 
   exposes: {
-    './Component': './projects/mfe1/src/bootstrap.ts',
+    "./Component": "./projects/mfe1/src/bootstrap.ts",
   },
   shared: {
     // This still works! But how about overrides?
@@ -121,29 +124,75 @@ export default withNativeFederation({
 
     // Here's an alternative, you can merge the overrides _into_ the shareAll!
     ...shareAll(
-      { singleton: true, strictVersion: true, requiredVersion: 'auto' },
+      { singleton: true, strictVersion: true, requiredVersion: "auto" },
       {
         overrides: {
-          '@angular/core': {
+          "@angular/core": {
             singleton: true,
             strictVersion: true,
-            requiredVersion: 'auto',
+            requiredVersion: "auto",
             includeSecondaries: { keepAll: true },
           },
         },
-      }
+      },
     ),
   },
 
-  skip: ['rxjs/ajax', 'rxjs/fetch', 'rxjs/testing', 'rxjs/webSocket'],
+  skip: ["rxjs/ajax", "rxjs/fetch", "rxjs/testing", "rxjs/webSocket"],
 
   features: {
     ignoreUnusedDeps: true, // Now enabled by default
     denseChunking: true, // Opt-in: groups chunks in remoteEntry.json for smaller file size
-    versionMapping: true, // Now enabled by default
+    denseExternals: true, // Opt-in: groups entrypoints by dependency for more performance and less crowded remoteEntry files.
+    mappingVersion: true, // Now enabled by default
   },
 });
 ```
+
+### Optional: the config builders
+
+Both halves of the config have a builder-style alternative to the `shareAll` + `skip` + `share` stack. `fromPackageJson` starts from your `package.json` dependencies, and `mappingsFromWorkspace` (new in `22.1.x`) starts from the workspace libraries in your root tsconfig's `compilerOptions.paths`. Written with both, the config above becomes:
+
+```javascript
+import {
+  withNativeFederation,
+  fromPackageJson,
+  mappingsFromWorkspace,
+} from "@angular-architects/native-federation/config";
+
+export default withNativeFederation({
+  name: "team/mfe1",
+
+  exposes: {
+    "./Component": "./projects/mfe1/src/bootstrap.ts",
+  },
+
+  // Same starting point as shareAll, but refined in place instead of spreading
+  // a second share() over it. The Angular skip list is pre-seeded, so .skip()
+  // only lists what is specific to your app.
+  shared: fromPackageJson({
+    singleton: true,
+    strictVersion: true,
+    requiredVersion: "auto",
+  })
+    .skip(["rxjs/ajax", "rxjs/fetch", "rxjs/testing", "rxjs/webSocket"])
+    .patch(["@angular/core"], { includeSecondaries: { keepAll: true } })
+    .get(),
+
+  // Your workspace libs (@my-org/*), previously a plain string array.
+  // Omit .filter() to share every mapped path — the same default as leaving
+  // sharedMappings out entirely.
+  sharedMappings: mappingsFromWorkspace({
+    singleton: true,
+    strictVersion: true,
+  })
+    .filter(["@my-org/ui/*", "@my-org/auth-lib"])
+    .patch(["@my-org/ui/*"], { singleton: false })
+    .get(),
+});
+```
+
+Nothing is lost by not using them: each `.get()` returns exactly the object or array you could have written by hand, so the old forms keep working and the two styles can be mixed per project. See the README for the [shared builder](./README.md#building-the-shared-config-from-packagejson) and the [mappings builder](./README.md#configuring-shared-mappings).
 
 ## 3. Updating the angular.json
 
@@ -192,38 +241,41 @@ And that's it! Your micro frontend is migrated to the new major! We do have some
 Here's the `projects/<your-project>/src/main.ts` you've been used to for the last couple of years (before v4). It now automatically bootstraps the new orchestrator:
 
 ```javascript
-import { initFederation } from '@angular-architects/native-federation';
+import { initFederation } from "@angular-architects/native-federation";
 
 initFederation()
-  .catch(err => console.error(err))
-  .then(_ => import('./bootstrap'))
-  .catch(err => console.error(err));
+  .catch((err) => console.error(err))
+  .then((_) => import("./bootstrap"))
+  .catch((err) => console.error(err));
 ```
 
 However, some projects still use the "legacy runtime" that did the job. But it lacks some modern features like dependency sharing based on a range, shareScopes, in-browser caching etc etc.
 
 ```javascript
-import { initFederation } from '@softarc/native-federation-runtime'; // Default native-federation runtime
+import { initFederation } from "@softarc/native-federation-runtime"; // Default native-federation runtime
 
 initFederation()
-  .catch(err => console.error(err))
-  .then(_ => import('./bootstrap'))
-  .catch(err => console.error(err));
+  .catch((err) => console.error(err))
+  .then((_) => import("./bootstrap"))
+  .catch((err) => console.error(err));
 ```
 
 For optimal performance, from now on we recommend using the orchestrator directly:
 
 ```javascript
-import { initFederation, NativeFederationResult } from '@softarc/native-federation-orchestrator';
+import {
+  initFederation,
+  NativeFederationResult,
+} from "@softarc/native-federation-orchestrator";
 
 const manifest = {
-  mfe1: 'http://localhost:4201/remoteEntry.json',
+  mfe1: "http://localhost:4201/remoteEntry.json",
 };
 
 initFederation(manifest)
-  .catch(err => console.error(err))
-  .then(_ => import('./bootstrap'))
-  .catch(err => console.error(err));
+  .catch((err) => console.error(err))
+  .then((_) => import("./bootstrap"))
+  .catch((err) => console.error(err));
 ```
 
 Not a lot of changes right? Sure, now you need to explicitly define the location of the manifest (or the object), but for the rest it's basically the same!
@@ -233,27 +285,30 @@ Not a lot of changes right? Sure, now you need to explicitly define the location
 Now, the big difference is that the new orchestrator is a _lot_ more customizable:
 
 ```javascript
-import { initFederation, NativeFederationResult } from '@softarc/native-federation-orchestrator';
+import {
+  initFederation,
+  NativeFederationResult,
+} from "@softarc/native-federation-orchestrator";
 import {
   useShimImportMap,
   consoleLogger,
   globalThisStorageEntry,
-} from '@softarc/native-federation-orchestrator/options';
+} from "@softarc/native-federation-orchestrator/options";
 
 const manifest = {
-  mfe1: 'http://localhost:4201/remoteEntry.json',
+  mfe1: "http://localhost:4201/remoteEntry.json",
 };
 
 initFederation(manifest, {
   ...useShimImportMap({ shimMode: true }),
   logger: consoleLogger,
   storage: globalThisStorageEntry,
-  hostRemoteEntry: './remoteEntry.json',
-  logLevel: 'debug',
+  hostRemoteEntry: "./remoteEntry.json",
+  logLevel: "debug",
 })
-  .catch(err => console.error(err))
-  .then(_ => import('./bootstrap'))
-  .catch(err => console.error(err));
+  .catch((err) => console.error(err))
+  .then((_) => import("./bootstrap"))
+  .catch((err) => console.error(err));
 ```
 
 You see that? Now you can choose which logger you want, and if you want to use the "shimImportMap" instead of the browser-native importmap (spoiler alert: 90% chance you do).

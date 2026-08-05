@@ -27,22 +27,13 @@ This package was successfully tested with Angular CLI projects and with Nx proje
 
 ## Versions
 
-We will at least provide a new version of this package per Angular major. If necessary, we will also provide packages to adapt to Angular minors. To make the relationship between Angular versions and versions of this package easy for all of us, **we follow Angular's version numbers**. E. g., `@angular-architects/native-federation` 16.1 is intended for Angular 16.1 and upwards.
+We will at least provide a new version of this package per Angular major. If necessary, we will also provide packages to adapt to Angular minors. To make the relationship between Angular versions and versions of this package easy for all of us, **we follow Angular's version numbers**. E. g., `@angular-architects/native-federation` 21.1 is intended for Angular 21.1 and upwards.
 
-- Use version 16.1.x for Angular 16.1.x
-- Use version 16.2.x for Angular 16.2.x
-- Use version 17.x for Angular 17.x
-- Use version 17.1.x for Angular 17.1
-- Use version 18.x for Angular 18.0.x
-- Use version 18.1.x for Angular 18.1.x
-- Use version 18.2.x for Angular 18.2.x
-- Use version 19.x for Angular 19.x
-- Use version 20.0.x for Angular 20.0.x
-- Use version 20.1.x for Angular 20.1.x
 - Use version 21.0.x for Angular 21.0.x
 - Use version 21.1.x for Angular 21.1.x
 - Use version 21.2.x for Angular 21.2.x
 - Use version 22.0.x for Angular 22.0.x
+- Use version 22.1.x for Angular 22.1.x
 
 ## Want to try v4 on an older angular version?
 
@@ -545,7 +536,10 @@ Workspace libraries mapped in `compilerOptions.paths` are shared via `sharedMapp
 
 ```js
 export default withNativeFederation({
-  sharedMappings: ["@my-org/auth-lib", [["@my-org/ui/*"], { singleton: false }]],
+  sharedMappings: [
+    "@my-org/auth-lib",
+    [["@my-org/ui/*"], { singleton: false }],
+  ],
 });
 ```
 
@@ -560,18 +554,21 @@ import {
 } from "@angular-architects/native-federation/config";
 
 export default withNativeFederation({
-  sharedMappings: mappingsFromWorkspace({ singleton: true, strictVersion: true })
+  sharedMappings: mappingsFromWorkspace({
+    singleton: true,
+    strictVersion: true,
+  })
     .filter(["@my-org/ui/*", "@my-org/auth-lib"])
     .patch(["@my-org/ui/*"], { singleton: false })
     .get(),
 });
 ```
 
-| Method                  | Purpose                                                                     |
-| ----------------------- | --------------------------------------------------------------------------- |
-| `.filter(patterns)`     | Narrow the selection. Omit it to select every mapped path.                   |
+| Method                  | Purpose                                                                        |
+| ----------------------- | ------------------------------------------------------------------------------ |
+| `.filter(patterns)`     | Narrow the selection. Omit it to select every mapped path.                     |
 | `.patch(patterns, cfg)` | Merge a partial config into the matching mappings; never widens the selection. |
-| `.get()`                | Resolve the builder into the `sharedMappings` array.                        |
+| `.get()`                | Resolve the builder into the `sharedMappings` array.                           |
 
 Requires `@softarc/native-federation` ≥ `4.4.0`. See the [core README](https://github.com/native-federation/native-federation-core#configuring-shared-mappings) for which `ExternalConfig` properties a mapping honours, how `includeSecondaries: { keepAll: true, resolveGlob: true }` keeps mappings nothing imports, and why only barrel imports can be shared as a mapped path.
 
