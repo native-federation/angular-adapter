@@ -38,6 +38,9 @@ importers:
       '@softarc/native-federation-orchestrator':
         specifier: ^4.5.2
         version: 4.5.2
+      mrmime:
+        specifier: ^2.0.1
+        version: 2.0.1
     devDependencies:
       '@eslint/js':
         specifier: ^9.39.1
@@ -75,9 +78,6 @@ importers:
       knip:
         specifier: ^6.17.1
         version: 6.26.0
-      mrmime:
-        specifier: ^2.0.1
-        version: 2.0.1
       tslib:
         specifier: ^2.3.0
         version: 2.8.1
