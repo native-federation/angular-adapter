@@ -12,6 +12,7 @@ import { updatePolyfills } from './steps/update-polyfills.js';
 import { generateRemoteMap } from './steps/generate-remote-map.js';
 import { generateFederationConfig } from './steps/generate-federation-config.js';
 import { updateWorkspaceConfig } from './steps/update-workspace-config.js';
+import { generateFederationTsConfig } from './steps/generate-federation-tsconfig.js';
 import { addDependencies } from './steps/add-dependencies.js';
 import { makeMainAsync } from './steps/make-main-async.js';
 import { makeServerAsync } from './steps/make-server-async.js';
@@ -69,7 +70,9 @@ export default function config(options: NfSchematicSchema): Rule {
     const ssr = isSsrProject(normalized);
     const server = ssr ? getSsrFilePath(normalized) : '';
 
-    updateWorkspaceConfig(tree, normalized, workspace, workspaceFileName, ssr);
+    const federationTsConfig = generateFederationTsConfig(tree, normalized);
+
+    updateWorkspaceConfig(tree, normalized, workspace, workspaceFileName, ssr, federationTsConfig);
 
     addDependencies(tree, context, ssr);
 
