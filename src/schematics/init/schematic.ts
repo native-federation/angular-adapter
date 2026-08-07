@@ -70,7 +70,16 @@ export default function config(options: NfSchematicSchema): Rule {
     const ssr = isSsrProject(normalized);
     const server = ssr ? getSsrFilePath(normalized) : '';
 
-    const federationTsConfig = generateFederationTsConfig(tree, normalized);
+    // Seed the federation program with what the generated config exposes, so the first build
+    // finds the tsconfig already correct. Where the exposes are unknown (a host, a config we
+    // did not write, or a project without a recognisable app component) main.ts stands in —
+    // the same fallback the builder applies.
+    const exposesAppComponent =
+      !exists && options.type === 'remote' && appComponent !== 'update-this.ts';
+
+    const federationTsConfig = generateFederationTsConfig(tree, normalized, [
+      exposesAppComponent ? appComponent : main,
+    ]);
 
     updateWorkspaceConfig(tree, normalized, workspace, workspaceFileName, ssr, federationTsConfig);
 

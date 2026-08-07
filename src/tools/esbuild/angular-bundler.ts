@@ -33,7 +33,6 @@ export async function createAngularEsbuildContext(options: NormalizedContextOpti
     hash,
     chunks,
     platform,
-    optimizedMappings,
   } = options;
 
   let tsConfigPath = options.tsConfigPath;
@@ -78,7 +77,17 @@ export async function createAngularEsbuildContext(options: NormalizedContextOpti
     }
   }
 
-  updateFederationTsConfig(workspaceRoot, tsConfigPath, entryPoints, optimizedMappings);
+  // Only a tsconfig the NF target explicitly points at is ours to rewrite. Without one the
+  // builder falls back to the Angular target's own tsconfig, whose include already covers the
+  // exposes — rewriting that would strip its comments to no effect.
+  if (builderOptions.managedTsConfig) {
+    updateFederationTsConfig(
+      workspaceRoot,
+      tsConfigPath,
+      entryPoints,
+      builderOptions.fallbackEntryPoints
+    );
+  }
 
   tsConfigPath = path.join(workspaceRoot, tsConfigPath);
 

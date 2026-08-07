@@ -216,11 +216,20 @@ export async function* runBuilder(
       ? nfBuilderOptions.tsConfig
       : ngBuilderOptions.tsConfig;
 
+  const entryPoints: string[] | undefined =
+    nfBuilderOptions.entryPoints && nfBuilderOptions.entryPoints.length > 0
+      ? nfBuilderOptions.entryPoints
+      : [path.join(path.dirname(federationTsConfig), "src/main.ts")];
+
   const adapter = createAngularBuildAdapter(
     {
       ...ngBuilderOptions,
       plugins: nfBuilderOptions.plugins,
       instrumentForCoverage: nfBuilderOptions.instrumentForCoverage,
+      // Deliberately not `federationTsConfig`: only a tsconfig the target declares itself is
+      // the builder's to rewrite, never the Angular target's own one it falls back to.
+      managedTsConfig: nfBuilderOptions.tsConfig,
+      fallbackEntryPoints: entryPoints,
     },
     context,
   );
@@ -264,11 +273,6 @@ export async function* runBuilder(
   const devServerOutputPath = !differentDevServerOutputPath
     ? browserOutputPath
     : path.join(outputOptions.base, outputOptions.browser, localeFilter[0]!);
-
-  const entryPoints: string[] | undefined =
-    nfBuilderOptions.entryPoints && nfBuilderOptions.entryPoints.length > 0
-      ? nfBuilderOptions.entryPoints
-      : [path.join(path.dirname(federationTsConfig), "src/main.ts")];
 
   const cachePath = getDefaultCachePath(context.workspaceRoot);
 

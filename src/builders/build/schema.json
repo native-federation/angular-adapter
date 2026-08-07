@@ -61,7 +61,7 @@
     },
     "tsConfig": {
       "type": "string",
-      "description": "A specific tsconfig file for the nf remotes and exposed modules. It also drives esbuild's module resolution, so it must declare or extend the workspace baseUrl/paths."
+      "description": "A specific tsconfig file for the nf remotes and exposed modules. It also drives esbuild's module resolution, so it must declare or extend the workspace baseUrl/paths. The builder owns this file's `files` array and rewrites it on every build; comments are not preserved. Leave it unset to compile against the Angular target's own tsconfig, which the builder never rewrites."
     },
     "cacheExternalArtifacts": {
       "type": "boolean",

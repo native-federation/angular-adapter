@@ -84,29 +84,35 @@ describe('createAngularEsbuildContext', () => {
     expect(pluginOptions.tsconfig).toBe(expected);
   });
 
-  it('joins the workspace root once when mappings are optimized', async () => {
-    await createAngularEsbuildContext(makeOptions({ optimizedMappings: true }));
+  it('updates the tsconfig the NF target declared, passing the fallback entry points', async () => {
+    await createAngularEsbuildContext(
+      makeOptions({
+        builderOptions: {
+          optimization: false,
+          sourceMap: false,
+          managedTsConfig: 'apps/example/tsconfig.federation.json',
+          fallbackEntryPoints: ['apps/example/src/main.ts'],
+        },
+      } as unknown as Partial<NormalizedContextOptions>)
+    );
 
     // updateFederationTsConfig joins the workspace root itself
     expect(updateFederationTsConfig).toHaveBeenCalledWith(
       workspaceRoot,
       'apps/example/tsconfig.app.json',
       expect.anything(),
-      true
+      ['apps/example/src/main.ts']
     );
     expect(lastBuildOptions().tsconfig).toBe(
       path.join(workspaceRoot, 'apps/example/tsconfig.app.json')
     );
   });
 
-  it('still updates the tsconfig when mappings are not optimized, so exposes land in the program', async () => {
-    await createAngularEsbuildContext(makeOptions({ optimizedMappings: false }));
+  // Without `tsConfig` on the NF target the builder falls back to the Angular target's own
+  // tsconfig, which is the user's file and must be left alone.
+  it('leaves the tsconfig alone when the NF target declared none', async () => {
+    await createAngularEsbuildContext(makeOptions());
 
-    expect(updateFederationTsConfig).toHaveBeenCalledWith(
-      workspaceRoot,
-      'apps/example/tsconfig.app.json',
-      expect.anything(),
-      false
-    );
+    expect(updateFederationTsConfig).not.toHaveBeenCalled();
   });
 });

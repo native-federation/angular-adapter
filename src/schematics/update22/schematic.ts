@@ -1,5 +1,9 @@
 import type { Rule, Tree } from "@angular-devkit/schematics";
 import { getWorkspaceFileName } from "../init/schematic.js";
+import {
+  federationTsConfigPath,
+  writeFederationTsConfig,
+} from "../init/steps/generate-federation-tsconfig.js";
 
 import * as path from "path";
 
@@ -9,7 +13,9 @@ const BETA_PACKAGE = "@angular-architects/native-federation-v4";
 const NF_BUILDER = `${NF_PACKAGE}:build`;
 const BETA_BUILDER = `${BETA_PACKAGE}:build`;
 
-// `ng update` migration for v22: brings every project onto the ESM standard.
+// `ng update` migration for v22: brings every project onto the ESM standard and onto its own
+// federation tsconfig. Every step re-runs safely, so the collection entry can be bumped to a
+// later version to reach projects that already ran an earlier one.
 export default function update22(): Rule {
   return async function (tree: Tree) {
     const workspaceFileName = getWorkspaceFileName(tree);
@@ -18,9 +24,84 @@ export default function update22(): Rule {
     );
 
     normalizeBuilderReferences(tree, workspace, workspaceFileName);
+    generateFederationTsConfigs(tree, workspace, workspaceFileName);
     migrateFederationConfigs(tree, workspace);
     normalizeMainTsImports(tree, workspace);
   };
+}
+
+/**
+ * Give every federated project its own tsconfig.federation.json. Without one the builder
+ * compiles the federation artifacts against the Angular target's tsconfig — the whole app,
+ * for every build — and would have to rewrite that file to add the exposes to its program.
+ */
+function generateFederationTsConfigs(
+  tree: Tree,
+  workspace: any,
+  workspaceFileName: string,
+): void {
+  let modified = false;
+
+  for (const projectName of Object.keys(workspace.projects ?? {})) {
+    const project = workspace.projects[projectName];
+    const architect = project?.architect ?? {};
+
+    const targets = Object.values(architect).filter(
+      (target: any) =>
+        target?.builder === NF_BUILDER && !target?.options?.tsConfig,
+    ) as { options?: Record<string, unknown> }[];
+
+    if (targets.length === 0) {
+      continue;
+    }
+
+    const projectRoot: string = (project.root ?? "").replace(/\\/g, "/");
+    const federationTsConfig = federationTsConfigPath(projectRoot);
+
+    if (!tree.exists(federationTsConfig)) {
+      // `esbuild` is where the init schematic parked the original build target.
+      const original = architect.esbuild ?? architect.build;
+      const appTsConfig = original?.options?.tsConfig;
+
+      if (!appTsConfig) {
+        console.warn(
+          `Skipping ${projectName}: its build target has no tsConfig, so ` +
+            `${federationTsConfig} cannot be generated.`,
+        );
+        continue;
+      }
+
+      const projectSourceRoot: string = (
+        project.sourceRoot ?? path.join(projectRoot, "src")
+      ).replace(/\\/g, "/");
+
+      writeFederationTsConfig(tree, {
+        projectRoot,
+        projectSourceRoot,
+        appTsConfig,
+        // The exposes live in federation.config.mjs, which is not ours to parse; main.ts
+        // keeps the program non-empty until the first build fills in the real entries.
+        entryPoints: [
+          original.options.browser ??
+            original.options.main ??
+            path.join(projectSourceRoot, "main.ts"),
+        ],
+      });
+
+      console.log(`Generated ${federationTsConfig}`);
+    }
+
+    for (const target of targets) {
+      target.options ??= {};
+      target.options.tsConfig = federationTsConfig;
+    }
+
+    modified = true;
+  }
+
+  if (modified) {
+    tree.overwrite(workspaceFileName, JSON.stringify(workspace, null, "\t"));
+  }
 }
 
 // Rename the beta builder back and ensure NF targets carry entryPoints/projectName.
