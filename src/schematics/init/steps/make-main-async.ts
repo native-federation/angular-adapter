@@ -1,6 +1,6 @@
-import type { Rule } from '@angular-devkit/schematics';
-import type { NfSchematicSchema } from '../schema.js';
-import * as path from 'path';
+import type { Rule } from "@angular-devkit/schematics";
+import type { NfSchematicSchema } from "../schema.js";
+import * as path from "path";
 
 // The adapter's `initFederation` wrapper hides shimMode/logger/storage, so
 // generated apps don't ship internal orchestrator options or `logLevel: 'debug'`.
@@ -9,15 +9,15 @@ const FEDERATION_IMPORT = `import { initFederation } from '@angular-architects/n
 function getFederationArg(
   options: NfSchematicSchema,
   remoteMap: unknown,
-  manifestRelPath: string
+  manifestRelPath: string,
 ): string {
   switch (options.type) {
-    case 'dynamic-host':
+    case "dynamic-host":
       return `'${manifestRelPath}'`;
-    case 'host':
+    case "host":
       return JSON.stringify(remoteMap, null, 2).replace(/"/g, "'");
     default:
-      return `{ '${options.project}': './remoteEntry.json' }`;
+      return ``;
   }
 }
 
@@ -25,11 +25,11 @@ export function makeMainAsync(
   main: string,
   options: NfSchematicSchema,
   remoteMap: unknown,
-  manifestRelPath: string
+  manifestRelPath: string,
 ): Rule {
   return async function (tree) {
     const mainPath = path.dirname(main);
-    const bootstrapName = path.join(mainPath, 'bootstrap.ts');
+    const bootstrapName = path.join(mainPath, "bootstrap.ts");
 
     if (tree.exists(bootstrapName)) {
       console.info(`${bootstrapName} already exists.`);
@@ -49,7 +49,7 @@ initFederation(${federationArg})
   .catch(err => console.error(err))
   .then(_ => import('./bootstrap'))
   .catch(err => console.error(err));
-`
+`,
     );
   };
 }
