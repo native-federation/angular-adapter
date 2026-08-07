@@ -18,35 +18,76 @@ describe('updateFederationTsConfig', () => {
     vi.mocked(fs.writeFileSync).mockReset();
   });
 
-  it('returns early without touching fs when all entry points are local', () => {
-    updateFederationTsConfig('/ws', 'tsconfig.fed.json', [entry('./local-a'), entry('./local-b')]);
+  it('returns early without touching fs when there are no entry points', () => {
+    updateFederationTsConfig('/ws', 'tsconfig.fed.json', [], true);
 
     expect(fs.readFileSync).not.toHaveBeenCalled();
     expect(fs.writeFileSync).not.toHaveBeenCalled();
   });
 
-  it('appends non-local entry points relative to the tsconfig dir, skipping locals', () => {
+  it('resolves workspace-root-relative exposes against the workspace root', () => {
+    vi.mocked(fs.existsSync).mockReturnValue(true);
+    vi.mocked(fs.readFileSync).mockReturnValue(JSON5.stringify({ include: [] }) as never);
+
+    updateFederationTsConfig(
+      '/ws',
+      'projects/mfe1/tsconfig.fed.json',
+      [entry('./projects/mfe1/src/bootstrap.ts')],
+      true
+    );
+
+    const written = JSON.parse(String(vi.mocked(fs.writeFileSync).mock.calls[0]![1]));
+    expect(written.include).toEqual(['src/bootstrap.ts']);
+  });
+
+  it('appends absolute mapping entry points relative to the tsconfig dir', () => {
     vi.mocked(fs.existsSync).mockReturnValue(true);
     vi.mocked(fs.readFileSync).mockReturnValue(JSON5.stringify({ include: ['existing.ts'] }) as never);
 
-    updateFederationTsConfig('/ws', 'tsconfig.fed.json', [
-      entry('/ws/src/a.ts'),
-      entry('./skip.ts'),
-    ]);
+    updateFederationTsConfig('/ws', 'tsconfig.fed.json', [entry('/ws/src/a.ts')], true);
 
     expect(fs.writeFileSync).toHaveBeenCalledTimes(1);
     const written = JSON.parse(String(vi.mocked(fs.writeFileSync).mock.calls[0]![1]));
     expect(written.include).toEqual(['existing.ts', 'src/a.ts']);
   });
 
+  it('skips mapping entry points but keeps exposes when mappings are not optimized', () => {
+    vi.mocked(fs.existsSync).mockReturnValue(true);
+    vi.mocked(fs.readFileSync).mockReturnValue(JSON5.stringify({ include: [] }) as never);
+
+    updateFederationTsConfig(
+      '/ws',
+      'tsconfig.fed.json',
+      [entry('/ws/libs/unused/src/index.ts'), entry('./src/bootstrap.ts')],
+      false
+    );
+
+    const written = JSON.parse(String(vi.mocked(fs.writeFileSync).mock.calls[0]![1]));
+    expect(written.include).toEqual(['src/bootstrap.ts']);
+  });
+
+  it('returns early without touching fs when only mappings are present and unoptimized', () => {
+    updateFederationTsConfig(
+      '/ws',
+      'tsconfig.fed.json',
+      [entry('/ws/libs/unused/src/index.ts')],
+      false
+    );
+
+    expect(fs.readFileSync).not.toHaveBeenCalled();
+    expect(fs.writeFileSync).not.toHaveBeenCalled();
+  });
+
   it('does not duplicate an include that is already present', () => {
     vi.mocked(fs.existsSync).mockReturnValue(true);
     vi.mocked(fs.readFileSync).mockReturnValue(JSON5.stringify({ include: ['src/a.ts'] }) as never);
 
-    updateFederationTsConfig('/ws', 'tsconfig.fed.json', [
-      entry('/ws/src/a.ts'),
-      entry('/ws/src/b.ts'),
-    ]);
+    updateFederationTsConfig(
+      '/ws',
+      'tsconfig.fed.json',
+      [entry('/ws/src/a.ts'), entry('/ws/src/b.ts')],
+      true
+    );
 
     const written = JSON.parse(String(vi.mocked(fs.writeFileSync).mock.calls[0]![1]));
     expect(written.include).toEqual(['src/a.ts', 'src/b.ts']);
@@ -56,7 +97,7 @@ describe('updateFederationTsConfig', () => {
     vi.mocked(fs.existsSync).mockReturnValue(true);
     vi.mocked(fs.readFileSync).mockReturnValue(JSON5.stringify({ compilerOptions: {} }) as never);
 
-    updateFederationTsConfig('/ws', 'tsconfig.fed.json', [entry('/ws/src/a.ts')]);
+    updateFederationTsConfig('/ws', 'tsconfig.fed.json', [entry('/ws/src/a.ts')], true);
 
     const written = JSON.parse(String(vi.mocked(fs.writeFileSync).mock.calls[0]![1]));
     expect(written.include).toEqual(['src/a.ts']);
@@ -70,7 +111,7 @@ describe('updateFederationTsConfig', () => {
       .spyOn(path, 'relative')
       .mockReturnValue('..\\libs\\shared\\src\\index.ts');
 
-    updateFederationTsConfig('/ws', 'tsconfig.fed.json', [entry('/libs/shared/src/index.ts')]);
+    updateFederationTsConfig('/ws', 'tsconfig.fed.json', [entry('/libs/shared/src/index.ts')], true);
 
     const written = JSON.parse(String(vi.mocked(fs.writeFileSync).mock.calls[0]![1]));
     expect(written.include).toEqual(['../libs/shared/src/index.ts']);
@@ -82,7 +123,7 @@ describe('updateFederationTsConfig', () => {
     vi.mocked(fs.existsSync).mockReturnValue(true);
     vi.mocked(fs.readFileSync).mockReturnValue(JSON5.stringify({ include: ['src/a.ts'] }) as never);
 
-    updateFederationTsConfig('/ws', 'tsconfig.fed.json', [entry('/ws/src/a.ts')]);
+    updateFederationTsConfig('/ws', 'tsconfig.fed.json', [entry('/ws/src/a.ts')], true);
 
     expect(fs.writeFileSync).not.toHaveBeenCalled();
   });

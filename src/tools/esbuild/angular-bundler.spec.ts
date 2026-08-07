@@ -91,10 +91,22 @@ describe('createAngularEsbuildContext', () => {
     expect(updateFederationTsConfig).toHaveBeenCalledWith(
       workspaceRoot,
       'apps/example/tsconfig.app.json',
-      expect.anything()
+      expect.anything(),
+      true
     );
     expect(lastBuildOptions().tsconfig).toBe(
       path.join(workspaceRoot, 'apps/example/tsconfig.app.json')
+    );
+  });
+
+  it('still updates the tsconfig when mappings are not optimized, so exposes land in the program', async () => {
+    await createAngularEsbuildContext(makeOptions({ optimizedMappings: false }));
+
+    expect(updateFederationTsConfig).toHaveBeenCalledWith(
+      workspaceRoot,
+      'apps/example/tsconfig.app.json',
+      expect.anything(),
+      false
     );
   });
 });

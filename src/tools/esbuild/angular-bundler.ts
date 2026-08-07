@@ -78,9 +78,7 @@ export async function createAngularEsbuildContext(options: NormalizedContextOpti
     }
   }
 
-  if (optimizedMappings) {
-    updateFederationTsConfig(workspaceRoot, tsConfigPath, entryPoints);
-  }
+  updateFederationTsConfig(workspaceRoot, tsConfigPath, entryPoints, optimizedMappings);
 
   tsConfigPath = path.join(workspaceRoot, tsConfigPath);
 
