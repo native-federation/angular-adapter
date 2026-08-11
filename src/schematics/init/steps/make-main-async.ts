@@ -17,7 +17,7 @@ function getFederationArg(
     case "host":
       return JSON.stringify(remoteMap, null, 2).replace(/"/g, "'");
     default:
-      return ``;
+      return `{}`;
   }
 }
 
@@ -45,7 +45,9 @@ export function makeMainAsync(
       main,
       `${FEDERATION_IMPORT}
 
-initFederation(${federationArg})
+initFederation(${federationArg}, {
+  hostRemoteEntry: { url: "./remoteEntry.json" }
+})
   .catch(err => console.error(err))
   .then(_ => import('./bootstrap'))
   .catch(err => console.error(err));
