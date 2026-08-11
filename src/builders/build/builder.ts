@@ -211,10 +211,12 @@ export async function* runBuilder(
     ngBuilderOptions.outputPath = nfBuilderOptions.outputPath;
   }
 
-  const federationTsConfig =
-    !!nfBuilderOptions.tsConfig && nfBuilderOptions.tsConfig.length > 0
-      ? nfBuilderOptions.tsConfig
-      : ngBuilderOptions.tsConfig;
+  const declaresTsConfig =
+    !!nfBuilderOptions.tsConfig && nfBuilderOptions.tsConfig.length > 0;
+
+  const federationTsConfig = declaresTsConfig
+    ? nfBuilderOptions.tsConfig!
+    : ngBuilderOptions.tsConfig;
 
   const entryPoints: string[] | undefined =
     nfBuilderOptions.entryPoints && nfBuilderOptions.entryPoints.length > 0
@@ -226,9 +228,9 @@ export async function* runBuilder(
       ...ngBuilderOptions,
       plugins: nfBuilderOptions.plugins,
       instrumentForCoverage: nfBuilderOptions.instrumentForCoverage,
-      // Deliberately not `federationTsConfig`: only a tsconfig the target declares itself is
-      // the builder's to rewrite, never the Angular target's own one it falls back to.
-      managedTsConfig: nfBuilderOptions.tsConfig,
+      // Only a tsconfig the target declares itself is the builder's to rewrite, never the
+      // Angular target's own one it falls back to.
+      manageTsConfig: declaresTsConfig,
       fallbackEntryPoints: entryPoints,
     },
     context,

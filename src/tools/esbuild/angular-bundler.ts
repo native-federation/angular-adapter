@@ -77,10 +77,11 @@ export async function createAngularEsbuildContext(options: NormalizedContextOpti
     }
   }
 
-  // Only a tsconfig the NF target explicitly points at is ours to rewrite. Without one the
-  // builder falls back to the Angular target's own tsconfig, whose include already covers the
-  // exposes — rewriting that would strip its comments to no effect.
-  if (builderOptions.managedTsConfig) {
+  // Only a tsconfig the NF target explicitly points at is ours to rewrite. Without one this is
+  // the Angular target's own tsconfig, where `files` belongs to Angular — replacing it there
+  // drops main.ts from the app's program on any project scaffolded with the older
+  // `files: ["src/main.ts"]` / `include: ["src/**/*.d.ts"]` shape.
+  if (builderOptions.manageTsConfig) {
     updateFederationTsConfig(
       workspaceRoot,
       tsConfigPath,

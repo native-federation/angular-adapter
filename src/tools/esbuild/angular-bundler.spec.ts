@@ -90,7 +90,7 @@ describe('createAngularEsbuildContext', () => {
         builderOptions: {
           optimization: false,
           sourceMap: false,
-          managedTsConfig: 'apps/example/tsconfig.federation.json',
+          manageTsConfig: true,
           fallbackEntryPoints: ['apps/example/src/main.ts'],
         },
       } as unknown as Partial<NormalizedContextOptions>)

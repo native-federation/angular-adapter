@@ -76,7 +76,7 @@ export async function* runRemoteBuilder(
     {
       ...ngBuilderOptions,
       // Required by the schema, so the tsconfig is always the builder's to manage.
-      managedTsConfig: federationTsConfig,
+      manageTsConfig: true,
       fallbackEntryPoints: entryPoints,
     },
     context
