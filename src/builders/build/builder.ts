@@ -48,6 +48,7 @@ import {
 } from "@softarc/native-federation/internal";
 import { type Plugin, type PluginBuild } from "esbuild";
 import { devHostInstancesPlugin } from "../../plugin/dev-host-instances-plugin.js";
+import { withCanonicalWorkspaceRoot } from "./../../utils/canonical-workspace-root.js";
 import { checkForInvalidImports } from "./../../utils/check-for-invalid-imports.js";
 import { federationSourceFiles } from "./../../utils/federation-source-files.js";
 import { federationBuildNotifier } from "./federation-build-notifier.js";
@@ -127,8 +128,12 @@ const createInternalAngularBuilder =
 
 export async function* runBuilder(
   nfBuilderOptions: NfBuilderSchema & NfInternalOptions,
-  context: BuilderContext,
+  builderContext: BuilderContext,
 ): AsyncIterable<BuilderOutput> {
+  // One root for the whole invocation, ours and Angular's alike — the two halves compare
+  // each other's paths as plain strings (watch sets, cache keys).
+  const context = withCanonicalWorkspaceRoot(builderContext);
+
   let target = targetFromTargetString(nfBuilderOptions.target);
 
   let targetOptions = (await context.getTargetOptions(
