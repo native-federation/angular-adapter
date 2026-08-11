@@ -44,6 +44,13 @@ export function updateFederationTsConfig(
     return;
   }
 
+  if (!fs.existsSync(fullTsConfigPath)) {
+    throw new Error(
+      `The federation tsconfig "${tsConfigPath}" does not exist, so the exposed modules and ` +
+        `shared mappings cannot be added to the TypeScript program.`
+    );
+  }
+
   const tsconfigAsString = fs.readFileSync(fullTsConfigPath, 'utf-8');
   const tsconfig = JSON5.parse(tsconfigAsString);
 

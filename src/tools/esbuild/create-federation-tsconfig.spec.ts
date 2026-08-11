@@ -29,6 +29,19 @@ describe('updateFederationTsConfig', () => {
     expect(fs.writeFileSync).not.toHaveBeenCalled();
   });
 
+  it('throws naming the tsconfig when the file the target points at is missing', () => {
+    vi.mocked(fs.existsSync).mockReturnValue(false);
+
+    expect(() =>
+      updateFederationTsConfig('/ws', 'projects/mfe1/tsconfig.fed.json', [
+        entry('./projects/mfe1/src/bootstrap.ts'),
+      ])
+    ).toThrow(/"projects\/mfe1\/tsconfig\.fed\.json" does not exist/);
+
+    expect(fs.readFileSync).not.toHaveBeenCalled();
+    expect(fs.writeFileSync).not.toHaveBeenCalled();
+  });
+
   it('resolves workspace-root-relative exposes against the workspace root', () => {
     vi.mocked(fs.existsSync).mockReturnValue(true);
     vi.mocked(fs.readFileSync).mockReturnValue(JSON5.stringify({ files: [] }) as never);
