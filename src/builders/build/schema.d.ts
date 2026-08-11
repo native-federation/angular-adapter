@@ -23,4 +23,20 @@ export interface NfBuilderSchema extends JsonObject {
   cacheExternalArtifacts?: boolean;
 }
 
-export type NfInternalOptions = { plugins?: Plugin[] };
+export type NfInternalOptions = {
+  plugins?: Plugin[];
+
+  /**
+   * Whether the tsconfig the federation build resolved to is the builder's to rewrite (see
+   * utils/update-federation-tsconfig.ts). True only when the NF target declares a
+   * `tsConfig` of its own; without one the build falls back to the Angular target's tsconfig,
+   * where `files` is Angular's — replacing it would drop main.ts from the app's own program.
+   */
+  manageTsConfig?: boolean;
+
+  /**
+   * Roots keeping the federation program non-empty when a build has no entry points of its
+   * own — core's reachability entry points, which default to the project's main.ts.
+   */
+  fallbackEntryPoints?: string[];
+};

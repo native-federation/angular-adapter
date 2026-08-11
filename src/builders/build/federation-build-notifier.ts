@@ -21,6 +21,9 @@ interface FederationEvent {
 type NextFunction = (error?: Error) => void;
 type MiddlewareFunction = (req: IncomingMessage, res: ServerResponse, next: NextFunction) => void;
 
+const MAX_CONNECTIONS = 16;
+const RECONNECT_DELAY_MS = 5000;
+
 /**
  * Manages Server-Sent Events for federation hot reload in local development
  * Only active when running in development mode with dev server
@@ -71,6 +74,8 @@ export class FederationBuildNotifier {
    * Sets up a new SSE connection
    */
   private _setupSSEConnection(req: IncomingMessage, res: ServerResponse): void {
+    this._evictOverflow();
+
     res.writeHead(200, {
       'Content-Type': 'text/event-stream',
       'Cache-Control': 'no-cache',
@@ -78,6 +83,9 @@ export class FederationBuildNotifier {
       'Access-Control-Allow-Origin': '*',
       'Access-Control-Allow-Headers': 'Cache-Control',
     });
+
+    // Pins the reconnect backoff instead of leaving it to the browser default.
+    res.write(`retry: ${RECONNECT_DELAY_MS}\n`);
 
     // Send initial connection event
     this._sendEvent(res, {
@@ -96,6 +104,28 @@ export class FederationBuildNotifier {
     logger.info(
       `[Federation SSE] Client connected. Active connections: ${this.connections.length}`
     );
+  }
+
+  /**
+   * Drops the oldest connections once the pool is full
+   *
+   * Behind a reverse proxy the peer is the proxy rather than the browser, so a stream the
+   * client already abandoned still looks writable here and cannot be detected as stale.
+   * Bounding the pool caps how many such connections can pile up.
+   */
+  private _evictOverflow(): void {
+    while (this.connections.length >= MAX_CONNECTIONS) {
+      const oldest = this.connections.shift();
+      if (!oldest) return;
+
+      try {
+        oldest.response.end();
+      } catch {
+        // Connection might already be closed
+      }
+
+      logger.info('[Federation SSE] Connection limit reached, dropped the oldest connection');
+    }
   }
 
   /**

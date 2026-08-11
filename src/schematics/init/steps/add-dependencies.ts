@@ -1,48 +1,55 @@
-import type { SchematicContext, Tree } from '@angular-devkit/schematics';
-import { NodePackageInstallTask } from '@angular-devkit/schematics/tasks/index.js';
-import {
-  addPackageJsonDependency,
-  getPackageJsonDependency,
-  NodeDependencyType,
-} from '@schematics/angular/utility/dependencies';
+import type { SchematicContext, Tree } from "@angular-devkit/schematics";
+import { NodePackageInstallTask } from "@angular-devkit/schematics/tasks/index.js";
 
-export function addDependencies(tree: Tree, context: SchematicContext, ssr: boolean): void {
-  addPackageJsonDependency(tree, {
-    name: '@angular-devkit/build-angular',
-    type: NodeDependencyType.Dev,
-    version: getPackageJsonDependency(tree, '@angular/build')?.version || 'latest',
-    overwrite: false,
-  });
+type DependencyType = "dependencies" | "devDependencies";
+type PackageJson = Partial<Record<DependencyType, Record<string, string>>>;
 
-  addPackageJsonDependency(tree, {
-    name: 'es-module-shims',
-    type: NodeDependencyType.Default,
-    version: '^2.8.0',
-    overwrite: false,
-  });
+export function addDependencies(
+  tree: Tree,
+  context: SchematicContext,
+  ssr: boolean,
+): void {
+  const packageJson = (tree.readJson("package.json") as PackageJson) ?? {};
 
-  // Browser-only projects bundle the orchestrator into the app, so a dev
-  // dependency suffices. For SSR it must be a runtime dependency: the generated
-  // server entry imports '@softarc/native-federation-orchestrator/node' as a
-  // bare specifier resolved from node_modules at runtime.
-  addPackageJsonDependency(tree, {
-    name: '@softarc/native-federation-orchestrator',
-    type: ssr ? NodeDependencyType.Default : NodeDependencyType.Dev,
-    version: '^4.2.2',
-    overwrite: true,
-  });
+  function addDependency(
+    type: DependencyType,
+    name: string,
+    version: string,
+    overwrite = false,
+  ): void {
+    const deps = (packageJson[type] ??= {});
+    if (overwrite || !deps[name]) {
+      deps[name] = version;
+    }
+  }
+
+  // Angular 21's application builder still reaches into @angular-devkit/build-angular,
+  // which @angular/build does not pull in on its own.
+  addDependency(
+    "devDependencies",
+    "@angular-devkit/build-angular",
+    packageJson.dependencies?.["@angular/build"] ??
+      packageJson.devDependencies?.["@angular/build"] ??
+      "latest",
+  );
+
+  addDependency("dependencies", "es-module-shims", "^2.8.0");
+
+  addDependency(
+    "devDependencies",
+    "@softarc/native-federation-orchestrator",
+    "^4.6.0",
+    true,
+  );
 
   if (ssr) {
-    console.log('SSR detected ...');
-    console.log('Activating CORS ...');
+    console.log("SSR detected ...");
+    console.log("Activating CORS ...");
 
-    addPackageJsonDependency(tree, {
-      name: 'cors',
-      type: NodeDependencyType.Default,
-      version: '^2.8.5',
-      overwrite: false,
-    });
+    addDependency("dependencies", "cors", "^2.8.5");
   }
+
+  tree.overwrite("package.json", JSON.stringify(packageJson, null, 2));
 
   context.addTask(new NodePackageInstallTask());
 }

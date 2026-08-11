@@ -13,6 +13,7 @@ import { updatePolyfills } from './steps/update-polyfills.js';
 import { generateRemoteMap } from './steps/generate-remote-map.js';
 import { generateFederationConfig } from './steps/generate-federation-config.js';
 import { updateWorkspaceConfig } from './steps/update-workspace-config.js';
+import { generateFederationTsConfig } from './steps/generate-federation-tsconfig.js';
 import { addDependencies } from './steps/add-dependencies.js';
 import { makeMainAsync } from './steps/make-main-async.js';
 import { makeServerAsync } from './steps/make-server-async.js';
@@ -70,7 +71,18 @@ export default function config(options: NfSchematicSchema): Rule {
     const ssr = isSsrProject(normalized);
     const server = ssr ? getSsrFilePath(normalized) : '';
 
-    updateWorkspaceConfig(tree, normalized, workspace, workspaceFileName, ssr);
+    // Seed the federation program with what the generated config exposes, so the first build
+    // finds the tsconfig already correct. Where the exposes are unknown (a host, a config we
+    // did not write, or a project without a recognisable app component) main.ts stands in —
+    // the same fallback the builder applies.
+    const exposesAppComponent =
+      !exists && options.type === 'remote' && appComponent !== 'update-this.ts';
+
+    const federationTsConfig = generateFederationTsConfig(tree, normalized, [
+      exposesAppComponent ? appComponent : main,
+    ]);
+
+    updateWorkspaceConfig(tree, normalized, workspace, workspaceFileName, ssr, federationTsConfig);
 
     addDependencies(tree, context, ssr);
 

@@ -19,7 +19,7 @@ import {
 
 import { createAwaitableCompilerPlugin } from './create-awaitable-compiler-plugin.js';
 import type { NormalizedContextOptions } from './normalize-context-options.js';
-import { updateFederationTsConfig } from './create-federation-tsconfig.js';
+import { updateFederationTsConfig } from './update-federation-tsconfig.js';
 
 export async function createAngularEsbuildContext(options: NormalizedContextOptions): Promise<{
   ctx: esbuild.BuildContext;
@@ -36,7 +36,6 @@ export async function createAngularEsbuildContext(options: NormalizedContextOpti
     hash,
     chunks,
     platform,
-    optimizedMappings,
   } = options;
 
   let tsConfigPath = options.tsConfigPath;
@@ -81,8 +80,17 @@ export async function createAngularEsbuildContext(options: NormalizedContextOpti
     }
   }
 
-  if (optimizedMappings) {
-    updateFederationTsConfig(workspaceRoot, tsConfigPath, entryPoints);
+  // Only a tsconfig the NF target explicitly points at is ours to rewrite. Without one this is
+  // the Angular target's own tsconfig, where `files` belongs to Angular — replacing it there
+  // drops main.ts from the app's program on any project scaffolded with the older
+  // `files: ["src/main.ts"]` / `include: ["src/**/*.d.ts"]` shape.
+  if (builderOptions.manageTsConfig) {
+    updateFederationTsConfig(
+      workspaceRoot,
+      tsConfigPath,
+      entryPoints,
+      builderOptions.fallbackEntryPoints
+    );
   }
 
   tsConfigPath = path.join(workspaceRoot, tsConfigPath);

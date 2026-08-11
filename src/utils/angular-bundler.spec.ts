@@ -4,7 +4,7 @@ import type { CompilerPluginOptions } from '@angular/build/private';
 
 import { createAngularEsbuildContext } from './angular-bundler.js';
 import { createAwaitableCompilerPlugin } from './create-awaitable-compiler-plugin.js';
-import { updateFederationTsConfig } from './create-federation-tsconfig.js';
+import { updateFederationTsConfig } from './update-federation-tsconfig.js';
 import type { NormalizedContextOptions } from './normalize-context-options.js';
 
 vi.mock('esbuild', () => ({ context: vi.fn().mockResolvedValue({ rebuild: vi.fn() }) }));
@@ -23,7 +23,7 @@ vi.mock('./create-awaitable-compiler-plugin.js', () => ({
     .mockReturnValue([{ name: 'angular-compiler', setup: vi.fn() }, Promise.resolve()]),
 }));
 
-vi.mock('./create-federation-tsconfig.js', () => ({ updateFederationTsConfig: vi.fn() }));
+vi.mock('./update-federation-tsconfig.js', () => ({ updateFederationTsConfig: vi.fn() }));
 
 vi.mock('@chialab/esbuild-plugin-commonjs', () => ({
   default: () => ({ name: 'commonjs', setup: vi.fn() }),
@@ -84,17 +84,35 @@ describe('createAngularEsbuildContext', () => {
     expect(pluginOptions.tsconfig).toBe(expected);
   });
 
-  it('joins the workspace root once when mappings are optimized', async () => {
-    await createAngularEsbuildContext(makeOptions({ optimizedMappings: true }));
+  it('updates the tsconfig the NF target declared, passing the fallback entry points', async () => {
+    await createAngularEsbuildContext(
+      makeOptions({
+        builderOptions: {
+          optimization: false,
+          sourceMap: false,
+          manageTsConfig: true,
+          fallbackEntryPoints: ['apps/example/src/main.ts'],
+        },
+      } as unknown as Partial<NormalizedContextOptions>)
+    );
 
     // updateFederationTsConfig joins the workspace root itself
     expect(updateFederationTsConfig).toHaveBeenCalledWith(
       workspaceRoot,
       'apps/example/tsconfig.app.json',
-      expect.anything()
+      expect.anything(),
+      ['apps/example/src/main.ts']
     );
     expect(lastBuildOptions().tsconfig).toBe(
       path.join(workspaceRoot, 'apps/example/tsconfig.app.json')
     );
+  });
+
+  // Without `tsConfig` on the NF target the builder falls back to the Angular target's own
+  // tsconfig, which is the user's file and must be left alone.
+  it('leaves the tsconfig alone when the NF target declared none', async () => {
+    await createAngularEsbuildContext(makeOptions());
+
+    expect(updateFederationTsConfig).not.toHaveBeenCalled();
   });
 });

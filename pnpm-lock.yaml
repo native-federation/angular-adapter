@@ -48,9 +48,6 @@ importers:
       '@nx/devkit':
         specifier: ~22.6.0
         version: 22.6.5(nx@23.1.0)
-      '@schematics/angular':
-        specifier: ^21.2.0
-        version: 21.2.19(chokidar@5.0.0)
       '@types/node':
         specifier: ~24.10.0
         version: 24.10.15
@@ -2277,10 +2274,6 @@ packages:
     resolution: {integrity: sha512-BfzEnDJOt9T8M989/lA37EcJgat01wLRnoi5dQf3QzOH7jzpqTAzdDbVfRljVr5r+jzKqpbHeyOfAaXxAd0PAA==, tarball: https://registry.npmjs.org/@rollup/rollup-win32-x64-msvc/-/rollup-win32-x64-msvc-4.62.2.tgz}
     cpu: [x64]
     os: [win32]
-
-  '@schematics/angular@21.2.19':
-    resolution: {integrity: sha512-eL+UU9eizoadhDB4YEctRmmo0A5iwrSmGzeuEa6akrq8nLGVWM8zO91HTJutkPqGQjelF+UOiOShsQSZAU9SIQ==, tarball: https://registry.npmjs.org/@schematics/angular/-/angular-21.2.19.tgz}
-    engines: {node: ^20.19.0 || ^22.12.0 || >=24.0.0, npm: ^6.11.0 || ^7.5.6 || >=8.0.0, yarn: '>= 1.13.0'}
 
   '@softarc/native-federation-orchestrator@4.5.2':
     resolution: {integrity: sha512-3GM65AwdaDhqlbU9X7hg5TqF8FZfqHfIyKv2F28XIZwy1KPImVMKQUd28IUP7K8ROiFhMNltpwggGSF1xDZm/w==, tarball: https://registry.npmjs.org/@softarc/native-federation-orchestrator/-/native-federation-orchestrator-4.5.2.tgz}
@@ -7108,14 +7101,6 @@ snapshots:
 
   '@rollup/rollup-win32-x64-msvc@4.62.2':
     optional: true
-
-  '@schematics/angular@21.2.19(chokidar@5.0.0)':
-    dependencies:
-      '@angular-devkit/core': 21.2.19(chokidar@5.0.0)
-      '@angular-devkit/schematics': 21.2.19(chokidar@5.0.0)
-      jsonc-parser: 3.3.1
-    transitivePeerDependencies:
-      - chokidar
 
   '@softarc/native-federation-orchestrator@4.5.2':
     dependencies:
