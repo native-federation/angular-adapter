@@ -13,6 +13,4 @@ allowBuilds:
   msw: true
   nx: false
 overrides:
-  'axios': '>=1.18.0'
   'brace-expansion': '>=5.0.9'
-  'fast-uri': '>=3.1.5'
