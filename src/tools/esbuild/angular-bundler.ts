@@ -16,7 +16,7 @@ import { normalizeOptimization, normalizeSourceMaps } from '../../utils/normaliz
 
 import { createAwaitableCompilerPlugin } from './create-awaitable-compiler-plugin.js';
 import type { NormalizedContextOptions } from '../../utils/normalize-context-options.js';
-import { updateFederationTsConfig } from './create-federation-tsconfig.js';
+import { updateFederationTsConfig } from './update-federation-tsconfig.js';
 
 export async function createAngularEsbuildContext(options: NormalizedContextOptions): Promise<{
   ctx: esbuild.BuildContext;

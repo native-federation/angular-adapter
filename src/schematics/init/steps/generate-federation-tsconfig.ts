@@ -24,7 +24,7 @@ export interface FederationTsConfigOptions {
 /**
  * Writes the tsconfig the federation build compiles against. It covers the exposes and shared
  * mappings rather than the app entry, so `files` is a plain list of entry points that the
- * builder rewrites per build (see tools/esbuild/create-federation-tsconfig.ts) and `include`
+ * builder rewrites per build (see tools/esbuild/update-federation-tsconfig.ts) and `include`
  * only picks up ambient declarations. It extends the app tsconfig because it also drives
  * esbuild's module resolution and so needs its paths.
  *

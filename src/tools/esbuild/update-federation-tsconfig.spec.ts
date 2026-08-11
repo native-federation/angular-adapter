@@ -2,7 +2,7 @@ import fs from 'fs';
 import path from 'path';
 import JSON5 from 'json5';
 
-import { updateFederationTsConfig } from './create-federation-tsconfig.js';
+import { updateFederationTsConfig } from './update-federation-tsconfig.js';
 import type { EntryPoint } from '@softarc/native-federation';
 
 vi.mock('fs');

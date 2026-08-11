@@ -4,7 +4,7 @@ import type { CompilerPluginOptions } from '@angular/build/private';
 
 import { createAngularEsbuildContext } from './angular-bundler.js';
 import { createAwaitableCompilerPlugin } from './create-awaitable-compiler-plugin.js';
-import { updateFederationTsConfig } from './create-federation-tsconfig.js';
+import { updateFederationTsConfig } from './update-federation-tsconfig.js';
 import type { NormalizedContextOptions } from '../../utils/normalize-context-options.js';
 
 vi.mock('esbuild', () => ({ context: vi.fn().mockResolvedValue({ rebuild: vi.fn() }) }));
@@ -23,7 +23,7 @@ vi.mock('./create-awaitable-compiler-plugin.js', () => ({
     .mockReturnValue([{ name: 'angular-compiler', setup: vi.fn() }, Promise.resolve()]),
 }));
 
-vi.mock('./create-federation-tsconfig.js', () => ({ updateFederationTsConfig: vi.fn() }));
+vi.mock('./update-federation-tsconfig.js', () => ({ updateFederationTsConfig: vi.fn() }));
 
 vi.mock('@chialab/esbuild-plugin-commonjs', () => ({
   default: () => ({ name: 'commonjs', setup: vi.fn() }),

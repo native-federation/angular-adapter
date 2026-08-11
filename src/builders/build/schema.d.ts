@@ -35,7 +35,7 @@ export type NfInternalOptions = {
 
   /**
    * Whether the tsconfig the federation build resolved to is the builder's to rewrite (see
-   * tools/esbuild/create-federation-tsconfig.ts). True only when the NF target declares a
+   * tools/esbuild/update-federation-tsconfig.ts). True only when the NF target declares a
    * `tsConfig` of its own; without one the build falls back to the Angular target's tsconfig,
    * where `files` is Angular's — replacing it would drop main.ts from the app's own program.
    */

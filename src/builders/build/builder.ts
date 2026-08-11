@@ -228,8 +228,6 @@ export async function* runBuilder(
       ...ngBuilderOptions,
       plugins: nfBuilderOptions.plugins,
       instrumentForCoverage: nfBuilderOptions.instrumentForCoverage,
-      // Only a tsconfig the target declares itself is the builder's to rewrite, never the
-      // Angular target's own one it falls back to.
       manageTsConfig: declaresTsConfig,
       fallbackEntryPoints: entryPoints,
     },
