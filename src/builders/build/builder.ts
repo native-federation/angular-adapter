@@ -211,16 +211,25 @@ export async function* runBuilder(
     ngBuilderOptions.outputPath = nfBuilderOptions.outputPath;
   }
 
-  const federationTsConfig =
-    !!nfBuilderOptions.tsConfig && nfBuilderOptions.tsConfig.length > 0
-      ? nfBuilderOptions.tsConfig
-      : ngBuilderOptions.tsConfig;
+  const declaresTsConfig =
+    !!nfBuilderOptions.tsConfig && nfBuilderOptions.tsConfig.length > 0;
+
+  const federationTsConfig = declaresTsConfig
+    ? nfBuilderOptions.tsConfig!
+    : ngBuilderOptions.tsConfig;
+
+  const entryPoints: string[] | undefined =
+    nfBuilderOptions.entryPoints && nfBuilderOptions.entryPoints.length > 0
+      ? nfBuilderOptions.entryPoints
+      : [path.join(path.dirname(federationTsConfig), "src/main.ts")];
 
   const adapter = createAngularBuildAdapter(
     {
       ...ngBuilderOptions,
       plugins: nfBuilderOptions.plugins,
       instrumentForCoverage: nfBuilderOptions.instrumentForCoverage,
+      manageTsConfig: declaresTsConfig,
+      fallbackEntryPoints: entryPoints,
     },
     context,
   );
@@ -264,11 +273,6 @@ export async function* runBuilder(
   const devServerOutputPath = !differentDevServerOutputPath
     ? browserOutputPath
     : path.join(outputOptions.base, outputOptions.browser, localeFilter[0]!);
-
-  const entryPoints: string[] | undefined =
-    nfBuilderOptions.entryPoints && nfBuilderOptions.entryPoints.length > 0
-      ? nfBuilderOptions.entryPoints
-      : [path.join(path.dirname(federationTsConfig), "src/main.ts")];
 
   const cachePath = getDefaultCachePath(context.workspaceRoot);
 

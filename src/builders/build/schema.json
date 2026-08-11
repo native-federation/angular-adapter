@@ -23,7 +23,9 @@
       "default": 0
     },
     "entryPoints": {
-      "type": "array"
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Fallback entry points, used only when the project has nothing federated of its own (no exposes, no shared mappings). They seed the federation tsconfig's 'files' and the unused-dependency scan. Exposes from federation.config always take precedence, so this cannot override or narrow them; to add extra files to the TypeScript program, use 'include' in the federation tsconfig instead. Defaults to 'src/main.ts' resolved next to the federation tsconfig."
     },
     "rebuildDelay": {
       "type": "number",
@@ -61,7 +63,7 @@
     },
     "tsConfig": {
       "type": "string",
-      "description": "A specific tsconfig file for the nf remotes and exposed modules. It also drives esbuild's module resolution, so it must declare or extend the workspace baseUrl/paths."
+      "description": "A specific tsconfig file for the nf remotes and exposed modules. It also drives esbuild's module resolution, so it must declare or extend the workspace baseUrl/paths. The builder owns this file's `files` array and rewrites it on every build; comments are not preserved. Leave it unset to compile against the Angular target's own tsconfig, which the builder never rewrites."
     },
     "cacheExternalArtifacts": {
       "type": "boolean",

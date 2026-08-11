@@ -10,10 +10,10 @@
       "description": "migrating to v18"
     },
     "update22": {
-      "version": "22.0.0",
+      "version": "22.1.1",
       "factory": "./src/schematics/update22/schematic",
       "schema": "./src/schematics/update22/schema.json",
-      "description": "migrating native-federation to the v22 ESM standard"
+      "description": "migrating native-federation to the v22 ESM standard and generating a tsconfig.federation.json per federated project"
     }
   }
 }

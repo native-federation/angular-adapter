@@ -64,16 +64,25 @@ export async function* runRemoteBuilder(
     context
   );
 
-  const adapter = createAngularBuildAdapter(ngBuilderOptions, context);
-  setBuildAdapter(adapter);
-  setLogLevel(nfBuilderOptions.verbose ? 'verbose' : 'info');
-
-  // Unlike the regular build builder, remote never bundles a main.ts / polyfills.
-  // Entry points come from the schema override or, when omitted, from the
-  // `exposes` map in federation.config.{mjs,js} (resolved by normalizeFederationOptions).
+  // Unlike the regular build builder, remote never bundles a main.ts / polyfills. Entry points
+  // come from the `exposes` map in federation.config.{mjs,js}; the schema option is only a
+  // fallback for when there are none, so passing `undefined` when it is omitted keeps core
+  // from treating an empty list as a deliberate one.
   const entryPoints: string[] | undefined = nfBuilderOptions.entryPoints?.length
     ? nfBuilderOptions.entryPoints
     : undefined;
+
+  const adapter = createAngularBuildAdapter(
+    {
+      ...ngBuilderOptions,
+      // Required by the schema, so the tsconfig is always the builder's to manage.
+      manageTsConfig: true,
+      fallbackEntryPoints: entryPoints,
+    },
+    context
+  );
+  setBuildAdapter(adapter);
+  setLogLevel(nfBuilderOptions.verbose ? 'verbose' : 'info');
 
   const cachePath = getDefaultCachePath(context.workspaceRoot);
 

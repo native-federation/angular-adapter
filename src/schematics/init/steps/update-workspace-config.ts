@@ -6,7 +6,8 @@ export function updateWorkspaceConfig(
   options: NormalizedOptions,
   workspace: any,
   workspaceFileName: string,
-  ssr: boolean
+  ssr: boolean,
+  federationTsConfig: string
 ) {
   const { projectConfig, projectName, port } = options;
 
@@ -43,6 +44,7 @@ export function updateWorkspaceConfig(
     builder: '@angular-architects/native-federation:build',
     options: {
       cacheExternalArtifacts: true,
+      tsConfig: federationTsConfig,
     },
     configurations: {
       production: {
@@ -96,6 +98,7 @@ export function updateWorkspaceConfig(
     builder: '@angular-architects/native-federation:build',
     options: {
       target: `${projectName}:serve-original:development`,
+      tsConfig: federationTsConfig,
       rebuildDelay: 500,
       cacheExternalArtifacts: true,
       dev: true,
