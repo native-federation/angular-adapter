@@ -20,7 +20,9 @@
       "default": false
     },
     "entryPoints": {
-      "type": "array"
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Fallback entry points, used only when the project has nothing federated of its own (no exposes, no shared mappings). They seed the federation tsconfig's 'files' and the unused-dependency scan. Exposes from federation.config always take precedence, so this cannot override or narrow them; to add extra files to the TypeScript program, use 'include' in the federation tsconfig instead. Unset by default — a remote's exposes are normally all it bundles."
     },
     "rebuildDelay": {
       "type": "number",

@@ -64,9 +64,10 @@ export async function* runRemoteBuilder(
     context
   );
 
-  // Unlike the regular build builder, remote never bundles a main.ts / polyfills.
-  // Entry points come from the schema override or, when omitted, from the
-  // `exposes` map in federation.config.{mjs,js} (resolved by normalizeFederationOptions).
+  // Unlike the regular build builder, remote never bundles a main.ts / polyfills. Entry points
+  // come from the `exposes` map in federation.config.{mjs,js}; the schema option is only a
+  // fallback for when there are none, so passing `undefined` when it is omitted keeps core
+  // from treating an empty list as a deliberate one.
   const entryPoints: string[] | undefined = nfBuilderOptions.entryPoints?.length
     ? nfBuilderOptions.entryPoints
     : undefined;
