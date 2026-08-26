@@ -1,4 +1,5 @@
 import { createNfWatcher, type NfFileWatcher } from '@softarc/native-federation/internal';
+import { watchpackWatch } from '../../utils/watchpack-watch.js';
 
 export interface DebouncedChangeWatcher {
   watcher: NfFileWatcher;
@@ -31,6 +32,7 @@ export function createDebouncedChangeWatcher(
   };
 
   const watcher = createNfWatcher({
+    watch: watchpackWatch,
     onChange: p => {
       pendingPaths.add(p);
       scheduleNotify();
