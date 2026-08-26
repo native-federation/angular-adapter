@@ -641,11 +641,19 @@ A common local-development setup is to build a shared library in its own repo (w
 
 Since Native Federation shares such a library as an _external_ (it is excluded from Angular's own build), a plain `ng serve` used to ignore edits to it — the change lived under `node_modules`, which the build watcher skips, so you had to clear the cache or restart the dev server to see it. Since version `22.0.6` (requires `@softarc/native-federation` ≥ `4.3.2`), the adapter detects linked shared packages and re-bundles them automatically on change.
 
+Two things about that detection have since changed (requires `@softarc/native-federation` ≥ `4.5.0`):
+
+- **A symlink alone no longer counts as linked.** Package managers that symlink by default — pnpm's default `isolated` linker, or Yarn's `nodeLinker: pnpm` — make _every_ dependency a symlink, which used to put the whole dependency graph on the watch list. A package is now treated as a live checkout only when its real path resolves **outside** every `node_modules` tree, which is exactly what `npm link` produces and what a package manager's internal symlink does not.
+- **Watching linked packages is opt-in**, via the `watchLinkedDeps` builder option below. It is off by default because watching means polling the linked checkout for as long as the dev server runs.
+
+Turning the option off does **not** risk a stale bundle. The adapter still checks the content of every linked package on each build, so a rebuilt library is never served from cache — it re-bundles on the next build either way. What the option buys is the live-reload loop: picking the change up _without_ you triggering a build.
+
 #### Requirements
 
 - The library is listed in your `federation.config.*` `shared` section (via `shareAll`, an explicit `shared` entry, or `sharedMappings`).
-- Its package directory under `node_modules` is a **symlink** — i.e. it was linked with `npm link` (or your package manager's equivalent), not installed from a registry.
+- Its package directory under `node_modules` is a **symlink pointing outside `node_modules`** — i.e. it was linked with `npm link` (or your package manager's equivalent), not installed from a registry and not symlinked by your package manager's own linker.
 - The library is rebuilt on change so the symlink target actually updates. With an Angular library this means running `ng build --watch` (ng-packagr) in the library's repo.
+- `watchLinkedDeps` is set to `true` on the builder target you are running — see below.
 
 #### Workflow
 
@@ -663,13 +671,31 @@ npm link @my-scope/my-lib
 ng serve
 ```
 
+Watching is opt-in, so enable it on the target you serve with:
+
+```json
+"serve": {
+  "builder": "@angular-architects/native-federation:build",
+  "options": {
+    "target": "host:serve-original:development",
+    "watchLinkedDeps": true
+  }
+}
+```
+
+The option is available on both the `:build` and `:remote` builders and defaults to `false`.
+
 Now edit a source file in the library. ng-packagr rebuilds its `dist/`, and the adapter picks up the change, re-bundles the affected shared external, and logs `Done!` — no manual cache clear or dev-server restart needed.
 
 To also refresh the browser automatically when the rebuild finishes, enable SSE-based reloading as described in [Shell reloading when MFE finishes building for local development](#shell-reloading-when-mfe-finishes-building-for-local-development) (`initFederation(manifest, { sse: true })`). Otherwise, a manual browser refresh will show the update.
 
 #### How it works
 
-The adapter resolves the real path of each symlinked shared package and adds it to the federation file watcher. Because linked packages live under `node_modules`, they are watched via polling, and a short debounce coalesces ng-packagr's atomic multi-file writes into a single rebuild. Only the shared externals affected by the change are re-bundled; regular (registry-installed) dependencies keep the version-only cache fast path, so there is no rebuild churn or performance regression for non-linked packages.
+The adapter resolves the real path of each shared package and treats it as a live checkout when that path lies outside every `node_modules` tree. With `watchLinkedDeps` enabled, those directories are added to the federation file watcher; a short debounce coalesces ng-packagr's atomic multi-file writes into a single rebuild. Only the shared externals affected by the change are re-bundled; regular (registry-installed) dependencies keep the version-only cache fast path, so there is no rebuild churn or performance regression for non-linked packages.
+
+Watching a linked checkout polls it, which is why it is off by default: a registry dependency is bundled once and cached by checksum, so its bytes cannot change without its version changing, and watching it could never change an outcome. Only a linked checkout changes content under a fixed version. Angular draws the same line — it ignores `**/node_modules/**` unless you opt in.
+
+Note that `preserveSymlinks` is unrelated and is **not** the switch for this. It changes esbuild's module resolution rather than what gets watched, and turning it on is the classic route to loading two copies of a singleton like `@angular/core`.
 
 ## FAQ
 
