@@ -693,9 +693,11 @@ To also refresh the browser automatically when the rebuild finishes, enable SSE-
 
 The adapter resolves the real path of each shared package and treats it as a live checkout when that path lies outside every `node_modules` tree. With `watchLinkedDeps` enabled, those directories are added to the federation file watcher; a short debounce coalesces ng-packagr's atomic multi-file writes into a single rebuild. Only the shared externals affected by the change are re-bundled; regular (registry-installed) dependencies keep the version-only cache fast path, so there is no rebuild churn or performance regression for non-linked packages.
 
-Watching a linked checkout polls it, which is why it is off by default: a registry dependency is bundled once and cached by checksum, so its bytes cannot change without its version changing, and watching it could never change an outcome. Only a linked checkout changes content under a fixed version. Angular draws the same line — it ignores `**/node_modules/**` unless you opt in.
+Watching a linked checkout polls it, which is why it is off by default: a registry dependency is bundled once and cached by checksum, so its bytes cannot change without its version changing, and watching it could never change an outcome. Only a linked checkout changes content under a fixed version.
 
-Note that `preserveSymlinks` is unrelated and is **not** the switch for this. It changes esbuild's module resolution rather than what gets watched, and turning it on is the classic route to loading two copies of a singleton like `@angular/core`.
+Angular draws the same line but wires it to `preserveSymlinks`: when it watches the project root it ignores `**/node_modules/**`, and skips that ignore when `preserveSymlinks` is on, precisely so `npm link` keeps working. It has to overload one flag because its resolver decides which path esbuild sees. The adapter does not, because it resolves each shared package's real path itself — so `watchLinkedDeps` governs watching and nothing else.
+
+That separation is worth keeping, so do **not** reach for `preserveSymlinks` here. It changes module resolution: it is the classic route to loading two copies of a singleton like `@angular/core`, and under pnpm it makes every dependency resolve through `.pnpm`. It would also shrink the watch set rather than grow it, since the adapter skips any path with a `node_modules` segment and `preserveSymlinks` is exactly what makes a linked library's files report as `node_modules/@my-scope/my-lib/…` instead of their real location.
 
 ## FAQ
 
