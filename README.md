@@ -646,14 +646,16 @@ Two things about that detection have since changed (requires `@softarc/native-fe
 - **A symlink alone no longer counts as linked.** Package managers that symlink by default — pnpm's default `isolated` linker, or Yarn's `nodeLinker: pnpm` — make _every_ dependency a symlink, which used to put the whole dependency graph on the watch list. A package is now treated as a live checkout only when its real path resolves **outside** every `node_modules` tree, which is exactly what `npm link` produces and what a package manager's internal symlink does not.
 - **Watching linked packages is opt-in**, via the `watchLinkedDeps` builder option below. It is off by default because watching means polling the linked checkout for as long as the dev server runs.
 
-Turning the option off does **not** risk a stale bundle. The adapter still checks the content of every linked package on each build, so a rebuilt library is never served from cache — it re-bundles on the next build either way. What the option buys is the live-reload loop: picking the change up _without_ you triggering a build.
+Turning the option off does **not** mean edits to a linked library are ignored. A library's type declarations are a TypeScript input, and the adapter resolves them to their real path outside `node_modules` — so an ng-packagr rebuild, which rewrites `dist/*.d.ts` alongside the JavaScript, is already noticed and re-bundled with the option off. What the option adds is coverage of changes that touch no such input: a JavaScript-only edit, or a rebuild whose emitted types come out byte-identical.
+
+A cold `ng build` re-bundles a changed linked library either way, since the adapter checksums each linked package's content on every build. A running `ng serve` is weaker: with the option off, a change touching no watched input can stay stale until you restart the server or run a build.
 
 #### Requirements
 
 - The library is listed in your `federation.config.*` `shared` section (via `shareAll`, an explicit `shared` entry, or `sharedMappings`).
 - Its package directory under `node_modules` is a **symlink pointing outside `node_modules`** — i.e. it was linked with `npm link` (or your package manager's equivalent), not installed from a registry and not symlinked by your package manager's own linker.
 - The library is rebuilt on change so the symlink target actually updates. With an Angular library this means running `ng build --watch` (ng-packagr) in the library's repo.
-- `watchLinkedDeps` is set to `true` on the builder target you are running — see below.
+- For the changes an ng-packagr rebuild does not cover on its own — see above — `watchLinkedDeps` is set to `true` on the builder target you are running.
 
 #### Workflow
 

@@ -20,8 +20,9 @@ export const watchpackWatch: WatchPort['watch'] = (watchPath, opts, onEvent) => 
       if (!rel || rel.startsWith('..')) return false;
       const segments = rel.split(path.sep);
       if (segments.includes('node_modules')) return true;
-      // Watchpack always descends; ignoring below depth 1 caps a non-recursive
-      // watch at what fs.watch would report.
+      // Watchpack descends either way; this only collapses a deeper change onto its
+      // depth-1 ancestor. fs.watch would report nothing at all, but core's only
+      // non-recursive watch drops the collapsed path as an untracked file anyway.
       return !opts.recursive && segments.length > 1;
     },
   });

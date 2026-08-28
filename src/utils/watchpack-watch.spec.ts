@@ -61,16 +61,19 @@ describe('watchpackWatch', () => {
     await waitFor(() => seen.includes('new.ts'));
   });
 
-  it('does not descend below depth 1 when not recursive', async () => {
-    const nested = path.join(root, 'sub');
-    fs.mkdirSync(nested);
+  // Watchpack descends whatever it is handed, so `recursive: false` cannot stop it the
+  // way fs.watch does — it only caps the reported path at depth 1. Two levels down, and
+  // modifying an existing file so no parent directory's mtime moves: the only way 'sub'
+  // can be reported is watchpack having descended to it.
+  it('collapses a change below depth 1 onto its depth-1 ancestor when not recursive', async () => {
+    const nested = path.join(root, 'sub', 'deeper');
+    fs.mkdirSync(nested, { recursive: true });
     fs.writeFileSync(path.join(nested, 'deep.ts'), 'one');
     const seen = watch(root, { recursive: false });
     await settle();
 
     fs.writeFileSync(path.join(nested, 'deep.ts'), 'two');
-    // Nothing to wait for, so give the event the same budget a real one would need.
-    await settle();
+    await waitFor(() => seen.includes('sub'));
     expect(seen.filter(f => f.includes('deep.ts'))).toEqual([]);
   });
 

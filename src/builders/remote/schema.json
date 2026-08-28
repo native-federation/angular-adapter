@@ -22,7 +22,7 @@
     "watchLinkedDeps": {
       "type": "boolean",
       "default": false,
-      "description": "Watch npm-linked shared libraries so rebuilding one reloads the host. Off by default: it polls the linked checkout for as long as the dev server runs. Correctness is not affected — a linked library still re-bundles on the next build either way."
+      "description": "Watch npm-linked shared libraries so rebuilding one reloads the host. Off by default: it polls the linked checkout for as long as the dev server runs. A cold build re-bundles a changed linked library either way; this option covers the changes a running dev server would otherwise miss."
     },
     "entryPoints": {
       "type": "array",
