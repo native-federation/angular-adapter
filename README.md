@@ -650,6 +650,12 @@ Turning the option off does **not** mean edits to a linked library are ignored. 
 
 A cold `ng build` re-bundles a changed linked library either way, since the adapter checksums each linked package's content on every build. A running `ng serve` is weaker: with the option off, a change touching no watched input can stay stale until you restart the server or run a build.
 
+So that the default is never a silent surprise, a watching build that finds a linked shared package while the option is off says so once at startup:
+
+```
+INFO  Detected npm-linked shared packages: @my-scope/my-lib. Set 'watchLinkedDeps' to true on this target to rebuild when they change.
+```
+
 #### Requirements
 
 - The library is listed in your `federation.config.*` `shared` section (via `shareAll`, an explicit `shared` entry, or `sharedMappings`).

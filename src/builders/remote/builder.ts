@@ -31,6 +31,7 @@ import {
 import { createAngularBuildAdapter } from '../../tools/esbuild/angular-esbuild-adapter.js';
 import { checkForInvalidImports } from '../../utils/check-for-invalid-imports.js';
 import { federationSourceFiles } from '../../utils/federation-source-files.js';
+import { hintUnwatchedLinkedDeps } from '../../utils/linked-deps-hint.js';
 
 import type { NfRemoteBuilderSchema, NfRemoteInternalOptions } from './schema.js';
 import { resolveNgBuilderOptions } from './resolve-ng-options.js';
@@ -115,6 +116,7 @@ export async function* runRemoteBuilder(
   // Realpath'd dirs of npm-linked shared packages (`[]` if none, making the
   // syncNfFileWatcher calls below a no-op) so the linked lib's real source is watched.
   const linkedDirs = linkedSharedDirs(normalized.config, normalized.options);
+  if (nfBuilderOptions.watch) hintUnwatchedLinkedDeps(normalized.config, normalized.options);
 
   const assetEntries = normalizeRemoteAssetEntries(
     nfBuilderOptions.assets,
