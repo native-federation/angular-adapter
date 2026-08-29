@@ -99,6 +99,7 @@ export async function* runRemoteBuilder(
       tsConfig: federationTsConfig,
       verbose: nfBuilderOptions.verbose,
       watch: nfBuilderOptions.watch,
+      watchLinkedDeps: nfBuilderOptions.watchLinkedDeps === true,
       dev: !!nfBuilderOptions.dev,
       entryPoints,
       cacheExternalArtifacts: nfBuilderOptions.cacheExternalArtifacts !== false,

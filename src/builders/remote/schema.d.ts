@@ -7,6 +7,7 @@ export interface NfRemoteBuilderSchema extends JsonObject {
   dev: boolean;
   rebuildDelay: number;
   watch: boolean;
+  watchLinkedDeps?: boolean;
   outputPath?: string;
   projectName?: string;
   verbose?: boolean;

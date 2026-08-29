@@ -51,6 +51,7 @@ import { devHostInstancesPlugin } from "../../plugin/dev-host-instances-plugin.j
 import { withCanonicalWorkspaceRoot } from "./../../utils/canonical-workspace-root.js";
 import { checkForInvalidImports } from "./../../utils/check-for-invalid-imports.js";
 import { federationSourceFiles } from "./../../utils/federation-source-files.js";
+import { watchpackWatch } from "./../../utils/watchpack-watch.js";
 import { federationBuildNotifier } from "./federation-build-notifier.js";
 import {
   createFederationFreshness,
@@ -294,6 +295,7 @@ export async function* runBuilder(
       tsConfig: federationTsConfig,
       verbose: ngBuilderOptions.verbose,
       watch: ngBuilderOptions.watch,
+      watchLinkedDeps: nfBuilderOptions.watchLinkedDeps === true,
       dev: !!nfBuilderOptions.dev,
       entryPoints,
       buildNotifications: nfBuilderOptions.buildNotifications,
@@ -472,6 +474,7 @@ export async function* runBuilder(
 
   const nfWatcher: NfFileWatcher | undefined = watch
     ? createNfWatcher({
+        watch: watchpackWatch,
         // Coalesce ng-packagr's atomic multi-write bursts into one rebuild.
         debounceMs: 100,
         onChange: (p) => {
