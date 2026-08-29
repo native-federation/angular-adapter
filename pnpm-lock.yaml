@@ -24,8 +24,8 @@ importers:
         specifier: ^0.19.0
         version: 0.19.1
       '@softarc/native-federation':
-        specifier: ~4.5.0-next.1
-        version: 4.5.0-next.1(typescript@6.0.3)
+        specifier: ~4.5.0
+        version: 4.5.0(typescript@6.0.3)
       '@softarc/native-federation-orchestrator':
         specifier: ^4.5.2
         version: 4.6.0
@@ -1837,8 +1837,8 @@ packages:
     resolution: {integrity: sha512-8529SINGc3zBdKZcyUsP9vGj4EFjUOljy+43qfwzYSgC3FwkHcAjddf/p86t8kI9CmCp0JGeLkM1IjJ7xahVXQ==, tarball: https://registry.npmjs.org/@softarc/native-federation-orchestrator/-/native-federation-orchestrator-4.6.0.tgz}
     engines: {node: '>=24.16.0'}
 
-  '@softarc/native-federation@4.5.0-next.1':
-    resolution: {integrity: sha512-HD8BO7b2d/9UIT4nSkq6D99mqB7DKQ35ONAkBpyx41/ojM98bvwzfJxL2UNtFvKqzlYaAeJZ/h0a5EagZ1IuZQ==, tarball: https://registry.npmjs.org/@softarc/native-federation/-/native-federation-4.5.0-next.1.tgz}
+  '@softarc/native-federation@4.5.0':
+    resolution: {integrity: sha512-FixGtwyRT7o8nANxecr0UDTZWTzhzLqH+cE3clntzhx/t4BNkNQwqaOZlcyjHNTI6l6nH4zIY4Ct7jaHCjPO3A==, tarball: https://registry.npmjs.org/@softarc/native-federation/-/native-federation-4.5.0.tgz}
 
   '@softarc/sheriff-core@0.19.6':
     resolution: {integrity: sha512-KACxHG9sS7kNWgnnBODzdr14kMLMrJVlQKc+tViUP03p2fRwNhESOA49bz51Yn7dro1mbtMmmFjICLmZSJDZZA==, tarball: https://registry.npmjs.org/@softarc/sheriff-core/-/sheriff-core-0.19.6.tgz}
@@ -4675,7 +4675,7 @@ snapshots:
     dependencies:
       semver: 7.8.5
 
-  '@softarc/native-federation@4.5.0-next.1(typescript@6.0.3)':
+  '@softarc/native-federation@4.5.0(typescript@6.0.3)':
     dependencies:
       '@softarc/sheriff-core': 0.19.6(typescript@6.0.3)
       chalk: 6.0.0
