@@ -11,6 +11,7 @@ export interface NfBuilderSchema extends JsonObject {
   buildNotifications?: BuildNotificationOptions;
   federationConfigPath?: string;
   watch?: boolean;
+  watchLinkedDeps?: boolean;
   skipHtmlTransform: boolean;
   esmsInitOptions: ESMSInitOptions;
   baseHref?: string;
