@@ -10,7 +10,8 @@
     "url": "http://www.angulararchitects.io"
   },
   "peerDependencies": {
-    "@angular/build": "~22.1.0"
+    "@angular/build": "~22.1.0",
+    "typescript": ">=6.0 <6.1"
   },
   "dependencies": {
     "@angular-devkit/architect": "^0.2201.0",

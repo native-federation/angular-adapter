@@ -2,6 +2,8 @@ import type { Plugin, PluginBuild } from 'esbuild';
 import * as path from 'path';
 import { isUnderDir, type PathToImport } from '@softarc/native-federation/internal';
 
+import { reexportedFiles, resolveModuleFile } from '../../utils/reexported-files.js';
+
 // esbuild's `external` matches the unresolved specifier, so it only catches imports spelled
 // `@myorg/ui`. Angular emits a deep relative path for any reference it has to synthesize —
 // a template dependency reached through an imported NgModule, say — and those would be
@@ -9,7 +11,11 @@ import { isUnderDir, type PathToImport } from '@softarc/native-federation/intern
 export function createSharedMappingsPlugin(mappedPaths: PathToImport): Plugin {
   // Longest first, so a secondary entry point wins over the barrel it sits under.
   const mappings = Object.entries(mappedPaths)
-    .map(([entryPoint, importName]) => ({ dir: path.dirname(entryPoint), importName }))
+    .map(([entryPoint, importName]) => ({
+      dir: path.dirname(entryPoint),
+      importName,
+      published: lazy(() => reexportedFiles(entryPoint)),
+    }))
     .sort((a, b) => b.dir.length - a.dir.length);
 
   return {
@@ -33,8 +39,21 @@ export function createSharedMappingsPlugin(mappedPaths: PathToImport): Plugin {
           return {};
         }
 
+        // Angular reaches past the barrel, emitting this import whether or not the entry point
+        // re-exports the file. Rewriting one it does not publish would resolve to `undefined`,
+        // so leave those inlined — duplicated, as today, rather than broken.
+        const target = resolveModuleFile(importPath);
+        if (!target || !mapping.published().has(target)) {
+          return {};
+        }
+
         return { path: mapping.importName, external: true };
       });
     },
   };
+}
+
+function lazy<T>(compute: () => T): () => T {
+  let value: T | undefined;
+  return () => (value ??= compute());
 }
