@@ -149,7 +149,11 @@ export async function createAngularEsbuildContext(options: NormalizedContextOpti
 
   const config: esbuild.BuildOptions = {
     entryPoints: entryPoints.map(ep => ({
-      in: ep.fileName,
+      // Anchored on workspaceRoot rather than left relative (core hands exposes over
+      // workspace-root-relative): esbuild resolves relative entry points through its own
+      // working directory, which need not be the root the TypeScript program — and with it
+      // the compiler plugin's cache keys — was built from.
+      in: path.isAbsolute(ep.fileName) ? ep.fileName : path.join(workspaceRoot, ep.fileName),
       out: path.parse(ep.outName).name,
     })),
     outdir,

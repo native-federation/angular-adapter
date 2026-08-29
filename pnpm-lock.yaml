@@ -33,14 +33,20 @@ importers:
         specifier: ^0.19.0
         version: 0.19.1
       '@softarc/native-federation':
-        specifier: ^4.4.0
-        version: 4.4.0(typescript@5.9.3)
+        specifier: ~4.5.0
+        version: 4.5.0(typescript@5.9.3)
       '@softarc/native-federation-orchestrator':
         specifier: ^4.5.2
         version: 4.5.2
+      esbuild:
+        specifier: ^0.28.0
+        version: 0.28.1
       mrmime:
         specifier: ^2.0.1
         version: 2.0.1
+      watchpack:
+        specifier: ^2.5.2
+        version: 2.5.2
     devDependencies:
       '@eslint/js':
         specifier: ^9.39.1
@@ -57,9 +63,6 @@ importers:
       es-module-shims:
         specifier: ^2.8.0
         version: 2.8.2
-      esbuild:
-        specifier: ^0.28.0
-        version: 0.28.1
       eslint:
         specifier: ^9.39.1
         version: 9.39.5(jiti@2.7.0)(supports-color@7.2.0)
@@ -2279,8 +2282,8 @@ packages:
     resolution: {integrity: sha512-3GM65AwdaDhqlbU9X7hg5TqF8FZfqHfIyKv2F28XIZwy1KPImVMKQUd28IUP7K8ROiFhMNltpwggGSF1xDZm/w==, tarball: https://registry.npmjs.org/@softarc/native-federation-orchestrator/-/native-federation-orchestrator-4.5.2.tgz}
     engines: {node: '>=22.14.0'}
 
-  '@softarc/native-federation@4.4.0':
-    resolution: {integrity: sha512-uFCcAUSb1XgUxMgNgncC6hf6L2jF2ojmTexhA0sQHj0YeHuVbxPNjbWC+CXwisDMuqOmCsULn59O90P10AE47A==, tarball: https://registry.npmjs.org/@softarc/native-federation/-/native-federation-4.4.0.tgz}
+  '@softarc/native-federation@4.5.0':
+    resolution: {integrity: sha512-FixGtwyRT7o8nANxecr0UDTZWTzhzLqH+cE3clntzhx/t4BNkNQwqaOZlcyjHNTI6l6nH4zIY4Ct7jaHCjPO3A==, tarball: https://registry.npmjs.org/@softarc/native-federation/-/native-federation-4.5.0.tgz}
 
   '@softarc/sheriff-core@0.19.6':
     resolution: {integrity: sha512-KACxHG9sS7kNWgnnBODzdr14kMLMrJVlQKc+tViUP03p2fRwNhESOA49bz51Yn7dro1mbtMmmFjICLmZSJDZZA==, tarball: https://registry.npmjs.org/@softarc/sheriff-core/-/sheriff-core-0.19.6.tgz}
@@ -3196,6 +3199,7 @@ packages:
   eslint@9.39.5:
     resolution: {integrity: sha512-DgZS62aPLXKlnxILS/AYCoRvHaZeXceIzlXPkkGGzJWSow1aEk0lbTlxUSlyjC8jcaKxAdOnTDz+o1JFSBsyjw==, tarball: https://registry.npmjs.org/eslint/-/eslint-9.39.5.tgz}
     engines: {node: ^18.18.0 || ^20.9.0 || >=21.1.0}
+    deprecated: This version is no longer supported. Please see https://eslint.org/version-support for other options.
     hasBin: true
     peerDependencies:
       jiti: '*'
@@ -7106,7 +7110,7 @@ snapshots:
     dependencies:
       semver: 7.8.5
 
-  '@softarc/native-federation@4.4.0(typescript@5.9.3)':
+  '@softarc/native-federation@4.5.0(typescript@5.9.3)':
     dependencies:
       '@softarc/sheriff-core': 0.19.6(typescript@5.9.3)
       chalk: 6.0.0

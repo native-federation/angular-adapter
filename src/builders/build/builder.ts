@@ -61,8 +61,10 @@ import {
   translateFederationArtifacts,
 } from "../../utils/i18n.js";
 import { updateScriptTags } from "../../utils/update-index-html.js";
+import { withDiskCaseWorkspaceRoot } from "./../../utils/disk-case.js";
 import { checkForInvalidImports } from "./../../utils/check-for-invalid-imports.js";
 import { federationSourceFiles } from "./../../utils/federation-source-files.js";
+import { watchpackWatch } from "./../../utils/watchpack-watch.js";
 import { federationBuildNotifier } from "./federation-build-notifier.js";
 import {
   createFederationFreshness,
@@ -130,8 +132,12 @@ const createInternalAngularBuilder =
 
 export async function* runBuilder(
   nfBuilderOptions: NfBuilderSchema & NfInternalOptions,
-  context: BuilderContext,
+  builderContext: BuilderContext,
 ): AsyncIterable<BuilderOutput> {
+  // One root for the whole invocation, ours and Angular's alike — the two halves compare
+  // each other's paths as plain strings (watch sets, cache keys).
+  const context = withDiskCaseWorkspaceRoot(builderContext);
+
   let target = targetFromTargetString(nfBuilderOptions.target);
 
   let targetOptions = (await context.getTargetOptions(
@@ -289,6 +295,7 @@ export async function* runBuilder(
       tsConfig: federationTsConfig,
       verbose: ngBuilderOptions.verbose,
       watch: ngBuilderOptions.watch,
+      watchLinkedDeps: nfBuilderOptions.watchLinkedDeps === true,
       dev: !!nfBuilderOptions.dev,
       entryPoints,
       buildNotifications: nfBuilderOptions.buildNotifications,
@@ -467,6 +474,7 @@ export async function* runBuilder(
 
   const nfWatcher: NfFileWatcher | undefined = watch
     ? createNfWatcher({
+        watch: watchpackWatch,
         // Coalesce ng-packagr's atomic multi-write bursts into one rebuild.
         debounceMs: 100,
         onChange: (p) => {
