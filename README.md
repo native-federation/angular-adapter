@@ -653,7 +653,7 @@ A cold `ng build` re-bundles a changed linked library either way, since the adap
 So that the default is never a silent surprise, a watching build that finds a linked shared package while the option is off says so once at startup:
 
 ```
-INFO  Detected npm-linked shared packages: @my-scope/my-lib. Set 'watchLinkedDeps' to true on this target to rebuild when they change.
+INFO  Detected npm-linked shared packages: @my-scope/my-lib. Set 'watchLinkedDeps' to true to rebuild when they change.
 ```
 
 #### Requirements

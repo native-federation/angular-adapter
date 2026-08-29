@@ -50,7 +50,6 @@ import { type Plugin, type PluginBuild } from "esbuild";
 import { devHostInstancesPlugin } from "../../plugin/dev-host-instances-plugin.js";
 import { checkForInvalidImports } from "./../../utils/check-for-invalid-imports.js";
 import { federationSourceFiles } from "./../../utils/federation-source-files.js";
-import { hintUnwatchedLinkedDeps } from "./../../utils/linked-deps-hint.js";
 import { watchpackWatch } from "./../../utils/watchpack-watch.js";
 import { federationBuildNotifier } from "./federation-build-notifier.js";
 import {
@@ -314,7 +313,6 @@ export async function* runBuilder(
   // Realpath'd dirs of npm-linked shared packages (`[]` if none, making the
   // syncNfFileWatcher calls below a no-op) so the linked lib's real source is watched.
   const linkedDirs = linkedSharedDirs(normalized.config, normalized.options);
-  if (watch) hintUnwatchedLinkedDeps(normalized.config, normalized.options);
 
   const plugins = [
     {
