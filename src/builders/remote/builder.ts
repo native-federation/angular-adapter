@@ -29,7 +29,7 @@ import {
 } from '@softarc/native-federation/internal';
 
 import { createAngularBuildAdapter } from '../../tools/esbuild/angular-esbuild-adapter.js';
-import { withCanonicalWorkspaceRoot } from '../../utils/canonical-workspace-root.js';
+import { withDiskCaseWorkspaceRoot } from '../../utils/disk-case.js';
 import { checkForInvalidImports } from '../../utils/check-for-invalid-imports.js';
 import { federationSourceFiles } from '../../utils/federation-source-files.js';
 
@@ -55,8 +55,8 @@ export async function* runRemoteBuilder(
   nfBuilderOptions: NfRemoteBuilderSchema & NfRemoteInternalOptions,
   builderContext: BuilderContext
 ): AsyncIterable<BuilderOutput> {
-  // One root for the whole invocation — see withCanonicalWorkspaceRoot.
-  const context = withCanonicalWorkspaceRoot(builderContext);
+  // One root for the whole invocation — see withDiskCaseWorkspaceRoot.
+  const context = withDiskCaseWorkspaceRoot(builderContext);
 
   const federationTsConfig = nfBuilderOptions.tsConfig;
   const outputBase = nfBuilderOptions.outputPath ?? `dist/${context.target!.project}`;

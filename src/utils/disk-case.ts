@@ -11,8 +11,8 @@ import type { BuilderContext } from '@angular-devkit/architect';
  * whose keys follow the TypeScript program (and thus the workspace root) while its lookups
  * follow esbuild. See issue #117.
  */
-export function withCanonicalWorkspaceRoot(context: BuilderContext): BuilderContext {
-  const workspaceRoot = toCanonicalCase(context.workspaceRoot);
+export function withDiskCaseWorkspaceRoot(context: BuilderContext): BuilderContext {
+  const workspaceRoot = toDiskCase(context.workspaceRoot);
 
   if (workspaceRoot === context.workspaceRoot) {
     return context;
@@ -28,9 +28,10 @@ export function withCanonicalWorkspaceRoot(context: BuilderContext): BuilderCont
 /**
  * The on-disk spelling of `p`, but only when it differs from `p` by case alone. `realpath` also
  * resolves symlinks, and adopting that result would move npm-linked and pnpm workspaces off the
- * path they were handed.
+ * path they were handed. Mirrors core's `toDiskCase`, which reads disk through an io port where
+ * this reaches `fs` directly.
  */
-export function toCanonicalCase(p: string): string {
+export function toDiskCase(p: string): string {
   let real: string;
 
   try {
@@ -42,12 +43,16 @@ export function toCanonicalCase(p: string): string {
     return p;
   }
 
-  return isSamePath(real, p) ? path.normalize(real) : p;
+  if (real === p || !differsOnlyByCase(real, p)) {
+    return p;
+  }
+
+  return path.normalize(real);
 }
 
 // Separator style and a trailing slash are not differences worth rejecting a correction over.
-const forCompare = (p: string): string => p.replace(/\\/g, '/').replace(/\/+$/, '').toLowerCase();
+const strip = (p: string): string => p.replace(/\\/g, '/').replace(/\/+$/, '').toLowerCase();
 
-function isSamePath(a: string, b: string): boolean {
-  return forCompare(a) === forCompare(b);
+function differsOnlyByCase(a: string, b: string): boolean {
+  return strip(a) === strip(b);
 }

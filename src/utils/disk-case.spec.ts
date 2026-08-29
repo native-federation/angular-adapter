@@ -3,7 +3,7 @@ import * as path from 'path';
 
 import type { BuilderContext } from '@angular-devkit/architect';
 
-import { toCanonicalCase, withCanonicalWorkspaceRoot } from './canonical-workspace-root.js';
+import { toDiskCase, withDiskCaseWorkspaceRoot } from './disk-case.js';
 
 vi.mock('fs');
 
@@ -18,24 +18,24 @@ beforeEach(() => {
   vi.clearAllMocks();
 });
 
-describe('toCanonicalCase', () => {
+describe('toDiskCase', () => {
   // The reported case: Nx inherits `c:\…` from the shell while the filesystem stores `C:\…`.
   it('adopts the on-disk spelling when only the case differs', () => {
     mockNativeRealpath(() => 'C:\\ws\\project');
 
-    expect(toCanonicalCase('c:\\ws\\project')).toBe(path.normalize('C:\\ws\\project'));
+    expect(toDiskCase('c:\\ws\\project')).toBe(path.normalize('C:\\ws\\project'));
   });
 
   it('accepts a correction that also differs in separator style', () => {
     mockNativeRealpath(() => 'C:/ws/project');
 
-    expect(toCanonicalCase('c:\\ws\\project')).toBe(path.normalize('C:/ws/project'));
+    expect(toDiskCase('c:\\ws\\project')).toBe(path.normalize('C:/ws/project'));
   });
 
   it('ignores a trailing slash when deciding whether the paths are the same', () => {
     mockNativeRealpath(() => 'C:/ws/project');
 
-    expect(toCanonicalCase('c:/ws/project/')).toBe(path.normalize('C:/ws/project'));
+    expect(toDiskCase('c:/ws/project/')).toBe(path.normalize('C:/ws/project'));
   });
 
   // A symlinked workspace root must stay on the path it was handed: npm-linked and pnpm
@@ -43,7 +43,7 @@ describe('toCanonicalCase', () => {
   it('keeps the input when realpath resolves to a different directory', () => {
     mockNativeRealpath(() => '/real/checkout');
 
-    expect(toCanonicalCase('/links/project')).toBe('/links/project');
+    expect(toDiskCase('/links/project')).toBe('/links/project');
   });
 
   it('keeps the input when realpath throws', () => {
@@ -51,17 +51,17 @@ describe('toCanonicalCase', () => {
       throw new Error('ENOENT');
     });
 
-    expect(toCanonicalCase('/gone')).toBe('/gone');
+    expect(toDiskCase('/gone')).toBe('/gone');
   });
 
   it('is a no-op when the spelling already matches', () => {
     mockNativeRealpath(p => p);
 
-    expect(toCanonicalCase('/ws/project')).toBe('/ws/project');
+    expect(toDiskCase('/ws/project')).toBe('/ws/project');
   });
 });
 
-describe('withCanonicalWorkspaceRoot', () => {
+describe('withDiskCaseWorkspaceRoot', () => {
   function contextWith(workspaceRoot: string) {
     return {
       workspaceRoot,
@@ -71,18 +71,18 @@ describe('withCanonicalWorkspaceRoot', () => {
     } as unknown as BuilderContext;
   }
 
-  it('returns a context carrying the canonical root', () => {
+  it('returns a context carrying the on-disk spelling of the root', () => {
     mockNativeRealpath(() => 'C:\\ws');
     const context = contextWith('c:\\ws');
 
-    expect(withCanonicalWorkspaceRoot(context).workspaceRoot).toBe(path.normalize('C:\\ws'));
+    expect(withDiskCaseWorkspaceRoot(context).workspaceRoot).toBe(path.normalize('C:\\ws'));
   });
 
   it('keeps the rest of the context reachable', async () => {
     mockNativeRealpath(() => 'C:\\ws');
     const context = contextWith('c:\\ws');
 
-    const derived = withCanonicalWorkspaceRoot(context);
+    const derived = withDiskCaseWorkspaceRoot(context);
 
     expect(derived.target).toBe(context.target);
     expect(derived.logger).toBe(context.logger);
@@ -93,6 +93,6 @@ describe('withCanonicalWorkspaceRoot', () => {
     mockNativeRealpath(p => p);
     const context = contextWith('/ws');
 
-    expect(withCanonicalWorkspaceRoot(context)).toBe(context);
+    expect(withDiskCaseWorkspaceRoot(context)).toBe(context);
   });
 });
