@@ -7,8 +7,8 @@ import type { EntryPoint } from '@softarc/native-federation';
 
 vi.mock('fs');
 
-function entry(fileName: string): EntryPoint {
-  return { fileName, outName: 'out.js' } as EntryPoint;
+function entry(fileName: string, kind: EntryPoint['kind'] = 'source'): EntryPoint {
+  return { fileName, outName: 'out.js', kind };
 }
 
 function written() {
@@ -142,5 +142,33 @@ describe('updateFederationTsConfig', () => {
     updateFederationTsConfig('/ws', 'tsconfig.fed.json', [entry('/ws/src/a.ts')]);
 
     expect(fs.writeFileSync).not.toHaveBeenCalled();
+  });
+
+  // A prebuilt mapping is compiled JS; ngtsc rejects it as a root file, and it does not need
+  // compiling in the first place.
+  it('leaves package entry points out of the program', () => {
+    vi.mocked(fs.existsSync).mockReturnValue(true);
+    vi.mocked(fs.readFileSync).mockReturnValue('{}');
+
+    updateFederationTsConfig('/ws', 'tsconfig.federation.json', [
+      entry('projects/app/src/bootstrap.ts'),
+      entry('dist/ui/fesm2022/ui.mjs', 'package'),
+    ]);
+
+    expect(written().files).toEqual(['projects/app/src/bootstrap.ts']);
+  });
+
+  it('falls back to the app entry points when every mapping is prebuilt', () => {
+    vi.mocked(fs.existsSync).mockReturnValue(true);
+    vi.mocked(fs.readFileSync).mockReturnValue('{}');
+
+    updateFederationTsConfig(
+      '/ws',
+      'tsconfig.federation.json',
+      [entry('dist/ui/fesm2022/ui.mjs', 'package')],
+      ['projects/app/src/main.ts']
+    );
+
+    expect(written().files).toEqual(['projects/app/src/main.ts']);
   });
 });

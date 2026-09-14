@@ -32,7 +32,12 @@ export function updateFederationTsConfig(
     return path.relative(tsconfigDir, absolute).replace(/\\/g, '/');
   };
 
-  const resolved = entryPoints.map(ep => toTsConfigRelative(ep.fileName));
+  // A 'package' entry point is already-compiled JS. esbuild loads it through the linker like
+  // any dependency, and putting it in `files` only makes ngtsc reject it as a non-TypeScript
+  // root file.
+  const resolved = entryPoints
+    .filter(ep => ep.kind !== 'package')
+    .map(ep => toTsConfigRelative(ep.fileName));
 
   // A host without exposes or shared mappings has no entry points of its own; the app's
   // main.ts keeps the program from being empty.
