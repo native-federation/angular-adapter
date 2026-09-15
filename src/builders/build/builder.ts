@@ -59,6 +59,7 @@ import {
 } from "./watch-decisions.js";
 import type { NfBuilderSchema, NfInternalOptions } from "./schema.js";
 import { createAngularBuildAdapter } from "../../tools/esbuild/angular-esbuild-adapter.js";
+import { createSharedMappingsPlugin } from "../../tools/esbuild/shared-mappings-plugin.js";
 import { getI18nConfig, translateFederationArtifacts } from "./i18n.js";
 import { updateScriptTags } from "./update-index-html.js";
 
@@ -325,6 +326,9 @@ export async function* runBuilder(
         }
       },
     },
+    ...(Object.keys(normalized.config.sharedMappings).length > 0
+      ? [createSharedMappingsPlugin(normalized.config.sharedMappings)]
+      : []),
     // Inject custom esbuild plugins
     ...(Array.isArray(nfBuilderOptions.plugins)
       ? nfBuilderOptions.plugins
