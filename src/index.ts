@@ -217,8 +217,6 @@ export async function loadRemoteModule<T = any>(
   }
 }
 
-// Explicit: shadows the build-time FederationManifest that line 1 star-exports,
-// whose extra `main` field initFederation() ignores.
 export {
   type NativeFederationResult,
   type FederationManifest,
