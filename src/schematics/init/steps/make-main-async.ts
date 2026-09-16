@@ -8,6 +8,10 @@ import * as path from 'path';
 // generated apps don't ship internal orchestrator options or `logLevel: 'debug'`.
 const FEDERATION_IMPORT = `import { initFederation } from '@angular-architects/native-federation';`;
 
+// Set once makeMainAsync has actually written a custom element bootstrap, so
+// addDependencies can skip @angular/elements when the flag turned out to be a no-op.
+export type WebComponentOutcome = { generated: boolean };
+
 function getFederationArg(
   options: NfSchematicSchema,
   remoteMap: unknown,
@@ -54,6 +58,13 @@ function resolveAppRefs(tree: Tree, normalized: NormalizedOptions, reason: strin
     );
   }
 
+  if (!appComponent.className) {
+    throw new SchematicsException(
+      `${reason}, but no exported component class could be read from ${appComponent.path}. ` +
+        `Create bootstrap.ts by hand and re-run.`
+    );
+  }
+
   const mainDir = path.dirname(main);
 
   return {
@@ -83,12 +94,14 @@ import { ${className} } from '${component}';
 import { createCustomElement } from '@angular/elements';
 
 (() => {
-  createApplication(appConfig).then(({ injector }) => {
-    customElements.define(
-      '${tag}', // your componentname
-      createCustomElement(${className}, { injector }),
-    );
-  });
+  createApplication(appConfig)
+    .then(({ injector }) => {
+      customElements.define(
+        '${tag}', // your componentname
+        createCustomElement(${className}, { injector }),
+      );
+    })
+    .catch((err) => console.error(err));
 })();
 `;
 }
@@ -108,7 +121,8 @@ export function customElementTag(projectName: string): string {
 export function makeMainAsync(
   normalized: NormalizedOptions,
   options: NfSchematicSchema,
-  remoteMap: unknown
+  remoteMap: unknown,
+  webComponent: WebComponentOutcome = { generated: false }
 ): Rule {
   return async function (tree: Tree) {
     const { main, manifestRelPath, projectName } = normalized;
@@ -127,30 +141,55 @@ export function makeMainAsync(
     // whenever it had gone missing, leaving bootstrap.ts importing itself.
     const alreadyFederated = mainContent.includes('initFederation');
     const bootstrapPath = path.join(path.dirname(main), 'bootstrap.ts').replace(/\\/g, '/');
+    const bootstrapExists = tree.exists(bootstrapPath);
 
-    if (tree.exists(bootstrapPath)) {
+    function createBootstrap(reason: string): void {
+      const refs = resolveAppRefs(tree, normalized, reason);
+
       if (options.webcomponent) {
+        tree.create(bootstrapPath, webComponentBootstrap(refs, customElementTag(projectName)));
+        webComponent.generated = true;
+      } else {
+        tree.create(bootstrapPath, defaultBootstrap(refs));
+      }
+    }
+
+    if (alreadyFederated) {
+      // main.ts is already the stub. Rewriting it would revert hand edits to the
+      // initFederation call (extra remotes, `shimMode: false` for #70), so it stays as is.
+      if (!bootstrapExists) {
+        createBootstrap(
+          `${main} is already federated but ${bootstrapPath} is missing, so it has to be regenerated`
+        );
+      } else if (options.webcomponent) {
         console.warn(`${bootstrapPath} already exists; --webcomponent left it untouched.`);
       }
-      if (!alreadyFederated) {
+
+      if (options.type === 'host') {
         console.warn(
-          `${bootstrapPath} already exists; the previous contents of ${main} were discarded.`
+          `${main} already calls initFederation and was left as is; its remote map was not ` +
+            `refreshed, so add new remotes to it by hand.`
         );
       }
-    } else if (options.webcomponent) {
-      const refs = resolveAppRefs(
-        tree,
-        normalized,
-        `--webcomponent needs to generate ${bootstrapPath}`
+      return;
+    }
+
+    // Past here main.ts is replaced by the stub, so whatever it holds now has to end up
+    // in bootstrap.ts — and there is only one bootstrap.ts to put it in.
+    if (bootstrapExists) {
+      throw new SchematicsException(
+        `${bootstrapPath} already exists and ${main} does not call initFederation, so there is ` +
+          `nowhere to move the contents of ${main}. Merge them into ${bootstrapPath} by hand ` +
+          `(or delete ${bootstrapPath}) and re-run.`
       );
-      tree.create(bootstrapPath, webComponentBootstrap(refs, customElementTag(projectName)));
-    } else if (alreadyFederated) {
-      const refs = resolveAppRefs(
-        tree,
-        normalized,
-        `${main} is already federated but ${bootstrapPath} is missing, so it has to be regenerated`
+    }
+
+    if (options.webcomponent) {
+      createBootstrap(`--webcomponent needs to generate ${bootstrapPath}`);
+      console.warn(
+        `${main} was replaced by the generated custom element bootstrap in ${bootstrapPath}; ` +
+          `its previous contents were not kept.`
       );
-      tree.create(bootstrapPath, defaultBootstrap(refs));
     } else {
       tree.create(bootstrapPath, mainContent);
     }

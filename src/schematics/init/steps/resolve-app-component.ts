@@ -3,7 +3,7 @@ import * as path from 'path';
 
 export type AppComponent = {
   path: string;
-  className: string;
+  className: string | null;
 };
 
 // The first class exported after an `@Component` decorator. Angular <20 scaffolds
@@ -12,6 +12,8 @@ export type AppComponent = {
 const DECORATED_CLASS = /@Component\b[\s\S]*?\bexport\s+class\s+([A-Za-z_$][\w$]*)/;
 const EXPORTED_CLASS = /\bexport\s+class\s+([A-Za-z_$][\w$]*)/;
 
+// `className` is null when the file exists but neither pattern matches (a default
+// export, a separate `export { App }`): callers that only need the path still get it.
 export function resolveAppComponent(tree: Tree, projectSourceRoot: string): AppComponent | null {
   const candidates = ['app.component.ts', 'app.ts'].map(name =>
     path.join(projectSourceRoot, 'app', name).replace(/\\/g, '/')
@@ -23,9 +25,9 @@ export function resolveAppComponent(tree: Tree, projectSourceRoot: string): AppC
   }
 
   const source = tree.readText(file);
-  const className = (DECORATED_CLASS.exec(source) ?? EXPORTED_CLASS.exec(source))?.[1];
+  const className = (DECORATED_CLASS.exec(source) ?? EXPORTED_CLASS.exec(source))?.[1] ?? null;
 
-  return className ? { path: file, className } : null;
+  return { path: file, className };
 }
 
 export function importSpecifier(fromDir: string, file: string): string {

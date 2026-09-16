@@ -1,6 +1,6 @@
 import { EmptyTree, type Tree } from '@angular-devkit/schematics';
 
-import { customElementTag, makeMainAsync } from './make-main-async.js';
+import { customElementTag, makeMainAsync, type WebComponentOutcome } from './make-main-async.js';
 import type { NormalizedOptions } from './normalize-options.js';
 import type { NfSchematicSchema } from '../schema.js';
 
@@ -59,11 +59,12 @@ function scaffold(tree: Tree) {
 function run(
   tree: Tree,
   schema: Partial<NfSchematicSchema> = {},
-  normalized: Partial<NormalizedOptions> = {}
+  normalized: Partial<NormalizedOptions> = {},
+  webComponent: WebComponentOutcome = { generated: false }
 ) {
   const options = { project: 'mfe1', port: '4200', type: 'remote', ...schema } as NfSchematicSchema;
   const remoteMap = { mfe2: 'http://x/remoteEntry.json' };
-  const rule = makeMainAsync(makeOptions(normalized), options, remoteMap);
+  const rule = makeMainAsync(makeOptions(normalized), options, remoteMap, webComponent);
   return (rule as (t: Tree) => Promise<void>)(tree);
 }
 
@@ -89,17 +90,16 @@ describe('makeMainAsync', () => {
     expect(warn).not.toHaveBeenCalled();
   });
 
-  // The old guard keyed on bootstrap.ts existing and returned early, leaving main.ts
-  // unfederated while every other init step had already been applied.
-  it('still stubs main.ts when bootstrap.ts already exists', async () => {
+  // main.ts would be overwritten by the stub, and bootstrap.ts is already taken, so its
+  // contents have nowhere to go. Warning and deleting them anyway is not recoverable.
+  it('refuses to stub main.ts when bootstrap.ts is already taken', async () => {
     tree.create(MAIN, SCAFFOLD_MAIN);
     tree.create(BOOTSTRAP, `console.log('hand written');\n`);
 
-    await run(tree);
+    await expect(run(tree)).rejects.toThrow(/nowhere to move the contents/);
 
+    expect(tree.readText(MAIN)).toBe(SCAFFOLD_MAIN);
     expect(tree.readText(BOOTSTRAP)).toBe(`console.log('hand written');\n`);
-    expect(tree.readText(MAIN)).toContain('initFederation');
-    expect(warn).toHaveBeenCalledWith(expect.stringContaining('were discarded'));
   });
 
   // Previously this copied the stub into bootstrap.ts, so bootstrap.ts imported itself.
@@ -135,6 +135,23 @@ describe('makeMainAsync', () => {
     expect(tree.readText(BOOTSTRAP)).toContain('bootstrapApplication(AppComponent, appConfig)');
   });
 
+  // The component file is found but neither regex matches, so there is no symbol to
+  // put in `bootstrapApplication(...)`; guessing one would emit a bootstrap that
+  // does not compile.
+  it('throws when the root component exports no readable class', async () => {
+    tree.create(MAIN, SCAFFOLD_MAIN);
+    tree.create(
+      'projects/mfe1/src/app/app.ts',
+      `import { Component } from '@angular/core';\n\n@Component({})\nclass App {}\nexport default App;\n`
+    );
+    tree.create('projects/mfe1/src/app/app.config.ts', SCAFFOLD_CONFIG);
+
+    await run(tree);
+    tree.delete(BOOTSTRAP);
+
+    await expect(run(tree)).rejects.toThrow(/no exported component class could be read/);
+  });
+
   it('is idempotent across re-runs', async () => {
     scaffold(tree);
     await run(tree);
@@ -147,6 +164,33 @@ describe('makeMainAsync', () => {
     expect(tree.readText(BOOTSTRAP)).toBe(bootstrap);
     expect(tree.readText(MAIN)).toBe(main);
     expect(warn).not.toHaveBeenCalled();
+  });
+
+  // Re-running init used to regenerate the stub from scratch, reverting anything the
+  // user had changed about the initFederation call (extra remotes, `shimMode: false`).
+  it('keeps hand edits to an already federated main.ts', async () => {
+    scaffold(tree);
+    await run(tree);
+
+    const edited = tree
+      .readText(MAIN)
+      .replace('hostRemoteEntry: { url: "./remoteEntry.json" }', 'shimMode: false');
+    tree.overwrite(MAIN, edited);
+
+    await run(tree);
+
+    expect(tree.readText(MAIN)).toBe(edited);
+  });
+
+  // A host bakes its remote map into main.ts, which is now left alone, so a re-run
+  // silently not picking up new remotes has to be said out loud.
+  it('warns that a host re-run did not refresh the remote map', async () => {
+    scaffold(tree);
+    await run(tree, { type: 'host' });
+
+    await run(tree, { type: 'host' });
+
+    expect(warn).toHaveBeenCalledWith(expect.stringContaining('was not'));
   });
 
   it('throws when the build entry point is not in the workspace', async () => {
@@ -167,14 +211,47 @@ describe('makeMainAsync', () => {
       expect(bootstrap).not.toContain('bootstrapApplication');
     });
 
-    it('leaves an existing bootstrap.ts alone and says so', async () => {
+    // A provider that throws during createApplication would otherwise be an unhandled
+    // rejection on a blank page.
+    it('handles a failing createApplication', async () => {
       scaffold(tree);
-      tree.create(BOOTSTRAP, `console.log('hand written');\n`);
 
       await run(tree, { webcomponent: true });
 
-      expect(tree.readText(BOOTSTRAP)).toBe(`console.log('hand written');\n`);
+      expect(tree.readText(BOOTSTRAP)).toContain('.catch((err) => console.error(err));');
+    });
+
+    // Unlike the default path, main.ts is not moved anywhere — the generated bootstrap
+    // replaces it, so anything it did beyond bootstrapApplication is gone.
+    it('warns that main.ts was not kept', async () => {
+      scaffold(tree);
+
+      await run(tree, { webcomponent: true });
+
+      expect(warn).toHaveBeenCalledWith(expect.stringContaining('previous contents were not kept'));
+    });
+
+    it('reports that it generated a custom element bootstrap', async () => {
+      scaffold(tree);
+      const outcome: WebComponentOutcome = { generated: false };
+
+      await run(tree, { webcomponent: true }, {}, outcome);
+
+      expect(outcome.generated).toBe(true);
+    });
+
+    it('leaves an existing bootstrap.ts alone and says so', async () => {
+      scaffold(tree);
+      await run(tree);
+      const bootstrap = tree.readText(BOOTSTRAP);
+      const outcome: WebComponentOutcome = { generated: false };
+
+      await run(tree, { webcomponent: true }, {}, outcome);
+
+      expect(tree.readText(BOOTSTRAP)).toBe(bootstrap);
       expect(warn).toHaveBeenCalledWith(expect.stringContaining('--webcomponent'));
+      // @angular/elements must not be installed for a bootstrap that was never written.
+      expect(outcome.generated).toBe(false);
     });
 
     it('throws when the root component cannot be resolved', async () => {
