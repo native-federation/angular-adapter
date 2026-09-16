@@ -217,4 +217,9 @@ export async function loadRemoteModule<T = any>(
   }
 }
 
-export { type NativeFederationResult } from "@softarc/native-federation-orchestrator";
+// Explicit: shadows the build-time FederationManifest that line 1 star-exports,
+// whose extra `main` field initFederation() ignores.
+export {
+  type NativeFederationResult,
+  type FederationManifest,
+} from "@softarc/native-federation-orchestrator";
