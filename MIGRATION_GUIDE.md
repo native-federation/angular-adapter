@@ -57,7 +57,6 @@ The first step is to update the `package.json` to install the new packages:
   },
   "devDependencies": {
     "@angular-architects/native-federation": "~22.1.0",
-    "@softarc/native-federation": "~4.4.0",
     "@softarc/native-federation-orchestrator": "^4.6.0"
   }
 }
