@@ -1,7 +1,7 @@
 export * from "@softarc/native-federation/domain";
-import type { FederationManifest } from "@softarc/native-federation";
 import {
   initFederation as internalInitFederation,
+  type FederationManifest,
   type NativeFederationResult,
 } from "@softarc/native-federation-orchestrator";
 import {
