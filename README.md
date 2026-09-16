@@ -120,7 +120,7 @@ The example loads a Micro Frontends into a shell:
 
 ## Relationship to @angular-architects/module-federation
 
-This package, `@angular-architects/native-federation`, uses the same API as `@angular-architects/module-federation`. To switch over, just make sure you import everything from the former package. Don't mix these packages.
+This package, `@angular-architects/native-federation-v4`, uses the same API as `@angular-architects/module-federation`. To switch over, just make sure you import everything from the former package. Don't mix these packages.
 
 ## About the Mental Model 🧠
 
@@ -152,19 +152,19 @@ This repository consists of two Angular applications: a `shell` and a Micro Fron
 ### Adding Native Federation
 
 ```
-npm i @angular-architects/native-federation -D
+npm i @angular-architects/native-federation-v4 -D
 ```
 
 Making an application a remote (Micro Frontend):
 
 ```
-ng g @angular-architects/native-federation:init --project mfe1 --port 4201 --type remote
+ng g @angular-architects/native-federation-v4:init --project mfe1 --port 4201 --type remote
 ```
 
 Making an application a host (shell):
 
 ```
-ng g @angular-architects/native-federation:init --project shell --port 4200 --type dynamic-host
+ng g @angular-architects/native-federation-v4:init --project shell --port 4200 --type dynamic-host
 ```
 
 A dynamic host reads the configuration data at runtime from a `.json` file.
@@ -175,7 +175,7 @@ Angular application. The generated `bootstrap.ts` then registers the root compon
 workspace at the same version as `@angular/core`:
 
 ```
-ng g @angular-architects/native-federation:init --project mfe1 --port 4201 --type remote --webcomponent
+ng g @angular-architects/native-federation-v4:init --project mfe1 --port 4201 --type remote --webcomponent
 ```
 
 The flag only applies to `--type remote`, and the generated `bootstrap.ts` replaces what
@@ -258,7 +258,7 @@ export default withNativeFederation({
 When bootstrapping the host (shell), Native Federation (`projects\shell\src\main.ts`) is initialized:
 
 ```typescript
-import { initFederation } from "@angular-architects/native-federation";
+import { initFederation } from "@angular-architects/native-federation-v4";
 
 initFederation("/assets/federation.manifest.json")
   .catch((err) => console.error(err))
@@ -289,7 +289,7 @@ If you follow this tutorial, **ensure** this entry points to port `4201` (!).
 When bootstrapping your remote (`projects\mfe1\src\main.ts`), Native Federation is initialized too:
 
 ```typescript
-import { initFederation } from "@angular-architects/native-federation";
+import { initFederation } from "@angular-architects/native-federation-v4";
 
 initFederation()
   .catch((err) => console.error(err))
@@ -311,7 +311,7 @@ import { HomeComponent } from "./home/home.component";
 import { NotFoundComponent } from "./not-found/not-found.component";
 
 // Add this import:
-import { loadRemoteModule } from "@angular-architects/native-federation";
+import { loadRemoteModule } from "@angular-architects/native-federation-v4";
 
 export const APP_ROUTES: Routes = [
   {
@@ -466,7 +466,7 @@ import {
   withNativeFederation,
   shareAll,
   autoShareScope,
-} from "@angular-architects/native-federation/config";
+} from "@angular-architects/native-federation-v4/config";
 
 export default withNativeFederation({
   // Only share with remotes built against the same Angular minor, e.g. "ng21.1"
@@ -516,7 +516,7 @@ As an alternative to `shareAll`, the `fromPackageJson` helper builds the shared 
 import {
   withNativeFederation,
   fromPackageJson,
-} from "@angular-architects/native-federation/config";
+} from "@angular-architects/native-federation-v4/config";
 
 export default withNativeFederation({
   shared: fromPackageJson({
@@ -562,7 +562,7 @@ For more than a couple of entries, `mappingsFromWorkspace` builds that array for
 import {
   withNativeFederation,
   mappingsFromWorkspace,
-} from "@angular-architects/native-federation/config";
+} from "@angular-architects/native-federation-v4/config";
 
 export default withNativeFederation({
   sharedMappings: mappingsFromWorkspace({
