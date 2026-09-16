@@ -1,4 +1,5 @@
 export * from "@softarc/native-federation/domain";
+import type { FederationManifest } from "@softarc/native-federation";
 import {
   initFederation as internalInitFederation,
   type NativeFederationResult,
@@ -68,7 +69,7 @@ let federationPromise: Promise<NativeFederationResult> = new Promise(
 );
 
 export function initFederation(
-  remotesOrManifestUrl?: Record<string, string> | string,
+  remotesOrManifestUrl?: FederationManifest | string,
   options: NgNFOptions = {},
 ) {
   const { cacheTag, shimMode, ...nfOpts } = options as Omit<
