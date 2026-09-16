@@ -72,6 +72,7 @@ import {
   shouldWakeFederation,
 } from "./watch-decisions.js";
 import type { NfBuilderSchema, NfInternalOptions } from "./schema.js";
+import { createSharedMappingsPlugin } from "../../utils/shared-mappings-plugin.js";
 
 const originalWrite = process.stderr.write.bind(process.stderr);
 
@@ -330,6 +331,9 @@ export async function* runBuilder(
         }
       },
     },
+    ...(Object.keys(normalized.config.sharedMappings).length > 0
+      ? [createSharedMappingsPlugin(normalized.config.sharedMappings)]
+      : []),
     // Inject custom esbuild plugins
     ...(Array.isArray(nfBuilderOptions.plugins)
       ? nfBuilderOptions.plugins

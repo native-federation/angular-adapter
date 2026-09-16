@@ -169,6 +169,19 @@ ng g @angular-architects/native-federation:init --project shell --port 4200 --ty
 
 A dynamic host reads the configuration data at runtime from a `.json` file.
 
+Passing `--webcomponent` bootstraps the remote as a custom element instead of as a regular
+Angular application. The generated `bootstrap.ts` then registers the root component with
+`createCustomElement` under an `mfe-<project>` tag, and `@angular/elements` is added to the
+workspace at the same version as `@angular/core`:
+
+```
+ng g @angular-architects/native-federation:init --project mfe1 --port 4201 --type remote --webcomponent
+```
+
+The flag only applies to `--type remote`, and the generated `bootstrap.ts` replaces what
+`main.ts` used to do rather than moving it, so anything `main.ts` did beyond
+`bootstrapApplication` has to be carried over by hand.
+
 > The schematics called here automate most steps of this tutorial, esp. adding configuration files and bootstrapping Native Federation. Hence, the following sections primarily discuss these changes. You just need to add a lazy route (see below) and make sure the correct ports are configured in the federation manifest (see below too).
 
 ### Configuring the Host

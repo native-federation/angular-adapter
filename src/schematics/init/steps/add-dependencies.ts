@@ -1,21 +1,26 @@
-import type { SchematicContext, Tree } from "@angular-devkit/schematics";
-import { NodePackageInstallTask } from "@angular-devkit/schematics/tasks/index.js";
+import { SchematicsException, type SchematicContext, type Tree } from '@angular-devkit/schematics';
+import { NodePackageInstallTask } from '@angular-devkit/schematics/tasks/index.js';
 
-type DependencyType = "dependencies" | "devDependencies";
+type DependencyType = 'dependencies' | 'devDependencies';
 type PackageJson = Partial<Record<DependencyType, Record<string, string>>>;
+
+export type DependencyOptions = {
+  ssr: boolean;
+  webcomponent: boolean;
+};
 
 export function addDependencies(
   tree: Tree,
   context: SchematicContext,
-  ssr: boolean,
+  { ssr, webcomponent }: DependencyOptions
 ): void {
-  const packageJson = (tree.readJson("package.json") as PackageJson) ?? {};
+  const packageJson = (tree.readJson('package.json') as PackageJson) ?? {};
 
   function addDependency(
     type: DependencyType,
     name: string,
     version: string,
-    overwrite = false,
+    overwrite = false
   ): void {
     const deps = (packageJson[type] ??= {});
     if (overwrite || !deps[name]) {
@@ -26,30 +31,42 @@ export function addDependencies(
   // Angular 21's application builder still reaches into @angular-devkit/build-angular,
   // which @angular/build does not pull in on its own.
   addDependency(
-    "devDependencies",
-    "@angular-devkit/build-angular",
-    packageJson.dependencies?.["@angular/build"] ??
-      packageJson.devDependencies?.["@angular/build"] ??
-      "latest",
+    'devDependencies',
+    '@angular-devkit/build-angular',
+    packageJson.dependencies?.['@angular/build'] ??
+      packageJson.devDependencies?.['@angular/build'] ??
+      'latest'
   );
 
-  addDependency("dependencies", "es-module-shims", "^2.8.0");
+  addDependency('dependencies', 'es-module-shims', '^2.8.0');
 
-  addDependency(
-    "devDependencies",
-    "@softarc/native-federation-orchestrator",
-    "^4.6.0",
-    true,
-  );
+  addDependency('devDependencies', '@softarc/native-federation-orchestrator', '^4.6.0', true);
 
   if (ssr) {
-    console.log("SSR detected ...");
-    console.log("Activating CORS ...");
+    console.log('SSR detected ...');
+    console.log('Activating CORS ...');
 
-    addDependency("dependencies", "cors", "^2.8.5");
+    addDependency('dependencies', 'cors', '^2.8.5');
   }
 
-  tree.overwrite("package.json", JSON.stringify(packageJson, null, 2));
+  if (webcomponent) {
+    // @angular/elements ships in lockstep with the framework, so it has to track
+    // whatever @angular/core the workspace is already on.
+    const angularVersion =
+      packageJson.dependencies?.['@angular/core'] ??
+      packageJson.devDependencies?.['@angular/core'];
+
+    if (!angularVersion) {
+      throw new SchematicsException(
+        '--webcomponent requires @angular/elements, but @angular/core is not a ' +
+          'dependency of this workspace.'
+      );
+    }
+
+    addDependency('dependencies', '@angular/elements', angularVersion);
+  }
+
+  tree.overwrite('package.json', JSON.stringify(packageJson, null, 2));
 
   context.addTask(new NodePackageInstallTask());
 }

@@ -1,6 +1,7 @@
 export * from "@softarc/native-federation/domain";
 import {
   initFederation as internalInitFederation,
+  type FederationManifest,
   type NativeFederationResult,
 } from "@softarc/native-federation-orchestrator";
 import {
@@ -68,7 +69,7 @@ let federationPromise: Promise<NativeFederationResult> = new Promise(
 );
 
 export function initFederation(
-  remotesOrManifestUrl?: Record<string, string> | string,
+  remotesOrManifestUrl?: FederationManifest | string,
   options: NgNFOptions = {},
 ) {
   const { cacheTag, shimMode, ...nfOpts } = options as Omit<
@@ -216,4 +217,7 @@ export async function loadRemoteModule<T = any>(
   }
 }
 
-export { type NativeFederationResult } from "@softarc/native-federation-orchestrator";
+export {
+  type NativeFederationResult,
+  type FederationManifest,
+} from "@softarc/native-federation-orchestrator";
