@@ -18,6 +18,7 @@ import { makeMainAsync } from './steps/make-main-async.js';
 import { makeServerAsync } from './steps/make-server-async.js';
 import { setServerRenderMode } from './steps/set-server-render-mode.js';
 import { wireServeSsrScript } from './steps/wire-serve-ssr-script.js';
+import { resolveAppComponent } from './steps/resolve-app-component.js';
 
 export { updatePackageJson } from './steps/update-package-json.js';
 export { getWorkspaceFileName } from './steps/normalize-options.js';
@@ -35,7 +36,6 @@ export default function config(options: NfSchematicSchema): Rule {
       projectRoot,
       projectSourceRoot,
       manifestPath,
-      manifestRelPath,
       main,
     } = normalized;
 
@@ -51,10 +51,7 @@ export default function config(options: NfSchematicSchema): Rule {
 
     const exists = tree.exists(federationConfigPath);
 
-    const cand1 = path.join(projectSourceRoot, 'app', 'app.component.ts').replace(/\\/g, '/');
-    const cand2 = path.join(projectSourceRoot, 'app', 'app.ts').replace(/\\/g, '/');
-
-    const appComponent = tree.exists(cand1) ? cand1 : tree.exists(cand2) ? cand2 : 'update-this.ts';
+    const appComponent = resolveAppComponent(tree, projectSourceRoot)?.path ?? 'update-this.ts';
 
     const generateRule = !exists
       ? generateFederationConfig(
@@ -87,7 +84,7 @@ export default function config(options: NfSchematicSchema): Rule {
 
     return chain([
       generateRule,
-      makeMainAsync(main, options, remoteMap, manifestRelPath),
+      makeMainAsync(normalized, options, remoteMap),
       ssr ? makeServerAsync(server, options) : noop(),
       ssr ? setServerRenderMode(projectSourceRoot) : noop(),
       ssr ? wireServeSsrScript(projectName) : noop(),
