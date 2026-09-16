@@ -115,4 +115,24 @@ describe('createAngularEsbuildContext', () => {
 
     expect(updateFederationTsConfig).not.toHaveBeenCalled();
   });
+
+  // #117: left relative, esbuild resolves these through its own working directory, which need
+  // not agree with the root the TypeScript program was built from.
+  it('anchors workspace-root-relative entry points on the workspace root', async () => {
+    await createAngularEsbuildContext(makeOptions());
+
+    expect(lastBuildOptions().entryPoints).toEqual([
+      { in: path.join(workspaceRoot, 'apps/example/src/main.ts'), out: 'main' },
+    ]);
+  });
+
+  // Core hands shared mappings over absolute already.
+  it('leaves an already-absolute entry point untouched', async () => {
+    const absolute = path.join(workspaceRoot, 'libs', 'ui', 'src', 'index.ts');
+    await createAngularEsbuildContext(
+      makeOptions({ entryPoints: [{ fileName: absolute, outName: 'ui.js' }] })
+    );
+
+    expect(lastBuildOptions().entryPoints).toEqual([{ in: absolute, out: 'ui' }]);
+  });
 });

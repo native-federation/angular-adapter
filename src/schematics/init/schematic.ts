@@ -1,4 +1,12 @@
-import { chain, noop, type Rule, url } from '@angular-devkit/schematics';
+import {
+  chain,
+  noop,
+  SchematicsException,
+  type Rule,
+  type SchematicContext,
+  type Tree,
+  url,
+} from '@angular-devkit/schematics';
 import type { NfSchematicSchema } from './schema.js';
 import * as path from 'path';
 
@@ -14,16 +22,24 @@ import { generateFederationConfig } from './steps/generate-federation-config.js'
 import { updateWorkspaceConfig } from './steps/update-workspace-config.js';
 import { generateFederationTsConfig } from './steps/generate-federation-tsconfig.js';
 import { addDependencies } from './steps/add-dependencies.js';
-import { makeMainAsync } from './steps/make-main-async.js';
+import { makeMainAsync, type WebComponentOutcome } from './steps/make-main-async.js';
 import { makeServerAsync } from './steps/make-server-async.js';
 import { setServerRenderMode } from './steps/set-server-render-mode.js';
 import { wireServeSsrScript } from './steps/wire-serve-ssr-script.js';
+import { resolveAppComponent } from './steps/resolve-app-component.js';
 
 export { updatePackageJson } from './steps/update-package-json.js';
 export { getWorkspaceFileName } from './steps/normalize-options.js';
 
 export default function config(options: NfSchematicSchema): Rule {
-  return async function (tree, context) {
+  return async function (tree) {
+    if (options.webcomponent && options.type !== 'remote') {
+      throw new SchematicsException(
+        `--webcomponent is only valid for --type remote; a '${options.type}' bootstraps the ` +
+          `application itself, which registering a custom element does not do.`
+      );
+    }
+
     const workspaceFileName = getWorkspaceFileName(tree);
     const workspace = JSON.parse(tree.read(workspaceFileName)?.toString('utf8') ?? '{}');
 
@@ -35,7 +51,6 @@ export default function config(options: NfSchematicSchema): Rule {
       projectRoot,
       projectSourceRoot,
       manifestPath,
-      manifestRelPath,
       main,
     } = normalized;
 
@@ -51,10 +66,7 @@ export default function config(options: NfSchematicSchema): Rule {
 
     const exists = tree.exists(federationConfigPath);
 
-    const cand1 = path.join(projectSourceRoot, 'app', 'app.component.ts').replace(/\\/g, '/');
-    const cand2 = path.join(projectSourceRoot, 'app', 'app.ts').replace(/\\/g, '/');
-
-    const appComponent = tree.exists(cand1) ? cand1 : tree.exists(cand2) ? cand2 : 'update-this.ts';
+    const appComponent = resolveAppComponent(tree, projectSourceRoot)?.path ?? 'update-this.ts';
 
     const generateRule = !exists
       ? generateFederationConfig(
@@ -83,11 +95,15 @@ export default function config(options: NfSchematicSchema): Rule {
 
     updateWorkspaceConfig(tree, normalized, workspace, workspaceFileName, ssr, federationTsConfig);
 
-    addDependencies(tree, context, ssr);
+    // `--webcomponent` is a no-op when bootstrap.ts already exists, so @angular/elements is
+    // only pulled in once makeMainAsync has actually written a custom element bootstrap.
+    const webComponent: WebComponentOutcome = { generated: false };
 
     return chain([
       generateRule,
-      makeMainAsync(main, options, remoteMap, manifestRelPath),
+      makeMainAsync(normalized, options, remoteMap, webComponent),
+      (t: Tree, c: SchematicContext) =>
+        addDependencies(t, c, { ssr, webcomponent: webComponent.generated }),
       ssr ? makeServerAsync(server, options) : noop(),
       ssr ? setServerRenderMode(projectSourceRoot) : noop(),
       ssr ? wireServeSsrScript(projectName) : noop(),
