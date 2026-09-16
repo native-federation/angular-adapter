@@ -217,4 +217,7 @@ export async function loadRemoteModule<T = any>(
   }
 }
 
-export { type NativeFederationResult } from "@softarc/native-federation-orchestrator";
+export {
+  type NativeFederationResult,
+  type FederationManifest,
+} from "@softarc/native-federation-orchestrator";
