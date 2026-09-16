@@ -25,6 +25,11 @@
       "enum": ["host", "dynamic-host", "remote"],
       "type": "string",
       "default": "remote"
+    },
+    "webcomponent": {
+      "type": "boolean",
+      "description": "Bootstrap the project as a custom element instead of a regular Angular application",
+      "default": false
     }
   }
 }

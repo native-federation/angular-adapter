@@ -76,6 +76,35 @@ import { ${className} } from '${component}';
 `;
 }
 
+function webComponentBootstrap({ className, component, config }: AppRefs, tag: string): string {
+  return `import { createApplication } from '@angular/platform-browser';
+import { appConfig } from '${config}';
+import { ${className} } from '${component}';
+import { createCustomElement } from '@angular/elements';
+
+(() => {
+  createApplication(appConfig).then(({ injector }) => {
+    customElements.define(
+      '${tag}', // your componentname
+      createCustomElement(${className}, { injector }),
+    );
+  });
+})();
+`;
+}
+
+// Custom element names must contain a hyphen, which a one-word project name does not.
+export function customElementTag(projectName: string): string {
+  const slug = projectName
+    .replace(/^@/, '')
+    .replace(/([a-z\d])([A-Z])/g, '$1-$2')
+    .replace(/[^a-zA-Z0-9]+/g, '-')
+    .toLowerCase()
+    .replace(/^-+|-+$/g, '');
+
+  return `mfe-${slug || 'remote'}`;
+}
+
 export function makeMainAsync(
   normalized: NormalizedOptions,
   options: NfSchematicSchema,
@@ -100,11 +129,21 @@ export function makeMainAsync(
     const bootstrapPath = path.join(path.dirname(main), 'bootstrap.ts').replace(/\\/g, '/');
 
     if (tree.exists(bootstrapPath)) {
+      if (options.webcomponent) {
+        console.warn(`${bootstrapPath} already exists; --webcomponent left it untouched.`);
+      }
       if (!alreadyFederated) {
         console.warn(
           `${bootstrapPath} already exists; the previous contents of ${main} were discarded.`
         );
       }
+    } else if (options.webcomponent) {
+      const refs = resolveAppRefs(
+        tree,
+        normalized,
+        `--webcomponent needs to generate ${bootstrapPath}`
+      );
+      tree.create(bootstrapPath, webComponentBootstrap(refs, customElementTag(projectName)));
     } else if (alreadyFederated) {
       const refs = resolveAppRefs(
         tree,

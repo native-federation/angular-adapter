@@ -80,7 +80,7 @@ export default function config(options: NfSchematicSchema): Rule {
 
     updateWorkspaceConfig(tree, normalized, workspace, workspaceFileName, ssr, federationTsConfig);
 
-    addDependencies(tree, context, ssr);
+    addDependencies(tree, context, { ssr, webcomponent: options.webcomponent === true });
 
     return chain([
       generateRule,

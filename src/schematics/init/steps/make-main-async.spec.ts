@@ -1,6 +1,6 @@
 import { EmptyTree, type Tree } from '@angular-devkit/schematics';
 
-import { makeMainAsync } from './make-main-async.js';
+import { customElementTag, makeMainAsync } from './make-main-async.js';
 import type { NormalizedOptions } from './normalize-options.js';
 import type { NfSchematicSchema } from '../schema.js';
 
@@ -153,6 +153,37 @@ describe('makeMainAsync', () => {
     await expect(run(tree)).rejects.toThrow(/does not exist/);
   });
 
+  describe('--webcomponent', () => {
+    it('generates a custom element bootstrap instead of moving main.ts', async () => {
+      scaffold(tree);
+
+      await run(tree, { webcomponent: true });
+
+      const bootstrap = tree.readText(BOOTSTRAP);
+      expect(bootstrap).toContain(`import { createCustomElement } from '@angular/elements';`);
+      expect(bootstrap).toContain('createApplication(appConfig)');
+      expect(bootstrap).toContain(`'mfe-mfe1', // your componentname`);
+      expect(bootstrap).toContain('createCustomElement(App, { injector })');
+      expect(bootstrap).not.toContain('bootstrapApplication');
+    });
+
+    it('leaves an existing bootstrap.ts alone and says so', async () => {
+      scaffold(tree);
+      tree.create(BOOTSTRAP, `console.log('hand written');\n`);
+
+      await run(tree, { webcomponent: true });
+
+      expect(tree.readText(BOOTSTRAP)).toBe(`console.log('hand written');\n`);
+      expect(warn).toHaveBeenCalledWith(expect.stringContaining('--webcomponent'));
+    });
+
+    it('throws when the root component cannot be resolved', async () => {
+      tree.create(MAIN, SCAFFOLD_MAIN);
+
+      await expect(run(tree, { webcomponent: true })).rejects.toThrow(/could not be found/);
+    });
+  });
+
   describe('the federation argument', () => {
     it.each([
       ['remote', '{}'],
@@ -166,4 +197,13 @@ describe('makeMainAsync', () => {
       expect(tree.readText(MAIN)).toContain(expected);
     });
   });
+});
+
+describe('customElementTag', () => {
+  it.each([
+    ['mfe1', 'mfe-mfe1'],
+    ['my-remote', 'mfe-my-remote'],
+    ['myRemote', 'mfe-my-remote'],
+    ['@scope/checkout', 'mfe-scope-checkout'],
+  ])('%s -> %s', (project, tag) => expect(customElementTag(project)).toBe(tag));
 });
