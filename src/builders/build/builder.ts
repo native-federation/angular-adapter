@@ -526,10 +526,10 @@ export async function* runBuilder(
     process.exit(1);
   }
 
-  // Dispose the finished federation context so its compiler-plugin onDispose resets
-  // Angular's shared TS compilation state before the app build (#47); watch reuses it.
+  // Each compiler plugin's onDispose resets Angular's shared TS compilation state before the
+  // app build (#47); watch reuses the contexts.
   if (!watch) {
-    await adapter.dispose("mapping-or-exposed").catch(() => undefined);
+    await adapter.disposeFederationContexts();
   }
 
   syncFederationWatcher();

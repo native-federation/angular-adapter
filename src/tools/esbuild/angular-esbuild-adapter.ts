@@ -59,27 +59,23 @@ function setNgServerMode(): void {
   }
 }
 
+export interface AngularBuildAdapter extends NFBuildAdapter {
+  // Disposes every mapping and exposed context, leaving esbuild running for the app build.
+  disposeFederationContexts(): Promise<void>;
+}
+
 export function createAngularBuildAdapter(
   ngBuilderOptions: ApplicationBuilderOptions & NfInternalOptions,
   context: BuilderContext
-): NFBuildAdapter {
+): AngularBuildAdapter {
   const bundleContextCache = new Map<string, EsbuildContextResult>();
 
-  const dispose = async (name?: string): Promise<void> => {
-    if (name) {
-      if (!bundleContextCache.has(name))
-        throw new Error(`Could not dispose of non-existing build '${name}'`);
-
-      const entry = bundleContextCache.get(name)!;
-      await entry.ctx.dispose();
-      await entry.pluginDisposed;
-      bundleContextCache.delete(name);
-      return;
-    }
-
+  const disposeWhere = async (matches: (entry: EsbuildContextResult) => boolean) => {
     const disposals: Promise<void>[] = [];
 
-    for (const [, entry] of bundleContextCache) {
+    for (const [name, entry] of bundleContextCache) {
+      if (!matches(entry)) continue;
+      bundleContextCache.delete(name);
       disposals.push(
         (async () => {
           await entry.ctx.dispose();
@@ -87,11 +83,24 @@ export function createAngularBuildAdapter(
         })()
       );
     }
-    bundleContextCache.clear();
-    await Promise.all(disposals);
 
+    await Promise.all(disposals);
+  };
+
+  const dispose = async (name?: string): Promise<void> => {
+    if (name) {
+      if (!bundleContextCache.has(name))
+        throw new Error(`Could not dispose of non-existing build '${name}'`);
+
+      await disposeWhere(entry => entry.name === name);
+      return;
+    }
+
+    await disposeWhere(() => true);
     await esbuild.stop();
   };
+
+  const disposeFederationContexts = () => disposeWhere(entry => entry.isMappingOrExposed);
 
   const setup = async (
     name: string,
@@ -155,5 +164,5 @@ export function createAngularBuildAdapter(
     }
   };
 
-  return { setup, build, dispose };
+  return { setup, build, dispose, disposeFederationContexts };
 }
