@@ -21,6 +21,7 @@
     "@softarc/native-federation-orchestrator": "^4.6.0",
     "es-module-shims": "^2.8.0",
     "esbuild": "^0.28.0",
+    "jsonc-parser": "^3.3.1",
     "mrmime": "^2.0.1",
     "watchpack": "^2.5.2"
   },

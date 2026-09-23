@@ -14,6 +14,12 @@
       "factory": "./src/schematics/update22/schematic",
       "schema": "./src/schematics/update22/schema.json",
       "description": "migrating native-federation to the v22 ESM standard and generating a tsconfig.federation.json per federated project"
+    },
+    "update22-2": {
+      "version": "22.2.0",
+      "factory": "./src/schematics/update22-2/schematic",
+      "schema": "./src/schematics/update22-2/schema.json",
+      "description": "removing the no longer used \"files\" from each tsconfig.federation.json"
     }
   }
 }

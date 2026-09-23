@@ -35,6 +35,9 @@ importers:
       esbuild:
         specifier: ^0.28.0
         version: 0.28.2
+      jsonc-parser:
+        specifier: ^3.3.1
+        version: 3.3.1
       mrmime:
         specifier: ^2.0.1
         version: 2.0.1
