@@ -56,7 +56,6 @@ describe('update22 — federation tsconfig', () => {
 
     expect(readJson(tree, 'projects/mfe1/tsconfig.federation.json')).toEqual({
       extends: './tsconfig.app.json',
-      files: ['src/main.ts'],
       include: ['src/**/*.d.ts'],
     });
 
