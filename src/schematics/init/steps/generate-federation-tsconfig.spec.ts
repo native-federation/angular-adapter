@@ -3,8 +3,6 @@ import { EmptyTree, type Tree } from '@angular-devkit/schematics';
 import { generateFederationTsConfig } from './generate-federation-tsconfig.js';
 import type { NormalizedOptions } from './normalize-options.js';
 
-const EXPOSED = ['projects/mfe1/src/app/app.ts'];
-
 function makeOptions(overrides: Partial<NormalizedOptions> = {}): NormalizedOptions {
   return {
     polyfills: [] as unknown as string,
@@ -38,34 +36,22 @@ describe('generateFederationTsConfig', () => {
     tree = new EmptyTree();
   });
 
-  it('creates a federation tsconfig extending the app tsconfig', () => {
-    const result = generateFederationTsConfig(tree, makeOptions(), EXPOSED);
+  // Each build context supplies its own `files` (tools/esbuild/write-context-tsconfig.ts), so
+  // a seeded list would only go stale.
+  it('creates a federation tsconfig extending the app tsconfig, without files', () => {
+    const result = generateFederationTsConfig(tree, makeOptions());
 
     expect(result).toBe('projects/mfe1/tsconfig.federation.json');
     expect(read(tree, result)).toEqual({
       extends: './tsconfig.app.json',
-      files: ['src/app/app.ts'],
       include: ['src/**/*.d.ts'],
     });
-  });
-
-  // An empty `files` list is a TypeScript error (TS18002) unless the config also extends
-  // another one, so neither key may be dropped from the generated shape.
-  it('always emits both extends and a non-empty files list', () => {
-    const result = generateFederationTsConfig(tree, makeOptions(), [
-      'projects/mfe1/src/main.ts',
-    ]);
-
-    const tsconfig = read(tree, result);
-    expect(tsconfig.extends).toBeTruthy();
-    expect(tsconfig.files).toEqual(['src/main.ts']);
   });
 
   it('derives the include glob from the project source root', () => {
     const result = generateFederationTsConfig(
       tree,
-      makeOptions({ projectSourceRoot: 'projects/mfe1/app-src' }),
-      EXPOSED
+      makeOptions({ projectSourceRoot: 'projects/mfe1/app-src' })
     );
 
     expect(read(tree, result).include).toEqual(['app-src/**/*.d.ts']);
@@ -83,8 +69,7 @@ describe('generateFederationTsConfig', () => {
             },
           },
         },
-      }),
-      EXPOSED
+      })
     );
 
     expect(read(tree, result).extends).toBe('../../tsconfig.app.json');
@@ -93,7 +78,7 @@ describe('generateFederationTsConfig', () => {
   it('leaves an existing federation tsconfig untouched', () => {
     tree.create('projects/mfe1/tsconfig.federation.json', '{ "files": ["src/bootstrap.ts"] }');
 
-    const result = generateFederationTsConfig(tree, makeOptions(), EXPOSED);
+    const result = generateFederationTsConfig(tree, makeOptions());
 
     expect(read(tree, result)).toEqual({ files: ['src/bootstrap.ts'] });
   });
@@ -102,7 +87,7 @@ describe('generateFederationTsConfig', () => {
     const options = makeOptions();
     options.projectConfig.architect.build.builder = '@angular-architects/native-federation:build';
 
-    const result = generateFederationTsConfig(tree, options, EXPOSED);
+    const result = generateFederationTsConfig(tree, options);
 
     expect(tree.exists(result)).toBe(false);
   });
@@ -118,8 +103,7 @@ describe('generateFederationTsConfig', () => {
             esbuild: { options: { tsConfig: 'projects/mfe1/tsconfig.app.json' } },
           },
         },
-      }),
-      EXPOSED
+      })
     );
 
     expect(read(tree, result).extends).toBe('./tsconfig.app.json');
@@ -133,8 +117,7 @@ describe('generateFederationTsConfig', () => {
           projectConfig: {
             architect: { build: { builder: '@angular/build:application', options: {} } },
           },
-        }),
-        EXPOSED
+        })
       )
     ).toThrow('has no tsConfig');
   });

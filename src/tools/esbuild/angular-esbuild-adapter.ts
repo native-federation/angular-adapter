@@ -106,7 +106,7 @@ export function createAngularBuildAdapter(
     const normalizedOptions = normalizeContextOptions(ngBuilderOptions, context, adapterOptions);
 
     const { ctx, pluginDisposed } = normalizedOptions.isMappingOrExposed
-      ? await createAngularEsbuildContext(normalizedOptions)
+      ? await createAngularEsbuildContext(normalizedOptions, name)
       : await createNodeModulesEsbuildContext(normalizedOptions);
 
     bundleContextCache.set(name, {

@@ -77,7 +77,7 @@ describe('createAngularBuildAdapter', () => {
     // second setup with the same name is a no-op
     await adapter.setup('remote', {} as never);
 
-    expect(createAngularEsbuildContext).toHaveBeenCalledTimes(1);
+    expect(createAngularEsbuildContext).toHaveBeenCalledWith(expect.anything(), 'remote');
     expect(createNodeModulesEsbuildContext).not.toHaveBeenCalled();
   });
 

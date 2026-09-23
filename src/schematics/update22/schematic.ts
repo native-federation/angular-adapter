@@ -79,13 +79,6 @@ function generateFederationTsConfigs(
         projectRoot,
         projectSourceRoot,
         appTsConfig,
-        // The exposes live in federation.config.mjs, which is not ours to parse; main.ts
-        // keeps the program non-empty until the first build fills in the real entries.
-        entryPoints: [
-          original.options.browser ??
-            original.options.main ??
-            path.join(projectSourceRoot, "main.ts"),
-        ],
       });
 
       console.log(`Generated ${federationTsConfig}`);

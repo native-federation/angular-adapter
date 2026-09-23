@@ -66,9 +66,6 @@ importers:
       jiti:
         specifier: ^2.6.0
         version: 2.7.0
-      json5:
-        specifier: ^2.2.3
-        version: 2.2.3
       knip:
         specifier: ^6.17.1
         version: 6.35.1
