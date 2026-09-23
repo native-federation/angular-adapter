@@ -527,8 +527,7 @@ export default withNativeFederation({
     requiredVersion: "auto",
   })
     .skip(["rxjs/ajax", "rxjs/fetch"])
-    .override({ "large-lib": { singleton: false } })
-    .get(),
+    .override({ "large-lib": { singleton: false } }),
 });
 ```
 
@@ -536,10 +535,11 @@ The builder exposes:
 
 | Method                   | Purpose                                                              |
 | ------------------------ | -------------------------------------------------------------------- |
+| `.filter(patterns)`      | Narrow the shared dependencies to those matching the patterns.       |
 | `.skip(externals)`       | Add packages to the skip list, on top of the ones seeded by default. |
 | `.override(externals)`   | Replace the sharing options for specific packages.                   |
 | `.patch(externals, cfg)` | Merge a partial config into the given packages.                      |
-| `.get()`                 | Resolve the builder into the shared config object.                   |
+| `.get()`                 | Resolve the builder into the shared config object (optional).        |
 
 Unlike the core `fromPackageJson`, this adapter's version pre-seeds the Angular skip list (`NG_SKIP_LIST`) — the same list `shareAll` uses — so Angular-internal and localization packages are skipped for you out of the box.
 
@@ -572,8 +572,7 @@ export default withNativeFederation({
     strictVersion: true,
   })
     .filter(["@my-org/ui/*", "@my-org/auth-lib"])
-    .patch(["@my-org/ui/*"], { singleton: false })
-    .get(),
+    .patch(["@my-org/ui/*"], { singleton: false }),
 });
 ```
 
@@ -581,9 +580,11 @@ export default withNativeFederation({
 | ----------------------- | ------------------------------------------------------------------------------ |
 | `.filter(patterns)`     | Narrow the selection. Omit it to select every mapped path.                     |
 | `.patch(patterns, cfg)` | Merge a partial config into the matching mappings; never widens the selection. |
-| `.get()`                | Resolve the builder into the `sharedMappings` array.                           |
+| `.get()`                | Resolve the builder into the `sharedMappings` array (optional).                |
 
-Requires `@softarc/native-federation` ≥ `4.4.0`. See the [core README](https://github.com/native-federation/native-federation-core#configuring-shared-mappings) for which `ExternalConfig` properties a mapping honours, how `includeSecondaries: { keepAll: true, resolveGlob: true }` keeps mappings nothing imports, and why only barrel imports can be shared as a mapped path.
+Since `@softarc/native-federation` `4.7.0`, `shared` and `sharedMappings` accept the builders directly, so the trailing `.get()` can be dropped. Add `// @ts-check` at the top of `federation.config.mjs` to have your editor check the config against the exported `FederationConfig` type.
+
+Requires `@softarc/native-federation` ≥ `4.4.0`. See the [core README](https://github.com/native-federation/native-federation-core#configuring-shared-mappings) for which `ExternalConfig` properties a mapping honours, how `includeSecondaries: { keepAll: true, resolveGlob: true }` keeps mappings nothing imports, and why only barrel imports can be shared as a mapped path. Note that with `ignoreUnusedDeps: false` a wildcard mapping (`@my-org/ui/*`) is dropped unless it sets `includeSecondaries: { resolveGlob: true }`: without the pruning scan nothing expands the wildcard into entry points.
 
 ### SSR and Hydration
 

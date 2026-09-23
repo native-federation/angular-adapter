@@ -132,6 +132,19 @@ describe('withNativeFederation', () => {
     expect(mockCoreWithNativeFederation.mock.calls[0]![0].platform).toBe('browser');
   });
 
+  it('infers the platform from a shared builder passed without get()', () => {
+    const resolved = { '@angular/ssr': {} };
+    const builder = { get: vi.fn(() => resolved) };
+
+    withNativeFederation({ shared: builder } as never);
+
+    const passed = mockCoreWithNativeFederation.mock.calls[0]![0];
+    expect(passed.platform).toBe('node');
+    // resolved once here, so core receives the plain object rather than calling get() again
+    expect(passed.shared).toBe(resolved);
+    expect(builder.get).toHaveBeenCalledTimes(1);
+  });
+
   it('does not override an explicitly configured platform', () => {
     withNativeFederation({ platform: 'node', shared: { '@angular/core': {} } } as never);
 
