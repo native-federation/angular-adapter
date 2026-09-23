@@ -12,9 +12,7 @@ export default withNativeFederation({
   shared: fromPackageJson({ singleton: true, strictVersion: true, requiredVersion: 'auto', build: 'package' })
     // includeSecondaries is an opt-out of ignoreUnusedDeps, so all of
     // @angular/core is shared to prevent mismatches.
-    .override({
-      '@angular/core': { singleton: true, strictVersion: true, requiredVersion: 'auto', build: 'package', includeSecondaries: { keepAll: true } },
-    }),
+    .patch(['@angular/core'], { includeSecondaries: { keepAll: true } }),
 
   skip: [
     'rxjs/ajax',
