@@ -1,6 +1,7 @@
 import * as esbuild from "esbuild";
 import * as path from "path";
 import * as fs from "fs";
+import { createRequire } from "node:module";
 
 import {
   transformSupportedBrowsersToTargets,
@@ -49,12 +50,9 @@ export function createAngularLinkerPlugin(
           return { contents, loader: "js" };
         }
 
-        const result = await jsTransformer.transformData(
-          args.path,
-          contents,
-          !needsLinking,
-          undefined,
-        );
+        const result = await jsTransformer.transformData(args.path, contents, {
+          skipLinker: !needsLinking,
+        });
 
         return {
           contents: Buffer.from(result).toString("utf-8"),
@@ -63,6 +61,17 @@ export function createAngularLinkerPlugin(
       });
     },
   };
+}
+
+// JavaScriptTransformer hashes its cache keys with xxhash-wasm, which must be loaded first.
+// Not exported from @angular/build/private, so load the exact module it uses.
+async function initializeAngularHash(): Promise<void> {
+  const require = createRequire(import.meta.url);
+  const buildRoot = path.dirname(require.resolve("@angular/build/package.json"));
+  const { initializeHash } = require(path.join(buildRoot, "src/utils/hash.js")) as {
+    initializeHash: () => Promise<void>;
+  };
+  await initializeHash();
 }
 
 const jsTransformerCacheStores = new Map<string, Map<string, Uint8Array>>();
@@ -127,18 +136,16 @@ export async function createNodeModulesEsbuildContext(
   const jsTransformerCacheStore = getOrCreateJsTransformerCacheStore(
     cache.cachePath,
   );
-  const jsTransformerCache = new Cache<Uint8Array>(
-    jsTransformerCacheStore,
-    "jstransformer",
-  );
+  await initializeAngularHash();
+  const jsTransformerCache = new Cache<Uint8Array>(jsTransformerCacheStore);
   const jsTransformer = new JavaScriptTransformer(
     {
       sourcemap: !!sourcemapOptions.scripts,
       thirdPartySourcemaps: false,
       advancedOptimizations,
       jit: false,
+      maxConcurrency: 1, // keep low for node_modules bundling
     },
-    1, // maxThreads - keep low for node_modules bundling
     jsTransformerCache,
   );
 

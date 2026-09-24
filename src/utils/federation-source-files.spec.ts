@@ -1,17 +1,14 @@
 import { SourceFileCache } from '@angular/build/private';
-import type ts from 'typescript';
 
 import { federationSourceFiles } from './federation-source-files.js';
 
+// Since @angular/build 22.2 SourceFileCache is no longer a Map of parsed
+// ts.SourceFiles; that cache moved into the TypeScript compilation itself.
 function cacheWith(options: {
-  outer?: readonly string[];
   typeScript?: readonly string[];
   referenced?: readonly string[];
 }): SourceFileCache {
   const cache = new SourceFileCache();
-  for (const file of options.outer ?? []) {
-    cache.set(file, {} as ts.SourceFile);
-  }
   for (const file of options.typeScript ?? []) {
     cache.typeScriptFileCache.set(file, '');
   }
@@ -22,11 +19,10 @@ function cacheWith(options: {
 }
 
 describe('federationSourceFiles', () => {
-  it('unions all three places the cache tracks files in', () => {
-    // outer Map: in-process TS path; typeScriptFileCache: emitted .ts output;
+  it('unions both places the cache tracks files in', () => {
+    // typeScriptFileCache: emitted .ts output;
     // referencedFiles: templates and styles (the only home they ever have).
     const cache = cacheWith({
-      outer: ['/app/in-process.ts'],
       typeScript: ['/app/emitted.ts'],
       referenced: ['/app/cmp.html', '/app/cmp.scss'],
     });
@@ -35,13 +31,11 @@ describe('federationSourceFiles', () => {
       '/app/cmp.html',
       '/app/cmp.scss',
       '/app/emitted.ts',
-      '/app/in-process.ts',
     ]);
   });
 
   it('deduplicates files reported by more than one source', () => {
     const cache = cacheWith({
-      outer: ['/app/shared.ts'],
       typeScript: ['/app/shared.ts'],
       referenced: ['/app/shared.ts'],
     });
@@ -51,7 +45,6 @@ describe('federationSourceFiles', () => {
 
   it('drops node_modules entries from every source', () => {
     const cache = cacheWith({
-      outer: ['/repo/node_modules/dep/index.ts'],
       typeScript: ['/repo/node_modules/dep/emit.ts', '/repo/src/kept.ts'],
       referenced: ['/repo/node_modules/dep/style.css'],
     });
