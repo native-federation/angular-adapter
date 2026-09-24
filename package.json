@@ -55,7 +55,10 @@
       "default": "./src/node-preload.js"
     }
   },
-  "homepage": "https://github.com/native-federation/angular-adapter",
+  "homepage": "https://native-federation.com/docs/v4/angular-adapter/",
+  "bugs": {
+    "url": "https://github.com/native-federation/angular-adapter/issues"
+  },
   "type": "module",
   "files": [
     "src",
