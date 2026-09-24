@@ -218,6 +218,13 @@ export async function* runBuilder(
     ngBuilderOptions.outputPath = nfBuilderOptions.outputPath;
   }
 
+  if (nfBuilderOptions.define) {
+    ngBuilderOptions.define = {
+      ...ngBuilderOptions.define,
+      ...nfBuilderOptions.define,
+    };
+  }
+
   const declaresTsConfig =
     !!nfBuilderOptions.tsConfig && nfBuilderOptions.tsConfig.length > 0;
 
