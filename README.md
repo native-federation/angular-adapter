@@ -21,7 +21,7 @@ The Angular adapter for **Native Federation**: the mental model of Module Federa
 
 ## Versions
 
-The adapter follows Angular's version numbers: use the adapter release that matches your Angular major and minor (e.g. `22.1.x` for Angular 22.1).
+The adapter follows Angular's version numbers: use the adapter release that matches your Angular major and minor (e.g. `22.1.x` for Angular 22.1.x).
 
 | Your Angular | Install                                    |
 | ------------ | ------------------------------------------ |
