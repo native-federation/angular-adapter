@@ -11,7 +11,6 @@ import {
   buildApplication,
 } from "@angular/build";
 import {
-  buildApplicationInternal,
   normalizeDevServerOptions,
   serveWithVite,
   SourceFileCache,
@@ -46,7 +45,7 @@ import {
   sharedMappingDirs,
   syncNfFileWatcher,
 } from "@softarc/native-federation/internal";
-import { type Plugin, type PluginBuild } from "esbuild";
+import { type PluginBuild } from "esbuild";
 import { devHostInstancesPlugin } from "../../plugin/dev-host-instances-plugin.js";
 import { withDiskCaseWorkspaceRoot } from "./../../utils/disk-case.js";
 import { checkForInvalidImports } from "./../../utils/check-for-invalid-imports.js";
@@ -63,6 +62,7 @@ import { createAngularBuildAdapter } from "../../tools/esbuild/angular-esbuild-a
 import { createSharedMappingsPlugin } from "../../tools/esbuild/shared-mappings-plugin.js";
 import { getI18nConfig, translateFederationArtifacts } from "./i18n.js";
 import { updateScriptTags } from "./update-index-html.js";
+import { createInternalAngularBuilder } from "./internal-angular-builder.js";
 
 const originalWrite = process.stderr.write.bind(process.stderr);
 
@@ -86,47 +86,6 @@ process.stderr.write = function (
 
   return originalWrite(chunk, encodingOrCallback as BufferEncoding, callback);
 };
-
-const createInternalAngularBuilder =
-  (
-    externals: string[],
-    opts?: { instrumentForCoverage?: (filename: string) => boolean },
-  ) =>
-  (
-    options: Parameters<typeof buildApplicationInternal>[0],
-    context: BuilderContext,
-    pluginsOrExtensions?:
-      | Plugin[]
-      | Parameters<typeof buildApplicationInternal>[2],
-  ) => {
-    let extensions: Parameters<typeof buildApplicationInternal>[2];
-    if (pluginsOrExtensions && Array.isArray(pluginsOrExtensions)) {
-      extensions = {
-        codePlugins: pluginsOrExtensions,
-      };
-    } else {
-      extensions = pluginsOrExtensions as Parameters<
-        typeof buildApplicationInternal
-      >[2];
-    }
-
-    // serveWithVite fetches its own browserOptions independently, so ngBuilderOptions
-    // modifications don't reach here. Add NF externals to externalDependencies so
-    // Angular routes them to optimizeDeps.exclude, preventing Vite from trying to
-    // pre-bundle packages that include native .node binaries.
-    options.externalDependencies = [
-      ...(options.externalDependencies ?? []),
-      ...externals,
-    ];
-
-    if (opts?.instrumentForCoverage) {
-      options.instrumentForCoverage = opts.instrumentForCoverage;
-    }
-
-    // Todo: share cache with Angular builder: https://github.com/angular/angular-cli/pull/32527
-    // options.codeBundleCache = nfOptions.federationCache.bundlerCache;
-    return buildApplicationInternal(options, context, extensions);
-  };
 
 export async function* runBuilder(
   nfBuilderOptions: NfBuilderSchema & NfInternalOptions,
@@ -564,6 +523,7 @@ export async function* runBuilder(
         appBuilderName,
         createInternalAngularBuilder(externals, {
           instrumentForCoverage: nfBuilderOptions.instrumentForCoverage,
+          define: nfBuilderOptions.define,
         }),
         context,
         nfBuilderOptions.skipHtmlTransform
