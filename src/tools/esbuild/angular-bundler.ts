@@ -174,6 +174,7 @@ export async function createAngularEsbuildContext(
     logLimit: 0,
     plugins: [compilerPlugin, commonjsPlugin(), ...customPlugins],
     define: {
+      ...builderOptions.define,
       ...(dev ? {} : { ngDevMode: 'false' }),
       ngJitMode: 'false',
     },
