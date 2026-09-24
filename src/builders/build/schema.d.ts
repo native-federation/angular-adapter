@@ -16,6 +16,7 @@ export interface NfBuilderSchema extends JsonObject {
   esmsInitOptions: ESMSInitOptions;
   baseHref?: string;
   outputPath?: string;
+  define?: Record<string, string>;
   projectName?: string;
   ssr: boolean;
   tsConfig?: string;

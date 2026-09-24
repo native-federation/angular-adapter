@@ -145,4 +145,25 @@ describe('createAngularEsbuildContext', () => {
 
     expect(lastBuildOptions().entryPoints).toEqual([{ in: absolute, out: 'ui' }]);
   });
+
+  // #129: exposed modules left user defines unreplaced, throwing a ReferenceError in the host.
+  // Angular's own flags win over user defines, mirroring the application builder.
+  it('applies the builder define, keeping the Angular flags on top', async () => {
+    await createAngularEsbuildContext(
+      makeOptions({
+        builderOptions: {
+          optimization: false,
+          sourceMap: false,
+          define: { BUILD_ID: "'abc'", ngJitMode: 'true' },
+        },
+      } as unknown as Partial<NormalizedContextOptions>),
+      'mapping-or-exposed'
+    );
+
+    expect(lastBuildOptions().define).toEqual({
+      BUILD_ID: "'abc'",
+      ngDevMode: 'false',
+      ngJitMode: 'false',
+    });
+  });
 });
