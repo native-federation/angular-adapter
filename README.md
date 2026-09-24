@@ -1,518 +1,47 @@
-# Native Federation for Angular
+# @angular-architects/native-federation
 
-Native Federation is a "browser-native" implementation of the successful mental model behind webpack Module Federation for building Micro Frontends (Plugins, etc.).
+[![npm version](https://img.shields.io/npm/v/@angular-architects/native-federation)](https://www.npmjs.com/package/@angular-architects/native-federation)
+[![npm downloads](https://img.shields.io/npm/dm/@angular-architects/native-federation)](https://www.npmjs.com/package/@angular-architects/native-federation)
+[![license](https://img.shields.io/npm/l/@angular-architects/native-federation)](https://github.com/native-federation/angular-adapter/blob/main/LICENSE)
 
-> [!TIP]
-> Starting at Angular version 22, we're migrating to a small rework we call the v4 upgrade. Coming from an older version of native-federation? Check out our [migration guide](./MIGRATION_GUIDE.md). You can find the older native-federation codebase [here](https://github.com/angular-architects/module-federation-plugin/).
+The Angular adapter for **Native Federation**: the mental model of Module Federation, implemented on browser standards (ES modules and import maps) for Micro Frontends and plugin-based architectures.
 
-## Features 🔥
+📖 **[Documentation](https://native-federation.com/docs/v4/angular-adapter/)**
 
-- ✅ Mental Model of Module Federation
-- ✅ Future Proof: Uses **Web Standards** to be **independent** of build tools like webpack
-- ✅ Neat Angular-Integration: **Directly delegates** to Angular's new ultra-fast esbuild-based ApplicationBuilder to **prevent diverging** from the Angular standard.
+> [!NOTE]
+> This is **v4**. Upgrading from an older version? See the [migration guide](https://native-federation.com/docs/v4/angular-adapter/migration-v4/), or run `ng update @angular-architects/native-federation`. The v3 source lives in the [module-federation-plugin repository](https://github.com/angular-architects/module-federation-plugin/tree/21.x.x/libs/native-federation).
 
-### More
+## Features
 
-- ✅ Embraces ESM and Import Maps - an emerging web standard
-- ✅ Easy to configure: We use the same API and Schematics as for our Module Federation plugin
-- ✅ Blazing Fast: The reference implementation not only uses the fast esbuild; it also caches already built shared dependencies.
-- ✅ Supports Angular SSR and Incremental Hydration (since 18@latest)
-- ✅ Supports Angular I18N (since 19.0.13)
-
-## Prerequisite
-
-Angular & Angular CLI 16.1 or higher
-
-This package was successfully tested with Angular CLI projects and with Nx projects.
+- **Stays on the Angular CLI** — delegates to Angular's esbuild-based ApplicationBuilder and dev server, so you keep every CLI optimisation.
+- **Web standards** — remotes are plain ES modules wired together by an import map.
+- **Shared dependencies** — load a library once across host and remotes, with semver-aware version negotiation.
+- **Schematics** — `ng add` turns a project into a host or remote; `ng update` migrates it.
+- **SSR, Incremental Hydration and I18N** — supported out of the box.
 
 ## Versions
 
-We will at least provide a new version of this package per Angular major. If necessary, we will also provide packages to adapt to Angular minors. To make the relationship between Angular versions and versions of this package easy for all of us, **we follow Angular's version numbers**. E. g., `@angular-architects/native-federation` 21.1 is intended for Angular 21.1 and upwards.
+The adapter follows Angular's version numbers: use the adapter release that matches your Angular major and minor (e.g. `22.1.x` for Angular 22.1).
 
-- Use version 21.0.x for Angular 21.0.x
-- Use version 21.1.x for Angular 21.1.x
-- Use version 21.2.x for Angular 21.2.x
-- Use version 22.0.x for Angular 22.0.x
-- Use version 22.1.x for Angular 22.1.x
+| Your Angular | Install                                    |
+| ------------ | ------------------------------------------ |
+| 22+          | `@angular-architects/native-federation`    |
+| 20 – 21      | `@angular-architects/native-federation-v4` |
 
-## Want to try v4 on an older angular version?
+Both packages are the same adapter under a different name.
 
-We have a "bridge" package that provides a backport to Angular 21 and 20. Try it here!
+## Quick start
+
+Install the adapter, then make one project a remote and another a host:
 
 ```bash
-npm install @angular-architects/native-federation-v4
-```
-
-## Demo Repo
-
-In this [demo repo](https://github.com/native-federation/playground), we test the new Native Federation major. For this, we compile demo apps build with them with Native Federation.
-
-<a href="https://github.com/native-federation/playground" target="_blank">
-<img width="500" src="https://github.com/angular-architects/module-federation-plugin/blob/main/libs/native-federation/demo-repo.png">
-</a>
-
-This is primarily for testing purposes. For an **initial example and/or an tutorial please look below.**
-
-## Migration from Module Federation
-
-If you currently use Angular with Module Federation, you can follow our [Migration Guide](https://github.com/angular-architects/module-federation-plugin/blob/main/libs/native-federation/docs/migrate.md) to migrate to Native Federation and Angular's new fast esbuild-based build system.
-
-## Using Module Federation and Native Federation Side-by-Side
-
-[In this article](https://www.angulararchitects.io/en/blog/combining-native-federation-and-module-federation/) we describe, how to use both technologies side-by-side.
-
-## Updates
-
-You can use `ng update` for updating Native Federation.
-
-Notes for [updating to version 18](https://github.com/angular-architects/module-federation-plugin/blob/main/libs/native-federation/docs/update18.md)
-
-## Angular Integration
-
-Since 17.1, Native Federation for Angular uses the Angular CLI's `esbuild`-based **Application Builder** and the CLI's **Dev Server** to **keep track with all the innovations and performance-improvements provided by the Angular CLI team.**
-
-Please find some [information for upgrading to 17.1. here](https://github.com/angular-architects/module-federation-plugin/blob/main/libs/native-federation/migrate-appbuilder.md).
-
-## Credits
-
-Big thanks to:
-
-- [Zack Jackson](https://twitter.com/ScriptedAlchemy) for initially coming up with the great idea of Module Federation and its successful mental model
-- [Tobias Koppers](https://twitter.com/wSokra) for helping to make Module Federation a first class citizen of webpack
-- [Florian Rappl](https://twitter.com/FlorianRappl) for a good discussion about these topics during a speakers dinner in Nuremberg
-- [The Nx Team](https://twitter.com/NxDevTools), esp. [Colum Ferry](https://twitter.com/FerryColum), who seamlessly integrated webpack Module Federation into Nx and hence helped to spread the word about it (Nx + Module Federation === ❤️)
-- [Michael Egger-Zikes](https://twitter.com/MikeZks) for contributing to our Module Federation efforts and brining in valuable feedback
-- The Angular CLI-Team, esp. [Alan Agius](https://twitter.com/AlanAgius4) and Charles Lyding, for their fantastic work on the esbuild builder for Angular
-
-## Example 🛠️
-
-We migrated our webpack Module Federation example to Native Federation:
-
-![Example](https://raw.githubusercontent.com/angular-architects/module-federation-plugin/main/libs/native-federation/example.png)
-
-Please find the example [here (branch: nf-standalone-solution)](https://github.com/manfredsteyer/module-federation-plugin-example/tree/nf-standalone-solution):
-
-```
-git clone https://github.com/manfredsteyer/module-federation-plugin-example.git --branch nf-standalone-solution
-
-cd module-federation-plugin-example
-
-npm i
-```
-
-Start the Micro Frontend:
-
-```
-ng serve mfe1 -o
-```
-
-_(In the case of an error, see this [information below](#error-file-srcmaints-is-missing-from-the-typescript-compilation-plugin-angular-compiler))_
-
-Wait until the Micro Frontend is started.
-
-Open another console and start the shell:
-
-```
-ng serve shell -o
-```
-
-The example loads a Micro Frontends into a shell:
-
-![Microfrontend Loaded into Shell](https://github.com/angular-architects/module-federation-plugin/raw/main/libs/mf/tutorial/result.png)
-
-## Relationship to @angular-architects/module-federation
-
-This package, `@angular-architects/native-federation`, uses the same API as `@angular-architects/module-federation`. To switch over, just make sure you import everything from the former package. Don't mix these packages.
-
-## About the Mental Model 🧠
-
-The underlying mental model allows for runtime integration: Loading a part of a separately built and deployed application into yours. This is needed for Micro Frontend architectures but also for plugin-based solutions.
-
-For this, the mental model introduces several concepts:
-
-- **Remote:** The remote is a separately built and deployed application. It can **expose EcmaScript** modules that can be loaded into other applications.
-- **Host:** The host loads one or several remotes on demand. From your framework's perspective, this looks like traditional lazy loading. The big difference is that the host doesn't know the remotes at compilation time.
-- **Shared Dependencies**:\*\* If several remotes and the host use the same library, you might not want to download it several times. Instead, you might want to download it once and share it at runtime. For this use case, the mental model allows for defining such shared dependencies.
-- **Version Mismatch:** If two or more applications use a different version of the same shared library, we need to prevent a version mismatch. The mental model defines several strategies to deal with it, like falling back to another version that fits the application, using a different compatible one (according to semantic versioning), or throwing an error.
-
-## Usage/ Tutorial 🧪
-
-You can checkout the [nf-standalone-starter branch](https://github.com/manfredsteyer/module-federation-plugin-example/tree/nf-standalone-starter) to try out Native Federation:
-
-```
-git clone https://github.com/manfredsteyer/module-federation-plugin-example.git --branch nf-standalone-starter
-
-cd module-federation-plugin-example
-
-npm i
-```
-
-This repository consists of two Angular applications: a `shell` and a Micro Frontend called `mfe1`. During this tutorial, you will load `mfe1` into the `shell`:
-
-![Microfrontend Loaded into Shell](https://github.com/angular-architects/module-federation-plugin/raw/main/libs/mf/tutorial/result.png)
-
-### Adding Native Federation
-
-```
 npm i @angular-architects/native-federation -D
-```
 
-Making an application a remote (Micro Frontend):
-
-```
 ng g @angular-architects/native-federation:init --project mfe1 --port 4201 --type remote
-```
-
-Making an application a host (shell):
-
-```
 ng g @angular-architects/native-federation:init --project shell --port 4200 --type dynamic-host
 ```
 
-A dynamic host reads the configuration data at runtime from a `.json` file.
-
-Passing `--webcomponent` bootstraps the remote as a custom element instead of as a regular
-Angular application. The generated `bootstrap.ts` then registers the root component with
-`createCustomElement` under an `mfe-<project>` tag, and `@angular/elements` is added to the
-workspace at the same version as `@angular/core`:
-
-```
-ng g @angular-architects/native-federation:init --project mfe1 --port 4201 --type remote --webcomponent
-```
-
-The flag only applies to `--type remote`, and the generated `bootstrap.ts` replaces what
-`main.ts` used to do rather than moving it, so anything `main.ts` did beyond
-`bootstrapApplication` has to be carried over by hand.
-
-> The schematics called here automate most steps of this tutorial, esp. adding configuration files and bootstrapping Native Federation. Hence, the following sections primarily discuss these changes. You just need to add a lazy route (see below) and make sure the correct ports are configured in the federation manifest (see below too).
-
-### Configuring the Host
-
-The host configuration (`projects/shell/federation.config.mjs`) looks like what you know from our Module Federation plugin:
-
-```javascript
-import {
-  withNativeFederation,
-  shareAll,
-} from "@angular-architects/native-federation/config";
-
-export default withNativeFederation({
-  name: "my-host",
-  shared: {
-    ...shareAll({
-      singleton: true,
-      strictVersion: true,
-      requiredVersion: "auto",
-    }),
-  },
-
-  skip: [
-    "rxjs/ajax",
-    "rxjs/fetch",
-    "rxjs/testing",
-    "rxjs/webSocket",
-    // Add further packages you don't need at runtime
-  ],
-});
-```
-
-> Our `init` schematic shown above generates this file for you.
-
-### Configuring the Remote
-
-Also, the remote configuration (`projects/mfe1/federation.config.mjs`) looks familiar:
-
-```javascript
-import {
-  withNativeFederation,
-  shareAll,
-} from "@angular-architects/native-federation/config";
-
-export default withNativeFederation({
-  name: "mfe1",
-
-  exposes: {
-    "./Component": "./projects/mfe1/src/app/app.component.ts",
-  },
-
-  shared: {
-    ...shareAll({
-      singleton: true,
-      strictVersion: true,
-      requiredVersion: "auto",
-    }),
-  },
-
-  skip: [
-    "rxjs/ajax",
-    "rxjs/fetch",
-    "rxjs/testing",
-    "rxjs/webSocket",
-    // Add further packages you don't need at runtime
-  ],
-});
-```
-
-> Our `init` schematic shown above generates this file for you.
-
-### Initializing the Host
-
-When bootstrapping the host (shell), Native Federation (`projects\shell\src\main.ts`) is initialized:
-
-```typescript
-import { initFederation } from "@angular-architects/native-federation";
-
-initFederation("/assets/federation.manifest.json")
-  .catch((err) => console.error(err))
-  .then((_) => import("./bootstrap"))
-  .catch((err) => console.error(err));
-```
-
-> This file is generated by the schematic described above.
-
-The function points to a federation manifest. This manifest lists the individual remotes. It can be exchanged when deploying the solution. Hence, you can adapt the build to the respective environment.
-
-**Credits:** The Nx team originally came up with the idea for the manifest.
-
-This is what the (also generated) federation manifest (`projects\shell\src\assets\federation.manifest.json`) looks like:
-
-```json
-{
-  "mfe1": "http://localhost:4201/remoteEntry.json"
-}
-```
-
-Native Federation generates the `remoteEntry.json`. It contains metadata about the individual remote.
-
-If you follow this tutorial, **ensure** this entry points to port `4201` (!).
-
-### Initializing the Remote
-
-When bootstrapping your remote (`projects\mfe1\src\main.ts`), Native Federation is initialized too:
-
-```typescript
-import { initFederation } from "@angular-architects/native-federation";
-
-initFederation()
-  .catch((err) => console.error(err))
-  .then((_) => import("./bootstrap"))
-  .catch((err) => console.error(err));
-```
-
-> Our `init` schematic shown above also generates this file.
-
-After the initialization, it loads the file `bootstrap.ts` starting your Angular application.
-
-### Loading a Remote
-
-For loading a component (or any other building block) exposed by a remote into the host, use Native Federation's `loadRemoteModule` function together with lazy loading (`projects\shell\src\app\app.routes.ts`):
-
-```typescript
-import { Routes } from "@angular/router";
-import { HomeComponent } from "./home/home.component";
-import { NotFoundComponent } from "./not-found/not-found.component";
-
-// Add this import:
-import { loadRemoteModule } from "@angular-architects/native-federation";
-
-export const APP_ROUTES: Routes = [
-  {
-    path: "",
-    component: HomeComponent,
-    pathMatch: "full",
-  },
-
-  // Add this route:
-  {
-    path: "flights",
-    loadComponent: () =>
-      loadRemoteModule("mfe1", "./Component").then((m) => m.AppComponent),
-  },
-
-  {
-    path: "**",
-    component: NotFoundComponent,
-  },
-
-  // DO NOT insert routes after this one.
-  // { path:'**', ...} needs to be the LAST one.
-];
-```
-
-### Starting your example
-
-Start the remote:
-
-```
-ng serve mfe1 -o
-```
-
-_(In the case of an error, see this [information below](#error-file-srcmaints-is-missing-from-the-typescript-compilation-plugin-angular-compiler))_
-
-Once the remote is started, start the shell:
-
-```
-ng serve shell -o
-```
-
-Now, by clicking at the 2nd menu item, you can load the remote directly into the host.
-
-## Advanced Use Cases
-
-### Code-Splitting for Shared Dependencies
-
-By default, Native Federation enables code-splitting (chunking) for shared dependencies. This means large libraries can be split into smaller chunks which reduces the overall size, improving initial load times.
-
-You can configure code-splitting at two levels:
-
-#### Global Setting
-
-Use the `chunks` option in your `federation.config.mjs` to control the default behavior for all shared dependencies:
-
-```js
-export default withNativeFederation({
-  // Disable code-splitting globally
-  chunks: false,
-
-  shared: {
-    ...shareAll({
-      singleton: true,
-      strictVersion: true,
-      requiredVersion: "auto",
-    }),
-  },
-});
-```
-
-When `chunks` is set to `false` at the config level, all shared dependencies, shared mappings and exposed modules will be bundled as single files without code-splitting.
-
-#### Per-Package Setting
-
-You can also override the code-splitting behavior for individual packages in the `shared` configuration:
-
-```js
-export default withNativeFederation({
-  shared: {
-    ...shareAll(
-      {
-        singleton: true,
-        strictVersion: true,
-        requiredVersion: "auto",
-      },
-      {
-        overrides: {
-          "large-lib": {
-            singleton: true,
-            strictVersion: true,
-            requiredVersion: "auto",
-            chunks: false,
-            build: "package", // necessary for isolated bundles
-          },
-        },
-      },
-    ),
-  },
-});
-```
-
-> **Note:** When setting `chunks` on individual packages, consider also setting `build: 'package'` to avoid your explicit chunk settings being ignored since all 'default' bundles are bundled in a single build step.
-
-#### Dense Chunking
-
-The `denseChunking` feature flag optimizes the `remoteEntry.json` file structure for better performance:
-
-```js
-export default withNativeFederation({
-  shared: {
-    ...shareAll({
-      singleton: true,
-      strictVersion: true,
-      requiredVersion: "auto",
-    }),
-  },
-  features: {
-    denseChunking: true,
-  },
-});
-```
-
-When enabled, instead of listing each chunk as a separate shared dependency, chunks are grouped by bundle name in a dedicated `chunks` object. Each shared dependency gets a `bundle` property linking it to its chunk bundle. This results in a smaller `remoteEntry.json` and allows chunks to be skipped if the dependency is not used in the final import map.
-
-#### Dense Externals
-
-The `denseExternals` feature flag applies the same compaction to shared externals themselves:
-
-```js
-export default withNativeFederation({
-  shared: {
-    ...shareAll({
-      singleton: true,
-      strictVersion: true,
-      requiredVersion: "auto",
-    }),
-  },
-  features: {
-    denseExternals: true,
-  },
-});
-```
-
-When enabled, each shared external is emitted as a single dense entry that carries its output filenames in an `entries` map, rather than one flat record per file. This further shrinks the `remoteEntry.json`. The Angular I18N build understands both the flat and dense shapes, so localization keeps translating shared bundles either way.
-
-### Version-Pinned Share Scopes
-
-A `shareScope` isolates shared dependencies into a named bucket, so packages are only shared between remotes that use the same scope. The `autoShareScope` helper derives that name from a dependency's declared version, letting you pin sharing to a version line without hardcoding the number.
-
-```js
-import {
-  withNativeFederation,
-  shareAll,
-  autoShareScope,
-} from "@angular-architects/native-federation/config";
-
-export default withNativeFederation({
-  // Only share with remotes built against the same Angular minor, e.g. "ng21.1"
-  shareScope: autoShareScope(),
-
-  shared: {
-    ...shareAll({
-      singleton: true,
-      strictVersion: true,
-      requiredVersion: "auto",
-    }),
-  },
-});
-```
-
-The `level` option controls the granularity of the generated scope (given `@angular/core` is `21.1.4`):
-
-| `level`   | Result               |
-| --------- | -------------------- |
-| `'major'` | `"ng21"`             |
-| `'minor'` | `"ng21.1"` (default) |
-| `'patch'` | `"ng21.1.4"`         |
-
-You can also point it at another package or set a per-dependency scope:
-
-```js
-export default withNativeFederation({
-  shareScope: autoShareScope({ level: "patch" }),
-
-  shared: {
-    // Override the scope for a single package
-    rxjs: {
-      singleton: true,
-      shareScope: autoShareScope({ dependency: "rxjs" }),
-    },
-  },
-});
-```
-
-The version is read from `dependencies`, `devDependencies` or `peerDependencies` in your `package.json`. `autoShareScope` throws if the dependency isn't declared, or if the declared version lacks enough segments for the requested `level`.
-
-### Building the Shared Config from `package.json`
-
-As an alternative to `shareAll`, the `fromPackageJson` helper builds the shared config from your `package.json` and returns a fluent builder you can refine before handing it to `withNativeFederation`:
+The schematic points `angular.json` at the federation builder, moves your bootstrap into `bootstrap.ts` and generates a `federation.config.mjs`:
 
 ```js
 import {
@@ -521,385 +50,49 @@ import {
 } from "@angular-architects/native-federation/config";
 
 export default withNativeFederation({
+  name: "mfe1",
+  exposes: {
+    "./Component": "./projects/mfe1/src/app/app.component.ts",
+  },
   shared: fromPackageJson({
     singleton: true,
     strictVersion: true,
     requiredVersion: "auto",
+    build: "package",
   })
-    .skip(["rxjs/ajax", "rxjs/fetch"])
-    .override({ "large-lib": { singleton: false } }),
-});
-```
-
-The builder exposes:
-
-| Method                   | Purpose                                                              |
-| ------------------------ | -------------------------------------------------------------------- |
-| `.filter(patterns)`      | Narrow the shared dependencies to those matching the patterns.       |
-| `.skip(externals)`       | Add packages to the skip list, on top of the ones seeded by default. |
-| `.override(externals)`   | Replace the sharing options for specific packages.                   |
-| `.patch(externals, cfg)` | Merge a partial config into the given packages.                      |
-| `.get()`                 | Resolve the builder into the shared config object (optional).        |
-
-Unlike the core `fromPackageJson`, this adapter's version pre-seeds the Angular skip list (`NG_SKIP_LIST`) — the same list `shareAll` uses — so Angular-internal and localization packages are skipped for you out of the box.
-
-### Configuring Shared Mappings
-
-Workspace libraries mapped in `compilerOptions.paths` are shared via `sharedMappings`. Besides plain strings, an entry can pair a list of patterns with a config, so a mapped path carries the same metadata as a shared npm package:
-
-```js
-export default withNativeFederation({
-  sharedMappings: [
-    "@my-org/auth-lib",
-    [["@my-org/ui/*"], { singleton: false }],
-  ],
-});
-```
-
-Entries are matched as patterns rather than exact keys, so `'@my-org/*'` selects every mapped path under that scope. When several entries match the same mapped path, the first one wins — put the specific entries before the general ones.
-
-For more than a couple of entries, `mappingsFromWorkspace` builds that array for you:
-
-```js
-import {
-  withNativeFederation,
-  mappingsFromWorkspace,
-} from "@angular-architects/native-federation/config";
-
-export default withNativeFederation({
-  sharedMappings: mappingsFromWorkspace({
-    singleton: true,
-    strictVersion: true,
-  })
-    .filter(["@my-org/ui/*", "@my-org/auth-lib"])
-    .patch(["@my-org/ui/*"], { singleton: false }),
-});
-```
-
-| Method                  | Purpose                                                                        |
-| ----------------------- | ------------------------------------------------------------------------------ |
-| `.filter(patterns)`     | Narrow the selection. Omit it to select every mapped path.                     |
-| `.patch(patterns, cfg)` | Merge a partial config into the matching mappings; never widens the selection. |
-| `.get()`                | Resolve the builder into the `sharedMappings` array (optional).                |
-
-Since `@softarc/native-federation` `4.7.0`, `shared` and `sharedMappings` accept the builders directly, so the trailing `.get()` can be dropped. Add `// @ts-check` at the top of `federation.config.mjs` to have your editor check the config against the exported `FederationConfig` type.
-
-Requires `@softarc/native-federation` ≥ `4.4.0`. See the [core README](https://github.com/native-federation/native-federation-core#configuring-shared-mappings) for which `ExternalConfig` properties a mapping honours, how `includeSecondaries: { keepAll: true, resolveGlob: true }` keeps mappings nothing imports, and why only barrel imports can be shared as a mapped path. Note that with `ignoreUnusedDeps: false` a wildcard mapping (`@my-org/ui/*`) is dropped unless it sets `includeSecondaries: { resolveGlob: true }`: without the pruning scan nothing expands the wildcard into entry points.
-
-### SSR and Hydration
-
-We support Angular's SSR and (Incremental) Hydration. Please find [more information here](https://www.angulararchitects.io/blog/ssr-and-hydration-with-native-federation-for-angular/).
-
-### Native Federation and Module Federation
-
-We support combining Native Federation with Module Federation. Please find [more information here](https://www.angulararchitects.io/blog/combining-native-federation-and-module-federation/).
-
-### Angular I18N
-
-Since version 19.0.13, Native Federation for Angular supports Angular I18N. Here are some things to keep in mind:
-
-- Make sure, you also add I18N support to your shell (e.g., `ng add @angular/localize --project shell`)
-- Configure I18N in your `angular.json`. Don't use command line parameters (as the Native Federation Builder does not forward them to the ApplicationBuilder by design)
-- In production, make sure your `federation.manifest.json` points to the right language versions of your remotes
-
-### Angular Localization
-
-#### Out of the box
-
-Since version 20.0.6, loading locales works out of the box when the feature `ignoreUnusedDeps` is activated. This feature is now **enabled by default**, so no additional configuration is needed for new projects.
-
-```js
-features: {
-  ignoreUnusedDeps: true;
-}
-```
-
-#### Fallback
-
-Before version 20.0.6 or when `ignoreUnusedDeps` is not activated, you need a helper that only loads the needed localization files:
-
-```js
-module.exports = withNativeFederation({
-  [...],
-  shared: {
-    ...shareAll({ singleton: true, strictVersion: true, requiredVersion: 'auto' }),
-    ...shareAngularLocales(['en', 'de', 'fr']),
-  }
-});
-```
-
-This option was introduced with version 19.0.14.
-
-#### Shell reloading when MFE finishes building for local development
-
-Native Federation provides automatic shell reloading when remote Micro Frontends finish rebuilding during development. This feature eliminates manual page refreshes and significantly improves the development experience when working with multiple applications simultaneously.
-
-Pass `{ sse: true }` to `initFederation` to enable it:
-
-```typescript
-import { initFederation } from "@angular-architects/native-federation";
-
-initFederation("/assets/federation.manifest.json", { sse: true })
-  .catch((err) => console.error(err))
-  .then((_) => import("./bootstrap"))
-  .catch((err) => console.error(err));
-```
-
-For complete implementation details, configuration options, please refer to the article:
-
-**📖 [Fixing DX Friction: Automatic Shell Reloading in Native Federation](https://www.angulararchitects.io/en/blog/fixing-dx-friction-automatic-shell-reloading-in-native-federation/)**
-
-### Developing `npm link`ed shared libraries
-
-A common local-development setup is to build a shared library in its own repo (with `ng build --watch`, which runs ng-packagr) and pull it into your host via [`npm link`](https://docs.npmjs.com/cli/commands/npm-link). This symlinks the library's `dist/` into your host's `node_modules`, so you can iterate on the library and the host together.
-
-Since Native Federation shares such a library as an _external_ (it is excluded from Angular's own build), a plain `ng serve` used to ignore edits to it — the change lived under `node_modules`, which the build watcher skips, so you had to clear the cache or restart the dev server to see it. Since version `22.0.6` (requires `@softarc/native-federation` ≥ `4.3.2`), the adapter detects linked shared packages and re-bundles them automatically on change.
-
-Two things about that detection have since changed (requires `@softarc/native-federation` ≥ `4.5.0`):
-
-- **A symlink alone no longer counts as linked.** Package managers that symlink by default — pnpm's default `isolated` linker, or Yarn's `nodeLinker: pnpm` — make _every_ dependency a symlink, which used to put the whole dependency graph on the watch list. A package is now treated as a live checkout only when its real path resolves **outside** every `node_modules` tree, which is exactly what `npm link` produces and what a package manager's internal symlink does not.
-- **Watching linked packages is opt-in**, via the `watchLinkedDeps` builder option below. It is off by default because watching means polling the linked checkout for as long as the dev server runs.
-
-Turning the option off does **not** mean edits to a linked library are ignored. A library's type declarations are a TypeScript input, and the adapter resolves them to their real path outside `node_modules` — so an ng-packagr rebuild, which rewrites `dist/*.d.ts` alongside the JavaScript, is already noticed and re-bundled with the option off. What the option adds is coverage of changes that touch no such input: a JavaScript-only edit, or a rebuild whose emitted types come out byte-identical.
-
-A cold `ng build` re-bundles a changed linked library either way, since the adapter checksums each linked package's content on every build. A running `ng serve` is weaker: with the option off, a change touching no watched input can stay stale until you restart the server or run a build.
-
-So that the default is never a silent surprise, a watching build that finds a linked shared package while the option is off says so once at startup:
-
-```
-INFO  Detected npm-linked shared packages: @my-scope/my-lib. Set 'watchLinkedDeps' to true to rebuild when they change.
-```
-
-#### Requirements
-
-- The library is listed in your `federation.config.*` `shared` section (via `shareAll`, an explicit `shared` entry, or `sharedMappings`).
-- Its package directory under `node_modules` is a **symlink pointing outside `node_modules`** — i.e. it was linked with `npm link` (or your package manager's equivalent), not installed from a registry and not symlinked by your package manager's own linker.
-- The library is rebuilt on change so the symlink target actually updates. With an Angular library this means running `ng build --watch` (ng-packagr) in the library's repo.
-- For the changes an ng-packagr rebuild does not cover on its own — see above — `watchLinkedDeps` is set to `true` on the builder target you are running.
-
-#### Workflow
-
-```bash
-# 1. In the shared library's repo — build to dist/ and keep watching
-ng build --watch
-
-# 2. Publish the built package to the local npm link registry
-cd dist/my-lib && npm link
-
-# 3. In the host repo — link the package into node_modules
-npm link @my-scope/my-lib
-
-# 4. Run the host as usual
-ng serve
-```
-
-Watching is opt-in, so enable it on the target you serve with:
-
-```json
-"serve": {
-  "builder": "@angular-architects/native-federation:build",
-  "options": {
-    "target": "host:serve-original:development",
-    "watchLinkedDeps": true
-  }
-}
-```
-
-The option is available on both the `:build` and `:remote` builders and defaults to `false`.
-
-Now edit a source file in the library. ng-packagr rebuilds its `dist/`, and the adapter picks up the change, re-bundles the affected shared external, and logs `Done!` — no manual cache clear or dev-server restart needed.
-
-To also refresh the browser automatically when the rebuild finishes, enable SSE-based reloading as described in [Shell reloading when MFE finishes building for local development](#shell-reloading-when-mfe-finishes-building-for-local-development) (`initFederation(manifest, { sse: true })`). Otherwise, a manual browser refresh will show the update.
-
-#### How it works
-
-The adapter resolves the real path of each shared package and treats it as a live checkout when that path lies outside every `node_modules` tree. With `watchLinkedDeps` enabled, those directories are added to the federation file watcher; a short debounce coalesces ng-packagr's atomic multi-file writes into a single rebuild. Only the shared externals affected by the change are re-bundled; regular (registry-installed) dependencies keep the version-only cache fast path, so there is no rebuild churn or performance regression for non-linked packages.
-
-Watching a linked checkout polls it, which is why it is off by default: a registry dependency is bundled once and cached by checksum, so its bytes cannot change without its version changing, and watching it could never change an outcome. Only a linked checkout changes content under a fixed version.
-
-Angular draws the same line but wires it to `preserveSymlinks`: when it watches the project root it ignores `**/node_modules/**`, and skips that ignore when `preserveSymlinks` is on, precisely so `npm link` keeps working. It has to overload one flag because its resolver decides which path esbuild sees. The adapter does not, because it resolves each shared package's real path itself — so `watchLinkedDeps` governs watching and nothing else.
-
-That separation is worth keeping, so do **not** reach for `preserveSymlinks` here. It changes module resolution: it is the classic route to loading two copies of a singleton like `@angular/core`, and under pnpm it makes every dependency resolve through `.pnpm`. It would also shrink the watch set rather than grow it, since the adapter skips any path with a `node_modules` segment and `preserveSymlinks` is exactly what makes a linked library's files report as `node_modules/@my-scope/my-lib/…` instead of their real location.
-
-## FAQ
-
-### When to use this package?
-
-If you like the idea of webpack Module Federation but want to switch over to Angular's new esbuild builder, you can use this package.
-
-### I get an error when preparing shared packages. What to do?
-
-Native Federation needs to prepare all your shared packages so that it can load them on demand as EcmaScript modules. This only happens once for development and once for production builds. The result of this is cached.
-
-If the preparation of one of these packages fails, you get an error like this one:
-
-![error when preparing shared packages](https://github.com/angular-architects/module-federation-plugin/blob/main/error.png?raw=true)
-
-For this, there are several reasons:
-
-- Perhaps you try to share a package intended for NodeJS/ a package that cannot be converted to EcmaScript modules. This happens if you use `shareAll` in the `federation.config.mjs` and when the package in question is part of your dependencies in `package.json`. If you don't need (to share) this package at runtime, move it to `devDependencies` or add it to the `skip` section of your `federation.config.mjs`.
-
-- Perhaps your shared packages contain some code esbuild cannot transfer to EcmaScript modules. This should not be the case for packages, built with the Angular CLI or Nx and the underlying package ng-packagr. If this happens, please let us know about the package causing troubles.
-
-### Why do I get `ɵɵdefineComponent is not a function` in an Nx workspace?
-
-The builder disables two of Angular's build features by setting environment variables before `@angular/build` loads:
-
-- `NG_BUILD_OPTIMIZE_CHUNKS=0` — Angular's chunk optimization pass (on by default in Angular 22 for production builds, from 3 lazy chunks upwards) re-bundles the esbuild output _after_ Native Federation has computed its import map, so shared externals such as `@angular/core` are no longer resolved as singletons. At runtime that surfaces as `ɵɵdefineComponent is not a function`.
-- `NG_BUILD_PARALLEL_TS=0` — lets the compilation steps share one cache, which is much faster here.
-
-`@angular/build` reads those variables **once**, when it is first loaded, so this only works if the builder is loaded first. Under the Angular CLI it is. Nx loads `@angular/build` before it resolves the builder (`nx/src/adapter/compat.js` requires `@angular/build/private` to stub a version assertion), so the variables arrive too late and both features stay on — see [#107](https://github.com/native-federation/angular-adapter/issues/107) / [#114](https://github.com/native-federation/angular-adapter/issues/114).
-
-The builder detects this and re-applies both settings to the already-loaded `@angular/build`, logging:
-
-```
-INFO  @angular/build was already loaded when this builder started (Nx preloads it),
-      so its build environment was stale; re-applied useParallelTs=false,
-      optimizeChunksThreshold=Infinity.
-```
-
-That line is informational — it means the problem was corrected, and no action is needed. Two things worth knowing:
-
-- **Run one uncached build after upgrading** (`nx build my-app --skip-nx-cache`). Artifacts that Nx cached from a broken build are still replayed on a cache hit.
-- If you would rather set the variables yourself, put them in a workspace-root `.env` file — Nx loads dotenv files before `@angular/build` — and add `{ "env": "NG_BUILD_OPTIMIZE_CHUNKS" }` to the target's `inputs` so the cache reacts to changes. Setting `NF_NG_BUILD_ENV_REPLAY=0` then keeps the builder from touching the loaded module at all.
-
-If the builder instead warns that it _could not_ re-apply a setting, `@angular/build` has changed internally: use the `.env` approach above and please report it.
-
-### How to deal with CommonJS Packages?
-
-The good message is, that the official Angular Package Format defines the usage of ECMA Script Modules (ESM) for years. This is the future-proof standard, Native Federation is built upon and all npm packages created with the Angular CLI follow. If you use older CommonJS-based packages, Native Federation automatically converts them to ESM. Depending on the package, this might change some details. Here, you find some [information for dealing with CommonJS packages](https://shorturl.at/jmzH0).
-
-### How to Manually Define a Package's Entry Point?
-
-Usually, Native Federation automatically detects entry points in shared packages. If the packages neither align with the official standard nor with typical conventions beyond these standards, you can also directly provide the entry point:
-
-```js
-module.exports = withNativeFederation({
-  shared: {
-    ...shareAll({
-      singleton: true,
-      strictVersion: true,
-      requiredVersion: "auto",
-    }),
-    "test-pkg": {
-      packageInfo: {
-        entryPoint: "/path/to/test-pkg/entry.mjs",
-        version: "1.0.0",
-        esm: true,
-      },
-    },
+    // includeSecondaries is an opt-out of ignoreUnusedDeps, so all of
+    // @angular/core is shared to prevent mismatches.
+    .patch(["@angular/core"], { includeSecondaries: { keepAll: true } }),
+  skip: ["rxjs/ajax", "rxjs/fetch", "rxjs/testing", "rxjs/webSocket"],
+  features: {
+    denseChunking: true,
   },
 });
 ```
 
-As in such cases, we cannot expect to find a `package.json` nearby, you also have to specifiy the `version` and the `esm` flag by hand.
+Load the exposed component in the shell like any lazy route, then run `ng serve mfe1` and `ng serve shell`. The [Getting Started](https://native-federation.com/docs/v4/angular-adapter/getting-started/) guide walks through every step, and the [playground](https://github.com/native-federation/playground) has runnable hosts, remotes and SSR examples.
 
-### How to speed up package preparation during the build process
+## Documentation
 
-The already prepared packages are cached in `node_modules/.cache`. Make sure, this folder is reused across subsequent build process runs.
+- [Builder](https://native-federation.com/docs/v4/angular-adapter/builder/) — the build/serve target and every option it accepts
+- [Schematics](https://native-federation.com/docs/v4/angular-adapter/schematics/) — `init`, `appbuilder`, `remove` and the Nx generator
+- [Angular config](https://native-federation.com/docs/v4/angular-adapter/configuration/) — `withNativeFederation`, `fromPackageJson`, `shareAngularLocales`, `autoShareScope`
+- [Runtime](https://native-federation.com/docs/v4/angular-adapter/runtime/) — `initFederation`, `loadRemoteModule` and dynamic remotes
+- [SSR & Hydration](https://native-federation.com/docs/v4/angular-adapter/ssr/), [I18N](https://native-federation.com/docs/v4/angular-adapter/i18n/) and [Localization](https://native-federation.com/docs/v4/angular-adapter/localization/)
+- [Custom builder](https://native-federation.com/docs/v4/angular-adapter/custom-builder/) — inject your own esbuild plugins
+- [Mental model](https://native-federation.com/docs/v4/mental-model/) and [Native & Module Federation](https://native-federation.com/docs/v4/native-and-module-federation/)
+- [FAQ](https://native-federation.com/docs/v4/faq/)
 
-### How does Native Federation Work under the Covers?
+Using an AI coding assistant? Point it at [`llms.txt`](https://native-federation.com/llms.txt).
 
-We use Import Maps at runtime. In addition to Import Maps, we use some code at build time and at runtime to provide the Mental Model of Module Federation.
+## Contributing
 
-### How to integrate custom esbuild plugins in Native Federation v4 build process?
+Issues and pull requests are welcome — see [CONTRIBUTING.md](https://github.com/native-federation/angular-adapter/blob/main/CONTRIBUTING.md).
 
-Native Federation v4 allows you to inject custom esbuild plugins into the build process. This is useful for tasks like code transformation, bundling optimizations, or integrating third-party tools.
+## Credits
 
-#### Steps to integrate custom plugins:
+Big thanks to [Zack Jackson](https://twitter.com/ScriptedAlchemy) for originally coming up with Module Federation and its mental model, to the Angular CLI team, esp. [Alan Agius](https://twitter.com/AlanAgius4) and Charles Lyding, for the esbuild-based builder this adapter builds on, and to [Florian Rappl](https://twitter.com/FlorianRappl) and the [Angular Architects team](https://www.angulararchitects.io/en/) for their feedback and contributions. Find the current team behind native-federation on our [documentation website](https://native-federation.com/team/).
 
-1. **Create a custom builder file** (e.g., `custom-builder.js`) in your project root or a suitable location.
+## License
 
-2. **Configure your `angular.json`** to use the custom builder instead of the default Native Federation builder.
-
-3. **Pass your plugins** through the `plugins` option in the custom builder.
-
-#### Example:
-
-Create `custom-builder.js`:
-
-```js
-import { runBuilder } from "@angular-architects/native-federation/internal";
-import { createBuilder } from "@angular-devkit/architect";
-
-async function* customBuilder(options, context) {
-  const nfOptions = {
-    ...options,
-    plugins: [], // Inject your plugins here
-  };
-
-  yield* runBuilder(nfOptions, context);
-}
-
-export default createBuilder(customBuilder);
-```
-
-Update your `angular.json` (for both `build` and `serve` targets):
-
-```json
-{
-  "projects": {
-    "your-project": {
-      "architect": {
-        "build": {
-          "builder": "./custom-builder",
-          "options": {
-            // Your existing options...
-          }
-        },
-        "serve": {
-          "builder": "./custom-builder",
-          "options": {
-            // Your existing options...
-          }
-        }
-      }
-    }
-  }
-}
-```
-
-### How to instrument bundles for code coverage (e.g. Cypress E2E)?
-
-`runBuilder` accepts an internal `instrumentForCoverage` option: a predicate `(filename: string) => boolean` that decides, per file, whether Angular's build should add Istanbul instrumentation. When supplied, both the host application shell and the exposed/remote federation artifacts are instrumented, so coverage collected while running E2E tests reflects all served code.
-
-It is deliberately **not** part of the `angular.json` schema — JSON can't carry a function, and it mirrors how Angular's own `karma` builder supplies the predicate to the application builder. You provide it the same way you inject plugins: through a small custom builder.
-
-Create `coverage-builder.js`:
-
-```js
-import { runBuilder } from "@angular-architects/native-federation/internal";
-import { createBuilder } from "@angular-devkit/architect";
-import * as path from "node:path";
-
-async function* coverageBuilder(options, context) {
-  const sourceRoot = path.join(context.workspaceRoot, "src");
-
-  const nfOptions = {
-    ...options,
-    // Instrument your own source, but skip specs and dependencies.
-    instrumentForCoverage: (filename) =>
-      filename.startsWith(sourceRoot) &&
-      !/\.spec\.tsx?$/.test(filename) &&
-      !/[\\/]node_modules[\\/]/.test(filename),
-  };
-
-  yield* runBuilder(nfOptions, context);
-}
-
-export default createBuilder(coverageBuilder);
-```
-
-Wire it into `angular.json` exactly like the custom plugin builder above (point your `build`/`serve` target's `builder` at `./coverage-builder`). Because the predicate adds instrumentation to every matching file, only enable this builder for test/coverage runs — never for production builds.
-
-## Documentation 📰
-
-Please have a look at this [article series](https://www.angulararchitects.io/en/aktuelles/the-microfrontend-revolution-part-2-module-federation-with-angular/).
-
-Even though these articles were written for Module Federation, thanks to the same API, they also apply to Native Federation.
-
-## More: Angular Architecture Workshop (100% online, interactive)
-
-In our [Angular Architecture Workshop](https://www.angulararchitects.io/en/angular-workshops/advanced-angular-enterprise-architecture-incl-ivy/), we cover all these topics and far more. We provide different options and alternatives and show up their consequences.
-
-[Details: Angular Architecture Workshop](https://www.angulararchitects.io/en/angular-workshops/advanced-angular-enterprise-architecture-incl-ivy/)
+[MIT](https://github.com/native-federation/angular-adapter/blob/main/LICENSE)
