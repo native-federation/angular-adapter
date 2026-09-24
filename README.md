@@ -28,7 +28,7 @@ The adapter follows Angular's version numbers: use the adapter release that matc
 | 22+          | `@angular-architects/native-federation`    |
 | 20 – 21      | `@angular-architects/native-federation-v4` |
 
-Both packages are the same adapter under a different name.
+`@angular-architects/native-federation-v4` is a bridge package: it brings Native Federation v4 to projects still on Angular 20 or 21. Starting with Angular 22, v4 ships in the main `@angular-architects/native-federation` package again, so drop the `-v4` suffix when you upgrade (`ng update @angular-architects/native-federation` does this for you).
 
 ## Quick start
 
