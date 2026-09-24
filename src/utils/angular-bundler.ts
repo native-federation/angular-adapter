@@ -19,9 +19,12 @@ import {
 
 import { createAwaitableCompilerPlugin } from './create-awaitable-compiler-plugin.js';
 import type { NormalizedContextOptions } from './normalize-context-options.js';
-import { updateFederationTsConfig } from './update-federation-tsconfig.js';
+import { writeContextTsConfig } from './write-context-tsconfig.js';
 
-export async function createAngularEsbuildContext(options: NormalizedContextOptions): Promise<{
+export async function createAngularEsbuildContext(
+  options: NormalizedContextOptions,
+  bundleName: string
+): Promise<{
   ctx: esbuild.BuildContext;
   pluginDisposed: Promise<void>;
 }> {
@@ -38,9 +41,9 @@ export async function createAngularEsbuildContext(options: NormalizedContextOpti
     platform,
   } = options;
 
-  let tsConfigPath = options.tsConfigPath;
+  const federationTsConfig = options.tsConfigPath;
 
-  if (!tsConfigPath) {
+  if (!federationTsConfig) {
     throw new Error('tsConfigPath is required for Angular/esbuild context creation');
   }
 
@@ -80,20 +83,17 @@ export async function createAngularEsbuildContext(options: NormalizedContextOpti
     }
   }
 
-  // Only a tsconfig the NF target explicitly points at is ours to rewrite. Without one this is
-  // the Angular target's own tsconfig, where `files` belongs to Angular — replacing it there
-  // drops main.ts from the app's program on any project scaffolded with the older
-  // `files: ["src/main.ts"]` / `include: ["src/**/*.d.ts"]` shape.
-  if (builderOptions.manageTsConfig) {
-    updateFederationTsConfig(
-      workspaceRoot,
-      tsConfigPath,
-      entryPoints,
-      builderOptions.fallbackEntryPoints
-    );
-  }
-
-  tsConfigPath = path.join(workspaceRoot, tsConfigPath);
+  // Without an NF-declared tsconfig this is the Angular target's own, which is left as is.
+  const tsConfigPath = builderOptions.manageTsConfig
+    ? writeContextTsConfig({
+        workspaceRoot,
+        tsConfigPath: federationTsConfig,
+        cacheDir: cache.cachePath,
+        bundleName,
+        entryPoints,
+        fallbackEntryPoints: builderOptions.fallbackEntryPoints,
+      })
+    : path.join(workspaceRoot, federationTsConfig);
 
   const pluginOptions: CompilerPluginOptions = {
     sourcemap: !!sourcemapOptions.scripts && (sourcemapOptions.hidden ? 'external' : true),
@@ -176,6 +176,7 @@ export async function createAngularEsbuildContext(options: NormalizedContextOpti
     logLimit: 0,
     plugins: [compilerPlugin, commonjsPlugin(), ...customPlugins],
     define: {
+      ...builderOptions.define,
       ...(dev ? {} : { ngDevMode: 'false' }),
       ngJitMode: 'false',
     },

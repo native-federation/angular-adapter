@@ -1,8 +1,11 @@
 import type {
+  ConfigBuilder,
+  FederationConfig,
+  PackageJsonExternalsBuilder,
+  ResolvedSharedExternalsConfig,
   ShareAllExternalsOptions,
   ShareExternalsOptions,
   SkipList,
-  FederationConfig,
 } from "@softarc/native-federation/domain";
 import {
   share as coreShare,
@@ -11,7 +14,10 @@ import {
   withNativeFederation as coreWithNativeFederation,
 } from "@softarc/native-federation/config";
 import { NG_SKIP_LIST } from "./angular-skip-list.js";
-import type { NormalizedSharedExternalsConfig } from "@softarc/native-federation/internal";
+import type {
+  NormalizedFederationConfig,
+  NormalizedSharedExternalsConfig,
+} from "@softarc/native-federation/internal";
 import { existsSync, readFileSync } from "node:fs";
 import * as path from "node:path";
 import { cwd } from "node:process";
@@ -23,7 +29,7 @@ export function shareAll(
     projectPath?: string;
     overrides?: ShareExternalsOptions;
   } = {},
-) {
+): ResolvedSharedExternalsConfig {
   if (!opts.skipList) opts.skipList = NG_SKIP_LIST;
   return coreShareAll(config, opts);
 }
@@ -31,8 +37,8 @@ export function shareAll(
 export function share(
   configuredShareObjects: ShareExternalsOptions,
   projectPath = "",
-  skipList = NG_SKIP_LIST,
-) {
+  skipList: SkipList = NG_SKIP_LIST,
+): ResolvedSharedExternalsConfig {
   return coreShare(configuredShareObjects, projectPath, skipList);
 }
 
@@ -45,13 +51,17 @@ export function share(
 export function fromPackageJson(
   baseCfg: ShareAllExternalsOptions,
   projectPath = "",
-) {
+): PackageJsonExternalsBuilder {
   return coreFromPackageJson(baseCfg, projectPath).skip(NG_SKIP_LIST);
 }
 
-export function withNativeFederation(cfg: FederationConfig) {
-  if (!cfg.platform)
+export function withNativeFederation(
+  cfg: FederationConfig,
+): NormalizedFederationConfig {
+  if (!cfg.platform) {
+    cfg.shared = fromBuilder(cfg.shared);
     cfg.platform = getDefaultPlatform(Object.keys(cfg.shared ?? {}));
+  }
 
   const normalized = coreWithNativeFederation(cfg);
 
@@ -136,6 +146,14 @@ export function autoShareScope(opts: PackageShareScopeOptions = {}): string {
       `autoShareScope({ level: 'patch' }) could not resolve a patch version from '${version}' in ${pkgPath}`,
     );
   return `${prefix}${major}.${minor}.${patch}`;
+}
+
+function fromBuilder<T>(
+  value: T | ConfigBuilder<T> | undefined,
+): T | undefined {
+  return typeof (value as ConfigBuilder<T> | undefined)?.get === "function"
+    ? (value as ConfigBuilder<T>).get()
+    : (value as T | undefined);
 }
 
 function removeNgLocales(

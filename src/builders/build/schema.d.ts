@@ -16,6 +16,7 @@ export interface NfBuilderSchema extends JsonObject {
   esmsInitOptions: ESMSInitOptions;
   baseHref?: string;
   outputPath?: string;
+  define?: Record<string, string>;
   projectName?: string;
   ssr: boolean;
   tsConfig?: string;
@@ -28,10 +29,8 @@ export type NfInternalOptions = {
   plugins?: Plugin[];
 
   /**
-   * Whether the tsconfig the federation build resolved to is the builder's to rewrite (see
-   * utils/update-federation-tsconfig.ts). True only when the NF target declares a
-   * `tsConfig` of its own; without one the build falls back to the Angular target's tsconfig,
-   * where `files` is Angular's — replacing it would drop main.ts from the app's own program.
+   * Whether each build context gets a generated tsconfig extending the resolved one. True only
+   * when the NF target declares a `tsConfig` of its own.
    */
   manageTsConfig?: boolean;
 

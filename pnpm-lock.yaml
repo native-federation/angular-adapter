@@ -34,14 +34,17 @@ importers:
         specifier: ^0.19.0
         version: 0.19.1
       '@softarc/native-federation':
-        specifier: ~4.6.0
-        version: 4.6.0
+        specifier: ~4.7.0
+        version: 4.7.0
       '@softarc/native-federation-orchestrator':
         specifier: ^4.6.0
         version: 4.6.1
       esbuild:
         specifier: ^0.28.0
         version: 0.28.1
+      jsonc-parser:
+        specifier: ^3.3.1
+        version: 3.3.1
       mrmime:
         specifier: ^2.0.1
         version: 2.0.1
@@ -73,9 +76,6 @@ importers:
       jiti:
         specifier: ^2.6.0
         version: 2.7.0
-      json5:
-        specifier: ^2.2.3
-        version: 2.2.3
       knip:
         specifier: ^6.17.1
         version: 6.26.0
@@ -1083,6 +1083,9 @@ packages:
 
   '@jridgewell/sourcemap-codec@1.5.5':
     resolution: {integrity: sha512-cYQ9310grqxueWbl+WuIUIaiUaDcj7WOq5fVhEljNVgRfOUhY9fy2zTvfoqWsnebh8Sl70VScFbICvJnLKB0Og==, tarball: https://registry.npmjs.org/@jridgewell/sourcemap-codec/-/sourcemap-codec-1.5.5.tgz}
+
+  '@jridgewell/sourcemap-codec@1.6.0':
+    resolution: {integrity: sha512-T7jf+5zgsZHwNJ4lvQ7/aezbyk0nNX+zJVWpmHA7VYsEx7a7qr5Rg5IbtJFqkgze5Y2sruq1RUY8Q837Od7iFw==, tarball: https://registry.npmjs.org/@jridgewell/sourcemap-codec/-/sourcemap-codec-1.6.0.tgz}
 
   '@jridgewell/trace-mapping@0.3.31':
     resolution: {integrity: sha512-zzNR+SdQSDJzc8joaeP8QQoCQr8NuYx2dIIytl1QeBEZHJ9uW6hebsrYgbz8hJwUQao3TWCMtmfV8Nu1twOLAw==, tarball: https://registry.npmjs.org/@jridgewell/trace-mapping/-/trace-mapping-0.3.31.tgz}
@@ -2283,8 +2286,8 @@ packages:
     resolution: {integrity: sha512-n5XZvWCFPeLvZ5y42fH79X9L1MG+BMBLlbhKOxIVXbju+52BAQL6D+NoYOuOPTwtX5wFafwhzAs15bkggF3VSw==, tarball: https://registry.npmjs.org/@softarc/native-federation-orchestrator/-/native-federation-orchestrator-4.6.1.tgz}
     engines: {node: '>=24.16.0'}
 
-  '@softarc/native-federation@4.6.0':
-    resolution: {integrity: sha512-Cd+z7CRpQYHagZUkjR9jCO6fWxl7rh0VfXcv4uhnCIopzWwwCMN0ltBvfSCjC5hso1gfPdOSlxGzhrqtprbZcw==, tarball: https://registry.npmjs.org/@softarc/native-federation/-/native-federation-4.6.0.tgz}
+  '@softarc/native-federation@4.7.0':
+    resolution: {integrity: sha512-YDeF0MSQGXLRP3ucDzuLiR6C10pKwX/cDgDTCMOgt9muUnF7ALufHUaq0K7iWcnSOcKocWiPNi2CMS/3BXxL0A==, tarball: https://registry.npmjs.org/@softarc/native-federation/-/native-federation-4.7.0.tgz}
 
   '@softarc/sheriff-core@0.19.6':
     resolution: {integrity: sha512-KACxHG9sS7kNWgnnBODzdr14kMLMrJVlQKc+tViUP03p2fRwNhESOA49bz51Yn7dro1mbtMmmFjICLmZSJDZZA==, tarball: https://registry.npmjs.org/@softarc/sheriff-core/-/sheriff-core-0.19.6.tgz}
@@ -3140,6 +3143,9 @@ packages:
 
   es-module-lexer@2.3.1:
     resolution: {integrity: sha512-shc1dbU90Yl/xq1QrC7QRtfcwURZuVRfPhZbDoldJ1cn1gzDvBaBWlv0eFolj5+0znnPJz5TXLxsN77X/12KTA==, tarball: https://registry.npmjs.org/es-module-lexer/-/es-module-lexer-2.3.1.tgz}
+
+  es-module-lexer@2.3.2:
+    resolution: {integrity: sha512-poHGpORABojJJucnV9KbOavETW8lBVnphkW77ER5/BQ5Fz7oXSoCNek7IH3vR5nRjdsEz926ibFYX8KtLQmdyw==, tarball: https://registry.npmjs.org/es-module-lexer/-/es-module-lexer-2.3.2.tgz}
 
   es-module-shims@2.8.2:
     resolution: {integrity: sha512-Re3rc7Fu8zrN2lD6ExQo+9SS1o2hai0DSLuC/m6R09A84DTL6SSKO+/s3JzKN648yxxdjJfuyFLSpsgr5kb0KA==, tarball: https://registry.npmjs.org/es-module-shims/-/es-module-shims-2.8.2.tgz}
@@ -6244,6 +6250,8 @@ snapshots:
 
   '@jridgewell/sourcemap-codec@1.5.5': {}
 
+  '@jridgewell/sourcemap-codec@1.6.0': {}
+
   '@jridgewell/trace-mapping@0.3.31':
     dependencies:
       '@jridgewell/resolve-uri': 3.1.2
@@ -7112,10 +7120,12 @@ snapshots:
     dependencies:
       semver: 7.8.5
 
-  '@softarc/native-federation@4.6.0':
+  '@softarc/native-federation@4.7.0':
     dependencies:
+      '@jridgewell/sourcemap-codec': 1.6.0
       '@softarc/sheriff-core': 0.19.6(typescript@6.0.3)
       chalk: 6.0.0
+      es-module-lexer: 2.3.2
       esbuild: 0.28.1
       fast-glob: 3.3.3
       json5: 2.2.3
@@ -8052,6 +8062,8 @@ snapshots:
   es-module-lexer@1.7.0: {}
 
   es-module-lexer@2.3.1: {}
+
+  es-module-lexer@2.3.2: {}
 
   es-module-shims@2.8.2: {}
 

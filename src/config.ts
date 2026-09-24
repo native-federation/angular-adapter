@@ -8,9 +8,12 @@ export {
 } from './config/share-utils.js';
 // Nothing Angular-specific to add: the skip list NG_SKIP_LIST seeds applies to npm
 // packages, not to workspace path mappings.
-export {
-  mappingsFromWorkspace,
-  type FederationConfig,
+export { mappingsFromWorkspace } from '@softarc/native-federation/config';
+export type {
+  ExternalConfig,
+  FederationConfig,
+  SharedExternalsConfig,
+  SharedMappingEntry,
 } from '@softarc/native-federation/config';
 export { NG_SKIP_LIST } from './config/angular-skip-list.js';
 

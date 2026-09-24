@@ -16,7 +16,6 @@ import {
   buildApplication,
 } from "@angular/build";
 import {
-  buildApplicationInternal,
   serveWithVite,
   SourceFileCache,
 } from "@angular/build/private";
@@ -53,7 +52,7 @@ import {
   sharedMappingDirs,
   syncNfFileWatcher,
 } from "@softarc/native-federation/internal";
-import { type Plugin, type PluginBuild } from "esbuild";
+import { type PluginBuild } from "esbuild";
 import { devHostInstancesPlugin } from "../../plugin/dev-host-instances-plugin.js";
 import { createAngularBuildAdapter } from "../../utils/angular-esbuild-adapter.js";
 import {
@@ -73,6 +72,7 @@ import {
 } from "./watch-decisions.js";
 import type { NfBuilderSchema, NfInternalOptions } from "./schema.js";
 import { createSharedMappingsPlugin } from "../../utils/shared-mappings-plugin.js";
+import { createInternalAngularBuilder } from "./internal-angular-builder.js";
 
 const originalWrite = process.stderr.write.bind(process.stderr);
 
@@ -96,40 +96,6 @@ process.stderr.write = function (
 
   return originalWrite(chunk, encodingOrCallback as BufferEncoding, callback);
 };
-
-const createInternalAngularBuilder =
-  (externals: string[]) =>
-  (
-    options: Parameters<typeof buildApplicationInternal>[0],
-    context: BuilderContext,
-    pluginsOrExtensions?:
-      | Plugin[]
-      | Parameters<typeof buildApplicationInternal>[2],
-  ) => {
-    let extensions: Parameters<typeof buildApplicationInternal>[2];
-    if (pluginsOrExtensions && Array.isArray(pluginsOrExtensions)) {
-      extensions = {
-        codePlugins: pluginsOrExtensions,
-      };
-    } else {
-      extensions = pluginsOrExtensions as Parameters<
-        typeof buildApplicationInternal
-      >[2];
-    }
-
-    // serveWithVite fetches its own browserOptions independently, so ngBuilderOptions
-    // modifications don't reach here. Add NF externals to externalDependencies so
-    // Angular routes them to optimizeDeps.exclude, preventing Vite from trying to
-    // pre-bundle packages that include native .node binaries.
-    options.externalDependencies = [
-      ...(options.externalDependencies ?? []),
-      ...externals,
-    ];
-
-    // Todo: share cache with Angular builder: https://github.com/angular/angular-cli/pull/32527
-    // options.codeBundleCache = nfOptions.federationCache.bundlerCache;
-    return buildApplicationInternal(options, context, extensions);
-  };
 
 export async function* runBuilder(
   nfBuilderOptions: NfBuilderSchema & NfInternalOptions,
@@ -217,6 +183,13 @@ export async function* runBuilder(
 
   if (nfBuilderOptions.outputPath) {
     ngBuilderOptions.outputPath = nfBuilderOptions.outputPath;
+  }
+
+  if (nfBuilderOptions.define) {
+    ngBuilderOptions.define = {
+      ...ngBuilderOptions.define,
+      ...nfBuilderOptions.define,
+    };
   }
 
   const declaresTsConfig =
@@ -526,6 +499,12 @@ export async function* runBuilder(
     process.exit(1);
   }
 
+  // Each compiler plugin's onDispose resets Angular's shared TS compilation state before the
+  // app build (#47); watch reuses the contexts.
+  if (!watch) {
+    await adapter.disposeFederationContexts();
+  }
+
   syncFederationWatcher();
 
   const hasLocales = i18n?.locales && Object.keys(i18n.locales).length > 0;
@@ -549,7 +528,9 @@ export async function* runBuilder(
     ? serveWithVite(
         serverOptions as unknown as Parameters<typeof serveWithVite>[0],
         appBuilderName,
-        createInternalAngularBuilder(externals),
+        createInternalAngularBuilder(externals, {
+          define: nfBuilderOptions.define,
+        }),
         context,
         nfBuilderOptions.skipHtmlTransform
           ? {}

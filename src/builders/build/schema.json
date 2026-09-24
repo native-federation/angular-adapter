@@ -50,6 +50,11 @@
     "outputPath": {
       "type": "string"
     },
+    "define": {
+      "type": "object",
+      "additionalProperties": { "type": "string" },
+      "description": "Global identifiers to replace at build time, merged over the Angular target's own 'define'. String values must be put in quotes."
+    },
     "esmsInitOptions": {
       "type": "object",
       "description": "Options for esms-module-shims https://github.com/guybedford/es-module-shims?tab=readme-ov-file#init-options",

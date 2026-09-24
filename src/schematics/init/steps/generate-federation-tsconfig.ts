@@ -17,22 +17,12 @@ export interface FederationTsConfigOptions {
   projectSourceRoot: string;
   /** Workspace-relative path of the tsconfig to extend, usually the app's. */
   appTsConfig: string;
-  /** Workspace-relative entry points seeding the program. */
-  entryPoints: string[];
 }
 
-/**
- * Writes the tsconfig the federation build compiles against. It covers the exposes and shared
- * mappings rather than the app entry, so `files` is a plain list of entry points that the
- * builder rewrites per build (see utils/update-federation-tsconfig.ts) and `include`
- * only picks up ambient declarations. It extends the app tsconfig because it also drives
- * esbuild's module resolution and so needs its paths.
- *
- * Both `extends` and `files` have to stay present: TypeScript reports an empty `files` list
- * (TS18002) unless the config also extends another one.
- */
+// No `files`: each build context supplies its own (utils/write-context-tsconfig.ts).
+// Extends the app tsconfig for its paths, which esbuild's module resolution also needs.
 export function writeFederationTsConfig(tree: Tree, options: FederationTsConfigOptions): string {
-  const { projectRoot, projectSourceRoot, appTsConfig, entryPoints } = options;
+  const { projectRoot, projectSourceRoot, appTsConfig } = options;
 
   const federationTsConfig = federationTsConfigPath(projectRoot);
 
@@ -44,7 +34,6 @@ export function writeFederationTsConfig(tree: Tree, options: FederationTsConfigO
     JSON.stringify(
       {
         extends: extendsPath.startsWith('.') ? extendsPath : `./${extendsPath}`,
-        files: entryPoints.map(entry => toPosix(path.relative(projectRoot, entry))),
         include: [`${sourceDir}/**/*.d.ts`],
       },
       null,
@@ -55,11 +44,7 @@ export function writeFederationTsConfig(tree: Tree, options: FederationTsConfigO
   return federationTsConfig;
 }
 
-export function generateFederationTsConfig(
-  tree: Tree,
-  options: NormalizedOptions,
-  entryPoints: string[]
-): string {
+export function generateFederationTsConfig(tree: Tree, options: NormalizedOptions): string {
   const { projectConfig, projectRoot, projectSourceRoot } = options;
 
   const federationTsConfig = federationTsConfigPath(projectRoot);
@@ -80,6 +65,5 @@ export function generateFederationTsConfig(
     projectRoot,
     projectSourceRoot,
     appTsConfig,
-    entryPoints,
   });
 }

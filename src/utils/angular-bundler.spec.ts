@@ -4,7 +4,7 @@ import type { CompilerPluginOptions } from '@angular/build/private';
 
 import { createAngularEsbuildContext } from './angular-bundler.js';
 import { createAwaitableCompilerPlugin } from './create-awaitable-compiler-plugin.js';
-import { updateFederationTsConfig } from './update-federation-tsconfig.js';
+import { writeContextTsConfig } from './write-context-tsconfig.js';
 import type { NormalizedContextOptions } from './normalize-context-options.js';
 
 vi.mock('esbuild', () => ({ context: vi.fn().mockResolvedValue({ rebuild: vi.fn() }) }));
@@ -23,7 +23,9 @@ vi.mock('./create-awaitable-compiler-plugin.js', () => ({
     .mockReturnValue([{ name: 'angular-compiler', setup: vi.fn() }, Promise.resolve()]),
 }));
 
-vi.mock('./update-federation-tsconfig.js', () => ({ updateFederationTsConfig: vi.fn() }));
+vi.mock('./write-context-tsconfig.js', () => ({
+  writeContextTsConfig: vi.fn().mockReturnValue('/cache/tsconfig/abc.mapping-bundle.json'),
+}));
 
 vi.mock('@chialab/esbuild-plugin-commonjs', () => ({
   default: () => ({ name: 'commonjs', setup: vi.fn() }),
@@ -67,12 +69,14 @@ describe('createAngularEsbuildContext', () => {
   it('throws when no tsconfig is configured', async () => {
     const options = makeOptions({ tsConfigPath: undefined });
 
-    await expect(createAngularEsbuildContext(options)).rejects.toThrow('tsConfigPath is required');
+    await expect(createAngularEsbuildContext(options, 'mapping-or-exposed')).rejects.toThrow(
+      'tsConfigPath is required'
+    );
   });
 
   // #98
   it('passes the normalized tsconfig path to esbuild, not only to the plugin', async () => {
-    await createAngularEsbuildContext(makeOptions());
+    await createAngularEsbuildContext(makeOptions(), 'mapping-or-exposed');
 
     const expected = path.join(workspaceRoot, 'apps/example/tsconfig.app.json');
 
@@ -84,7 +88,7 @@ describe('createAngularEsbuildContext', () => {
     expect(pluginOptions.tsconfig).toBe(expected);
   });
 
-  it('updates the tsconfig the NF target declared, passing the fallback entry points', async () => {
+  it('compiles against a per-context tsconfig when the NF target declared one', async () => {
     await createAngularEsbuildContext(
       makeOptions({
         builderOptions: {
@@ -93,33 +97,38 @@ describe('createAngularEsbuildContext', () => {
           manageTsConfig: true,
           fallbackEntryPoints: ['apps/example/src/main.ts'],
         },
-      } as unknown as Partial<NormalizedContextOptions>)
+      } as unknown as Partial<NormalizedContextOptions>),
+      'mapping-bundle'
     );
 
-    // updateFederationTsConfig joins the workspace root itself
-    expect(updateFederationTsConfig).toHaveBeenCalledWith(
+    expect(writeContextTsConfig).toHaveBeenCalledWith({
       workspaceRoot,
-      'apps/example/tsconfig.app.json',
-      expect.anything(),
-      ['apps/example/src/main.ts']
-    );
-    expect(lastBuildOptions().tsconfig).toBe(
-      path.join(workspaceRoot, 'apps/example/tsconfig.app.json')
-    );
+      tsConfigPath: 'apps/example/tsconfig.app.json',
+      cacheDir: '/cache',
+      bundleName: 'mapping-bundle',
+      entryPoints: [{ fileName: 'apps/example/src/main.ts', outName: 'main.js' }],
+      fallbackEntryPoints: ['apps/example/src/main.ts'],
+    });
+
+    const [pluginOptions] = vi.mocked(createAwaitableCompilerPlugin).mock.calls[0] as [
+      CompilerPluginOptions,
+    ];
+    expect(pluginOptions.tsconfig).toBe('/cache/tsconfig/abc.mapping-bundle.json');
+    expect(lastBuildOptions().tsconfig).toBe('/cache/tsconfig/abc.mapping-bundle.json');
   });
 
   // Without `tsConfig` on the NF target the builder falls back to the Angular target's own
   // tsconfig, which is the user's file and must be left alone.
   it('leaves the tsconfig alone when the NF target declared none', async () => {
-    await createAngularEsbuildContext(makeOptions());
+    await createAngularEsbuildContext(makeOptions(), 'mapping-or-exposed');
 
-    expect(updateFederationTsConfig).not.toHaveBeenCalled();
+    expect(writeContextTsConfig).not.toHaveBeenCalled();
   });
 
   // #117: left relative, esbuild resolves these through its own working directory, which need
   // not agree with the root the TypeScript program was built from.
   it('anchors workspace-root-relative entry points on the workspace root', async () => {
-    await createAngularEsbuildContext(makeOptions());
+    await createAngularEsbuildContext(makeOptions(), 'mapping-or-exposed');
 
     expect(lastBuildOptions().entryPoints).toEqual([
       { in: path.join(workspaceRoot, 'apps/example/src/main.ts'), out: 'main' },
@@ -130,9 +139,31 @@ describe('createAngularEsbuildContext', () => {
   it('leaves an already-absolute entry point untouched', async () => {
     const absolute = path.join(workspaceRoot, 'libs', 'ui', 'src', 'index.ts');
     await createAngularEsbuildContext(
-      makeOptions({ entryPoints: [{ fileName: absolute, outName: 'ui.js' }] })
+      makeOptions({ entryPoints: [{ fileName: absolute, outName: 'ui.js' }] }),
+      'mapping-bundle'
     );
 
     expect(lastBuildOptions().entryPoints).toEqual([{ in: absolute, out: 'ui' }]);
+  });
+
+  // #129: exposed modules left user defines unreplaced, throwing a ReferenceError in the host.
+  // Angular's own flags win over user defines, mirroring the application builder.
+  it('applies the builder define, keeping the Angular flags on top', async () => {
+    await createAngularEsbuildContext(
+      makeOptions({
+        builderOptions: {
+          optimization: false,
+          sourceMap: false,
+          define: { BUILD_ID: "'abc'", ngJitMode: 'true' },
+        },
+      } as unknown as Partial<NormalizedContextOptions>),
+      'mapping-or-exposed'
+    );
+
+    expect(lastBuildOptions().define).toEqual({
+      BUILD_ID: "'abc'",
+      ngDevMode: 'false',
+      ngJitMode: 'false',
+    });
   });
 });

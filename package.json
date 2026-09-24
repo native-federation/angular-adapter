@@ -13,7 +13,7 @@
     "@angular/build": ">=21.2.0"
   },
   "dependencies": {
-    "@softarc/native-federation": "~4.6.0",
+    "@softarc/native-federation": "~4.7.0",
     "@softarc/native-federation-orchestrator": "^4.6.0",
     "@angular-devkit/architect": "^0.2102.0",
     "@angular-devkit/build-angular": "^21.2.0",
@@ -21,6 +21,7 @@
     "@angular-devkit/schematics": "^21.2.0",
     "@angular/build": "^21.2.0",
     "@chialab/esbuild-plugin-commonjs": "^0.19.0",
+    "jsonc-parser": "^3.3.1",
     "mrmime": "^2.0.1",
     "esbuild": "^0.28.0",
     "watchpack": "^2.5.2"
@@ -55,7 +56,10 @@
       "default": "./src/node-preload.js"
     }
   },
-  "homepage": "https://github.com/native-federation/angular-adapter",
+  "homepage": "https://native-federation.com/docs/v4/angular-adapter/",
+  "bugs": {
+    "url": "https://github.com/native-federation/angular-adapter/issues"
+  },
   "type": "module",
   "files": [
     "src",
@@ -85,7 +89,6 @@
     "eslint": "^9.39.1",
     "globals": "^17.0.0",
     "jiti": "^2.6.0",
-    "json5": "^2.2.3",
     "knip": "^6.17.1",
     "tslib": "^2.3.0",
     "typescript": "~5.9.2",
