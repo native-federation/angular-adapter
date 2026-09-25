@@ -17,6 +17,7 @@ import { normalizeOptimization, normalizeSourceMaps } from '../../utils/normaliz
 import { createAwaitableCompilerPlugin } from './create-awaitable-compiler-plugin.js';
 import type { NormalizedContextOptions } from '../../utils/normalize-context-options.js';
 import { writeContextTsConfig } from './write-context-tsconfig.js';
+import { createSharedMappingsPlugin } from './shared-mappings-plugin.js';
 
 export async function createAngularEsbuildContext(
   options: NormalizedContextOptions,
@@ -36,6 +37,7 @@ export async function createAngularEsbuildContext(
     hash,
     chunks,
     platform,
+    mappedPaths,
   } = options;
 
   const federationTsConfig = options.tsConfigPath;
@@ -172,7 +174,13 @@ export async function createAngularEsbuildContext(
     format: 'esm',
     target: target,
     logLimit: 0,
-    plugins: [compilerPlugin, commonjsPlugin(), ...customPlugins],
+    plugins: [
+      compilerPlugin,
+      // Angular's synthesized deep imports would otherwise inline a second copy of a mapped lib.
+      ...(Object.keys(mappedPaths).length > 0 ? [createSharedMappingsPlugin(mappedPaths)] : []),
+      commonjsPlugin(),
+      ...customPlugins,
+    ],
     define: {
       ...builderOptions.define,
       ...(dev ? {} : { ngDevMode: 'false' }),

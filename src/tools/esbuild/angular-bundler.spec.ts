@@ -166,4 +166,24 @@ describe('createAngularEsbuildContext', () => {
       ngJitMode: 'false',
     });
   });
+
+  // #145: the #128 fix only covered the app build; exposes still inlined synthesized deep imports.
+  it('externalizes synthesized deep imports into shared mappings', async () => {
+    await createAngularEsbuildContext(
+      makeOptions({ mappedPaths: { [path.join(workspaceRoot, 'libs/ui/src/index.ts')]: '@myorg/ui' } }),
+      'mapping-or-exposed'
+    );
+
+    expect(lastBuildOptions().plugins!.map(p => p.name)).toEqual([
+      'angular-compiler',
+      'nf-shared-mappings',
+      'commonjs',
+    ]);
+  });
+
+  it('leaves the plugin out without shared mappings', async () => {
+    await createAngularEsbuildContext(makeOptions(), 'mapping-or-exposed');
+
+    expect(lastBuildOptions().plugins!.map(p => p.name)).toEqual(['angular-compiler', 'commonjs']);
+  });
 });
