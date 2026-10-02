@@ -79,7 +79,11 @@ export const kinds = [typeof Delta, typeof OpIterator];
     } as unknown as JavaScriptTransformer;
   }
 
-  async function bundle(jsTransformer: JavaScriptTransformer, advancedOptimizations: boolean) {
+  async function bundle(
+    jsTransformer: JavaScriptTransformer,
+    advancedOptimizations: boolean,
+    cache?: { store: Map<string, Uint8Array>; keyBase: string }
+  ) {
     const outfile = path.join(fixtureDir, 'out.mjs');
 
     await esbuild.build({
@@ -90,7 +94,10 @@ export const kinds = [typeof Delta, typeof OpIterator];
       platform: 'node',
       logLevel: 'silent',
       resolveExtensions: ['.mjs', '.js', '.cjs'],
-      plugins: [createAngularLinkerPlugin(jsTransformer, advancedOptimizations), commonjsPlugin()],
+      plugins: [
+        createAngularLinkerPlugin(jsTransformer, advancedOptimizations, cache),
+        commonjsPlugin(),
+      ],
     });
 
     return outfile;
@@ -120,5 +127,63 @@ export const kinds = [typeof Delta, typeof OpIterator];
     await bundle(jsTransformer, false);
 
     expect(jsTransformer.transformData).not.toHaveBeenCalled();
+  });
+
+  describe('transform cache', () => {
+    function createLinkingStub(): JavaScriptTransformer {
+      return {
+        transformData: vi.fn(async (_path: string, contents: string) =>
+          Buffer.from(`${contents}\nexport const linked = true;`, 'utf-8')
+        ),
+      } as unknown as JavaScriptTransformer;
+    }
+
+    beforeEach(() => {
+      fs.writeFileSync(
+        path.join(fixtureDir, 'entry.js'),
+        'export const cmp = "ɵɵngDeclareComponent";\n'
+      );
+    });
+
+    it('reuses the transform of an unchanged file across builds', async () => {
+      const jsTransformer = createLinkingStub();
+      const cache = { store: new Map<string, Uint8Array>(), keyBase: '{"sourcemap":false}' };
+
+      await bundle(jsTransformer, false, cache);
+      const outfile = await bundle(jsTransformer, false, cache);
+
+      expect(jsTransformer.transformData).toHaveBeenCalledTimes(1);
+      expect(fs.readFileSync(outfile, 'utf-8')).toContain('linked = true');
+    });
+
+    it('transforms again when the file contents change', async () => {
+      const jsTransformer = createLinkingStub();
+      const cache = { store: new Map<string, Uint8Array>(), keyBase: '{"sourcemap":false}' };
+
+      await bundle(jsTransformer, false, cache);
+      fs.appendFileSync(path.join(fixtureDir, 'entry.js'), 'export const other = 1;\n');
+      await bundle(jsTransformer, false, cache);
+
+      expect(jsTransformer.transformData).toHaveBeenCalledTimes(2);
+    });
+
+    it('transforms again when the output options change', async () => {
+      const jsTransformer = createLinkingStub();
+      const store = new Map<string, Uint8Array>();
+
+      await bundle(jsTransformer, false, { store, keyBase: '{"sourcemap":false}' });
+      await bundle(jsTransformer, false, { store, keyBase: '{"sourcemap":true}' });
+
+      expect(jsTransformer.transformData).toHaveBeenCalledTimes(2);
+    });
+
+    it('transforms every build when no cache is given', async () => {
+      const jsTransformer = createLinkingStub();
+
+      await bundle(jsTransformer, false);
+      await bundle(jsTransformer, false);
+
+      expect(jsTransformer.transformData).toHaveBeenCalledTimes(2);
+    });
   });
 });

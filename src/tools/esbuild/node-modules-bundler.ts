@@ -1,9 +1,9 @@
 import * as esbuild from "esbuild";
 import * as path from "path";
 import * as fs from "fs";
-import { createRequire } from "node:module";
+import { createHash } from "node:crypto";
 
-import { JavaScriptTransformer, Cache } from "@angular/build/private";
+import { JavaScriptTransformer } from "@angular/build/private";
 
 import type { NormalizedContextOptions } from "../../utils/normalize-context-options.js";
 import type { SharedBundleSettings } from "./shared-bundle-settings.js";
@@ -31,6 +31,7 @@ export function requiresLinking(filePath: string, source: string): boolean {
 export function createAngularLinkerPlugin(
   jsTransformer: JavaScriptTransformer,
   advancedOptimizations: boolean,
+  cache?: { store: Map<string, Uint8Array>; keyBase: string },
 ): esbuild.Plugin {
   return {
     name: "angular-linker",
@@ -44,28 +45,26 @@ export function createAngularLinkerPlugin(
           return { contents, loader: "js" };
         }
 
+        const cacheKey = cache
+          ? createHash("sha256")
+              .update(`${cache.keyBase}--${needsLinking}--${args.path}--`)
+              .update(contents)
+              .digest("hex")
+          : undefined;
+        const cached = cacheKey && cache?.store.get(cacheKey);
+        if (cached !== undefined) {
+          return { contents: cached, loader: "js" };
+        }
+
         const result = await jsTransformer.transformData(args.path, contents, {
           skipLinker: !needsLinking,
         });
+        if (cacheKey) cache?.store.set(cacheKey, result);
 
-        return {
-          contents: Buffer.from(result).toString("utf-8"),
-          loader: "js",
-        };
+        return { contents: result, loader: "js" };
       });
     },
   };
-}
-
-// JavaScriptTransformer hashes its cache keys with xxhash-wasm, which must be loaded first.
-// Not exported from @angular/build/private, so load the exact module it uses.
-async function initializeAngularHash(): Promise<void> {
-  const require = createRequire(import.meta.url);
-  const buildRoot = path.dirname(require.resolve("@angular/build/package.json"));
-  const { initializeHash } = require(path.join(buildRoot, "src/utils/hash.js")) as {
-    initializeHash: () => Promise<void>;
-  };
-  await initializeHash();
 }
 
 const jsTransformerCacheStores = new Map<string, Map<string, Uint8Array>>();
@@ -108,21 +107,22 @@ export async function createNodeModulesEsbuildContext(
 
   // Create JavaScriptTransformer for handling Angular partial compilation linking
   const advancedOptimizations = !dev;
-  const jsTransformerCacheStore = getOrCreateJsTransformerCacheStore(
-    cache.cachePath,
-  );
-  await initializeAngularHash();
-  const jsTransformerCache = new Cache<Uint8Array>(jsTransformerCacheStore);
-  const jsTransformer = new JavaScriptTransformer(
-    {
-      sourcemap: !!settings.sourcemap,
-      thirdPartySourcemaps: false,
-      advancedOptimizations,
-      jit: false,
-      maxConcurrency: 1, // keep low for node_modules bundling
-    },
-    jsTransformerCache,
-  );
+  // Keys the transform cache, so it must hold every option that changes transformer output.
+  // upstream: angular/angular-cli packages/angular/build/src/tools/javascript-transformer/javascript-transformer.ts @ 11dbe297f8
+  const outputOptions = {
+    sourcemap: !!settings.sourcemap,
+    thirdPartySourcemaps: false,
+    advancedOptimizations,
+    jit: false,
+  };
+  const jsTransformer = new JavaScriptTransformer({
+    ...outputOptions,
+    maxConcurrency: 1, // keep low for node_modules bundling
+  });
+  const jsTransformerCache = {
+    store: getOrCreateJsTransformerCacheStore(cache.cachePath),
+    keyBase: JSON.stringify(outputOptions),
+  };
 
   const config: esbuild.BuildOptions = {
     entryPoints: entryPoints.map((ep) => ({
@@ -148,7 +148,7 @@ export async function createNodeModulesEsbuildContext(
     target: settings.target,
     logLimit: 1,
     plugins: [
-      createAngularLinkerPlugin(jsTransformer, advancedOptimizations),
+      createAngularLinkerPlugin(jsTransformer, advancedOptimizations, jsTransformerCache),
       commonjsPlugin(),
       ...settings.plugins,
     ],
