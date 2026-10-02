@@ -1,6 +1,7 @@
 import type { BuilderContext } from '@angular-devkit/architect';
 import { logger } from '@softarc/native-federation/internal';
 import { execSync } from 'child_process';
+import os from 'os';
 import path from 'path';
 import fs from 'fs';
 import type { FederationInfo } from '@softarc/native-federation';
@@ -18,12 +19,12 @@ type LocaleObject = {
 };
 
 export type I18nConfig = {
-  sourceLocale: string | SourceLocaleObject;
+  sourceLocale?: string | SourceLocaleObject;
   locales: Record<string, LocaleTranslation | LocaleObject>;
 };
 
 type SourceLocaleObject = {
-  code: string;
+  code?: string;
   baseHref?: string;
   subPath?: string;
 };
@@ -37,12 +38,32 @@ export async function getI18nConfig(context: BuilderContext): Promise<I18nConfig
   return i18nConfig;
 }
 
+// @angular/build defaults a missing sourceLocale (or sourceLocale.code) to en-US
+export function getSourceLocaleCode(i18n: I18nConfig): string {
+  const sourceLocale = i18n.sourceLocale;
+  return (typeof sourceLocale === 'string' ? sourceLocale : sourceLocale?.code) ?? 'en-US';
+}
+
+// Mirrors @angular/build's i18n-options: a locale's output folder is its subPath, defaulting to the code
+export function getLocaleSubPath(i18n: I18nConfig, locale: string): string {
+  if (locale === getSourceLocaleCode(i18n)) {
+    return typeof i18n.sourceLocale === 'string' ? locale : (i18n.sourceLocale?.subPath ?? locale);
+  }
+  const config = i18n.locales[locale];
+  if (config && typeof config === 'object' && !Array.isArray(config)) {
+    return config.subPath ?? locale;
+  }
+  return locale;
+}
+
 export async function translateFederationArtifacts(
   i18n: I18nConfig,
   localize: boolean | string[],
   outputPath: string,
-  federationResult: FederationInfo
+  federationResult: FederationInfo,
+  workspaceRoot: string
 ) {
+  outputPath = path.resolve(workspaceRoot, outputPath);
   const neededLocales = Array.isArray(localize) ? localize : Object.keys(i18n.locales);
 
   const locales = Object.keys(i18n.locales).filter(locale => neededLocales.includes(locale));
@@ -63,10 +84,11 @@ export async function translateFederationArtifacts(
 
   const targetLocales = locales.join(' ');
 
-  const sourceLocale =
-    typeof i18n.sourceLocale === 'string' ? i18n.sourceLocale : i18n.sourceLocale.code;
+  const sourceLocale = getSourceLocaleCode(i18n);
 
-  const translationOutPath = path.join(outputPath, 'browser', '{{LOCALE}}');
+  // {{LOCALE}} expands to the locale code, not its subPath, so translate into a staging folder first
+  const stagingPath = fs.mkdtempSync(path.join(os.tmpdir(), 'nf-i18n-'));
+  const translationOutPath = path.join(stagingPath, '{{LOCALE}}');
 
   const federationFiles = [
     ...federationResult.shared.flatMap(s =>
@@ -80,41 +102,53 @@ export async function translateFederationArtifacts(
   // to improve performance
   const sourcePattern = '{' + federationFiles.join(',') + '}';
 
-  const sourceLocalePath = path.join(outputPath, 'browser', sourceLocale);
+  const localePath = (locale: string) =>
+    path.join(outputPath, 'browser', getLocaleSubPath(i18n, locale));
+  const sourceLocalePath = localePath(sourceLocale);
 
-  const localizeTranslate = path.resolve('node_modules/.bin/localize-translate');
+  const localizeTranslate = path.resolve(workspaceRoot, 'node_modules/.bin/localize-translate');
 
   const cmd = `"${localizeTranslate}" -r "${sourceLocalePath}" -s "${sourcePattern}" -t ${translationFiles} -o "${translationOutPath}" --target-locales ${targetLocales} -l ${sourceLocale}`;
 
-  ensureDistFolders(locales, outputPath);
-  copyRemoteEntry(locales, outputPath, sourceLocalePath);
+  const targetPaths = locales.map(localePath);
+  ensureDistFolders(targetPaths);
+  copyRemoteEntry(targetPaths, sourceLocalePath);
 
   logger.debug('Running: ' + cmd);
 
-  execCommand(cmd, 'Successfully translated');
+  try {
+    execCommand(cmd, workspaceRoot, 'Successfully translated');
+    for (const locale of new Set([sourceLocale, ...locales])) {
+      const staged = path.join(stagingPath, locale);
+      if (fs.existsSync(staged)) {
+        fs.cpSync(staged, localePath(locale), { recursive: true });
+      }
+    }
+  } finally {
+    fs.rmSync(stagingPath, { recursive: true, force: true });
+  }
 }
 
-function execCommand(cmd: string, defaultSuccessInfo: string) {
+function execCommand(cmd: string, cwd: string, defaultSuccessInfo: string) {
   try {
-    const output = execSync(cmd);
+    // translation file paths from angular.json are workspace-relative
+    const output = execSync(cmd, { cwd });
     logger.info(output.toString() || defaultSuccessInfo);
   } catch (error) {
     logger.error((error as Error).message!);
   }
 }
 
-function copyRemoteEntry(locales: string[], outputPath: string, sourceLocalePath: string) {
+function copyRemoteEntry(targetPaths: string[], sourceLocalePath: string) {
   const remoteEntry = path.join(sourceLocalePath, 'remoteEntry.json');
 
-  for (const locale of locales) {
-    const localePath = path.join(outputPath, 'browser', locale, 'remoteEntry.json');
-    fs.copyFileSync(remoteEntry, localePath);
+  for (const targetPath of targetPaths) {
+    fs.copyFileSync(remoteEntry, path.join(targetPath, 'remoteEntry.json'));
   }
 }
 
-function ensureDistFolders(locales: string[], outputPath: string) {
-  for (const locale of locales) {
-    const localePath = path.join(outputPath, 'browser', locale);
-    fs.mkdirSync(localePath, { recursive: true });
+function ensureDistFolders(targetPaths: string[]) {
+  for (const targetPath of targetPaths) {
+    fs.mkdirSync(targetPath, { recursive: true });
   }
 }

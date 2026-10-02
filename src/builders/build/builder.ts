@@ -60,7 +60,12 @@ import {
 import type { NfBuilderSchema, NfInternalOptions } from "./schema.js";
 import { createAngularBuildAdapter } from "../../tools/esbuild/angular-esbuild-adapter.js";
 import { createSharedMappingsPlugin } from "../../tools/esbuild/shared-mappings-plugin.js";
-import { getI18nConfig, translateFederationArtifacts } from "./i18n.js";
+import {
+  getI18nConfig,
+  getSourceLocaleCode,
+  getLocaleSubPath,
+  translateFederationArtifacts,
+} from "./i18n.js";
 import { updateScriptTags } from "./update-index-html.js";
 import { createInternalAngularBuilder } from "./internal-angular-builder.js";
 
@@ -230,10 +235,9 @@ export async function* runBuilder(
 
   const localeFilter = getLocaleFilter(ngBuilderOptions, runViteServer);
 
-  const sourceLocaleSegment =
-    typeof i18n?.sourceLocale === "string"
-      ? i18n.sourceLocale
-      : i18n?.sourceLocale?.subPath || i18n?.sourceLocale?.code || "";
+  const sourceLocaleSegment = i18n
+    ? getLocaleSubPath(i18n, getSourceLocaleCode(i18n))
+    : "";
 
   const browserOutputPath = path.join(
     outputOptions.base,
@@ -245,7 +249,11 @@ export async function* runBuilder(
     Array.isArray(localeFilter) && localeFilter.length === 1;
   const devServerOutputPath = !differentDevServerOutputPath
     ? browserOutputPath
-    : path.join(outputOptions.base, outputOptions.browser, localeFilter[0]!);
+    : path.join(
+        outputOptions.base,
+        outputOptions.browser,
+        i18n ? getLocaleSubPath(i18n, localeFilter[0]!) : localeFilter[0]!,
+      );
 
   const cachePath = getDefaultCachePath(context.workspaceRoot);
 
@@ -326,7 +334,10 @@ export async function* runBuilder(
     // at eval time. `process.env` is process-global, so it crosses the Vite SSR
     // realm boundary that `globalThis` would not, and mirrors how prod's
     // node-preload is configured.
-    process.env["NF_DEV_SSR_BROWSER_PATH"] = browserOutputPath;
+    process.env["NF_DEV_SSR_BROWSER_PATH"] = path.resolve(
+      context.workspaceRoot,
+      browserOutputPath,
+    );
     if (devServerOrigin) {
       process.env["NF_DEV_SSR_ORIGIN"] = devServerOrigin;
     } else {
@@ -472,12 +483,12 @@ export async function* runBuilder(
     ]);
   }
 
-  if (fs.existsSync(normalized.options.outputPath)) {
-    fs.rmSync(normalized.options.outputPath, { recursive: true });
+  if (fs.existsSync(federationOutputPath)) {
+    fs.rmSync(federationOutputPath, { recursive: true });
   }
 
-  if (!fs.existsSync(normalized.options.outputPath)) {
-    fs.mkdirSync(normalized.options.outputPath, { recursive: true });
+  if (!fs.existsSync(federationOutputPath)) {
+    fs.mkdirSync(federationOutputPath, { recursive: true });
   }
 
   let federationResult: FederationInfo;
@@ -509,6 +520,7 @@ export async function* runBuilder(
       localeFilter,
       outputOptions.base,
       federationResult,
+      context.workspaceRoot,
     );
     logger.measure(start, "To translate the artifacts.");
   }
@@ -613,6 +625,7 @@ export async function* runBuilder(
           localeFilter,
           outputOptions.base,
           federationResult,
+          context.workspaceRoot,
         );
       }
 
