@@ -7,6 +7,7 @@ import type { FederationInfo } from '@softarc/native-federation';
 import {
   getI18nConfig,
   getLocaleSubPath,
+  getSourceLocaleCode,
   translateFederationArtifacts,
   type I18nConfig,
 } from './i18n.js';
@@ -130,6 +131,21 @@ describe('translateFederationArtifacts', () => {
     expect(cmd).toContain('-l en-US');
   });
 
+  // sourceLocale is optional in angular.json; @angular/build then uses en-US
+  it('defaults the source locale to en-US when sourceLocale is omitted', async () => {
+    await translateFederationArtifacts(
+      { locales: { de: 'm.de.xlf' } },
+      true,
+      'dist',
+      federationResult,
+      '/ws'
+    );
+
+    const cmd = vi.mocked(execSync).mock.calls[0]![0] as string;
+    expect(cmd).toContain('-l en-US');
+    expect(cmd).toMatch(/-r "[^"]*browser\/en-US"/);
+  });
+
   it('creates a dist folder and copies the remoteEntry for each target locale', async () => {
     await translateFederationArtifacts(i18n, true, 'dist', federationResult, '/ws');
 
@@ -216,5 +232,32 @@ describe('getLocaleSubPath', () => {
 
   it('uses the code for a string source locale', () => {
     expect(getLocaleSubPath({ ...i18n, sourceLocale: 'en-US' }, 'en-US')).toBe('en-US');
+  });
+
+  it('uses en-US as the source locale folder when sourceLocale is omitted', () => {
+    expect(getLocaleSubPath({ locales: i18n.locales }, 'en-US')).toBe('en-US');
+  });
+
+  it('uses the source subPath when sourceLocale has no code', () => {
+    expect(getLocaleSubPath({ ...i18n, sourceLocale: { subPath: 'src' } }, 'en-US')).toBe('src');
+  });
+});
+
+// Mirrors @angular/build's i18n-options, where sourceLocale and sourceLocale.code both fall back to en-US
+describe('getSourceLocaleCode', () => {
+  it('returns a string source locale as-is', () => {
+    expect(getSourceLocaleCode({ sourceLocale: 'nl', locales: {} })).toBe('nl');
+  });
+
+  it('returns the code of an object source locale', () => {
+    expect(getSourceLocaleCode({ sourceLocale: { code: 'nl' }, locales: {} })).toBe('nl');
+  });
+
+  it('defaults to en-US when sourceLocale is omitted', () => {
+    expect(getSourceLocaleCode({ locales: { de: 'm.de.xlf' } })).toBe('en-US');
+  });
+
+  it('defaults to en-US when sourceLocale has no code', () => {
+    expect(getSourceLocaleCode({ sourceLocale: { subPath: 'src' }, locales: {} })).toBe('en-US');
   });
 });

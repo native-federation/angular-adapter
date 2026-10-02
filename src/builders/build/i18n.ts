@@ -19,12 +19,12 @@ type LocaleObject = {
 };
 
 export type I18nConfig = {
-  sourceLocale: string | SourceLocaleObject;
+  sourceLocale?: string | SourceLocaleObject;
   locales: Record<string, LocaleTranslation | LocaleObject>;
 };
 
 type SourceLocaleObject = {
-  code: string;
+  code?: string;
   baseHref?: string;
   subPath?: string;
 };
@@ -38,14 +38,16 @@ export async function getI18nConfig(context: BuilderContext): Promise<I18nConfig
   return i18nConfig;
 }
 
-function getSourceLocaleCode(i18n: I18nConfig): string {
-  return typeof i18n.sourceLocale === 'string' ? i18n.sourceLocale : i18n.sourceLocale.code;
+// @angular/build defaults a missing sourceLocale (or sourceLocale.code) to en-US
+export function getSourceLocaleCode(i18n: I18nConfig): string {
+  const sourceLocale = i18n.sourceLocale;
+  return (typeof sourceLocale === 'string' ? sourceLocale : sourceLocale?.code) ?? 'en-US';
 }
 
 // Mirrors @angular/build's i18n-options: a locale's output folder is its subPath, defaulting to the code
 export function getLocaleSubPath(i18n: I18nConfig, locale: string): string {
   if (locale === getSourceLocaleCode(i18n)) {
-    return typeof i18n.sourceLocale === 'string' ? locale : (i18n.sourceLocale.subPath ?? locale);
+    return typeof i18n.sourceLocale === 'string' ? locale : (i18n.sourceLocale?.subPath ?? locale);
   }
   const config = i18n.locales[locale];
   if (config && typeof config === 'object' && !Array.isArray(config)) {

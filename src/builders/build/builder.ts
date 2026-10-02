@@ -62,6 +62,7 @@ import { createAngularBuildAdapter } from "../../tools/esbuild/angular-esbuild-a
 import { createSharedMappingsPlugin } from "../../tools/esbuild/shared-mappings-plugin.js";
 import {
   getI18nConfig,
+  getSourceLocaleCode,
   getLocaleSubPath,
   translateFederationArtifacts,
 } from "./i18n.js";
@@ -235,12 +236,7 @@ export async function* runBuilder(
   const localeFilter = getLocaleFilter(ngBuilderOptions, runViteServer);
 
   const sourceLocaleSegment = i18n
-    ? getLocaleSubPath(
-        i18n,
-        typeof i18n.sourceLocale === "string"
-          ? i18n.sourceLocale
-          : i18n.sourceLocale.code,
-      )
+    ? getLocaleSubPath(i18n, getSourceLocaleCode(i18n))
     : "";
 
   const browserOutputPath = path.join(
