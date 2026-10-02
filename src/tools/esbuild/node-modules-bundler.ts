@@ -3,16 +3,10 @@ import * as path from "path";
 import * as fs from "fs";
 import { createRequire } from "node:module";
 
-import {
-  transformSupportedBrowsersToTargets,
-  getSupportedBrowsers,
-  JavaScriptTransformer,
-  Cache,
-} from "@angular/build/private";
-
-import { normalizeSourceMaps } from "../../utils/normalize-build-options.js";
+import { JavaScriptTransformer, Cache } from "@angular/build/private";
 
 import type { NormalizedContextOptions } from "../../utils/normalize-context-options.js";
+import type { SharedBundleSettings } from "./externals-cache-key.js";
 
 const LINKER_DECLARATION_PREFIX = "ɵɵngDeclare";
 
@@ -89,6 +83,7 @@ function getOrCreateJsTransformerCacheStore(
 
 export async function createNodeModulesEsbuildContext(
   options: NormalizedContextOptions,
+  settings: SharedBundleSettings,
 ): Promise<{
   ctx: esbuild.BuildContext;
   pluginDisposed: Promise<void>;
@@ -108,27 +103,11 @@ export async function createNodeModulesEsbuildContext(
 
   const workspaceRoot = context.workspaceRoot;
 
-  const projectMetadata = await context.getProjectMetadata(
-    context.target!.project,
-  );
-  const projectRoot = path.join(
-    workspaceRoot,
-    (projectMetadata["root"] as string | undefined) ?? "",
-  );
-
-  const browsers = getSupportedBrowsers(
-    projectRoot,
-    context.logger as unknown as Console,
-  );
-  const target = transformSupportedBrowsersToTargets(browsers);
-
-  const sourcemapOptions = normalizeSourceMaps(builderOptions.sourceMap!);
-
   const commonjsPluginModule = await import("@chialab/esbuild-plugin-commonjs");
   const commonjsPlugin = commonjsPluginModule.default;
 
-  const customPlugins = Array.isArray(options.builderOptions.plugins)
-    ? options.builderOptions.plugins
+  const customPlugins = Array.isArray(builderOptions.plugins)
+    ? builderOptions.plugins
     : [];
 
   // Create JavaScriptTransformer for handling Angular partial compilation linking
@@ -140,7 +119,7 @@ export async function createNodeModulesEsbuildContext(
   const jsTransformerCache = new Cache<Uint8Array>(jsTransformerCacheStore);
   const jsTransformer = new JavaScriptTransformer(
     {
-      sourcemap: !!sourcemapOptions.scripts,
+      sourcemap: settings.sourcemap,
       thirdPartySourcemaps: false,
       advancedOptimizations,
       jit: false,
@@ -161,7 +140,7 @@ export async function createNodeModulesEsbuildContext(
     external,
     logLevel: "warning",
     bundle: true,
-    sourcemap: sourcemapOptions.scripts,
+    sourcemap: settings.sourcemap,
     minify: !dev,
     supported: {
       "async-await": false,
@@ -170,7 +149,7 @@ export async function createNodeModulesEsbuildContext(
     splitting: chunks,
     platform: platform ?? "browser",
     format: "esm",
-    target: target,
+    target: settings.target,
     logLimit: 1,
     plugins: [
       createAngularLinkerPlugin(jsTransformer, advancedOptimizations),
@@ -181,7 +160,7 @@ export async function createNodeModulesEsbuildContext(
       ...(dev ? {} : { ngDevMode: "false" }),
       ngJitMode: "false",
     },
-    ...(builderOptions.loader ? { loader: builderOptions.loader } : {}),
+    ...(settings.loader ? { loader: settings.loader } : {}),
     resolveExtensions: [".mjs", ".js", ".cjs"],
   };
 

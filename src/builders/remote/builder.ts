@@ -76,7 +76,7 @@ export async function* runRemoteBuilder(
     ? nfBuilderOptions.entryPoints
     : undefined;
 
-  const adapter = createAngularBuildAdapter(
+  const adapter = await createAngularBuildAdapter(
     {
       ...ngBuilderOptions,
       // Required by the schema, so the tsconfig is always the builder's to manage.
