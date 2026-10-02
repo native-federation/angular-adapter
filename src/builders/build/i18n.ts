@@ -41,8 +41,10 @@ export async function translateFederationArtifacts(
   i18n: I18nConfig,
   localize: boolean | string[],
   outputPath: string,
-  federationResult: FederationInfo
+  federationResult: FederationInfo,
+  workspaceRoot: string
 ) {
+  outputPath = path.resolve(workspaceRoot, outputPath);
   const neededLocales = Array.isArray(localize) ? localize : Object.keys(i18n.locales);
 
   const locales = Object.keys(i18n.locales).filter(locale => neededLocales.includes(locale));
@@ -82,7 +84,7 @@ export async function translateFederationArtifacts(
 
   const sourceLocalePath = path.join(outputPath, 'browser', sourceLocale);
 
-  const localizeTranslate = path.resolve('node_modules/.bin/localize-translate');
+  const localizeTranslate = path.resolve(workspaceRoot, 'node_modules/.bin/localize-translate');
 
   const cmd = `"${localizeTranslate}" -r "${sourceLocalePath}" -s "${sourcePattern}" -t ${translationFiles} -o "${translationOutPath}" --target-locales ${targetLocales} -l ${sourceLocale}`;
 
@@ -91,12 +93,13 @@ export async function translateFederationArtifacts(
 
   logger.debug('Running: ' + cmd);
 
-  execCommand(cmd, 'Successfully translated');
+  execCommand(cmd, workspaceRoot, 'Successfully translated');
 }
 
-function execCommand(cmd: string, defaultSuccessInfo: string) {
+function execCommand(cmd: string, cwd: string, defaultSuccessInfo: string) {
   try {
-    const output = execSync(cmd);
+    // translation file paths from angular.json are workspace-relative
+    const output = execSync(cmd, { cwd });
     logger.info(output.toString() || defaultSuccessInfo);
   } catch (error) {
     logger.error((error as Error).message!);

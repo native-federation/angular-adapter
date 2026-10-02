@@ -512,6 +512,7 @@ export async function* runBuilder(
       localeFilter,
       outputOptions.base,
       federationResult,
+      context.workspaceRoot,
     );
     logger.measure(start, "To translate the artifacts.");
   }
@@ -616,6 +617,7 @@ export async function* runBuilder(
           localeFilter,
           outputOptions.base,
           federationResult,
+          context.workspaceRoot,
         );
       }
 
