@@ -38,6 +38,26 @@ docs: update readme
 
 > You can read more about conventional commits [here](https://www.conventionalcommits.org/en/v1.0.0/).
 
+## Angular Releases
+
+Each adapter release line supports exactly one Angular minor (`@angular/build` `~X.Y.0`). See
+[ADR 0001](docs/adr/0001-angular-build-internals.md) for why.
+
+When Angular releases a new minor:
+
+1. Move `@angular/build` (peer and dev dependency) and the `@angular-devkit/*` dependencies to
+   the new minor, e.g. `~22.2.0` and `^0.2202.0`.
+2. Fix what breaks in `pnpm typecheck` and `pnpm test`. Changes to `@angular/build/private` usually
+   show up there first.
+3. Review every `// upstream: angular/angular-cli <path> @ <sha>` tag against the new minor's
+   release branch in angular-cli. Port each upstream change or deliberately skip it, then bump the
+   SHA in the tag.
+4. Release the new adapter minor as soon as possible: until it's out, npm users can't upgrade
+   Angular because of the peer conflict.
+
+When Angular releases a patch within a supported minor, update the dev dependency to it and run
+`pnpm typecheck` and `pnpm test`, so each release line stays tested against the latest patch.
+
 ## Need Help?
 
 Open an issue if you:

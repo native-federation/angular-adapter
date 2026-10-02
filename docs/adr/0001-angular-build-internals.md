@@ -60,7 +60,8 @@ approaches, often in combination:
 
 1. **One adapter release line per Angular minor.** Adapter `X.Y.*` supports `@angular/build`
    `~X.Y.0` and nothing else (e.g. `22.1.x`, `22.2.x`). Each new Angular minor gets its own adapter
-   minor. This is a rule, not a default.
+   minor. This is a rule, not a default. Each release line stays tested against the latest Angular
+   patch of its minor.
 2. **Minimize drift from Angular's build.** Every difference from what `@angular/build` does is code
    we maintain. Where Angular's implementation is reachable through a supported import, we use it
    rather than our own. Where we have to deviate, the deviation is deliberate, small and tested.
@@ -75,14 +76,8 @@ approaches, often in combination:
 1. **The core pipeline: depend on `@angular/build/private`, don't copy it.** Copying
    `buildApplicationInternal` or the compiler plugin would be a fork of Angular's build, the
    largest possible drift (principle 2). The version range from principle 1 contains the risk of
-   an API without SemVer guarantees. In addition:
-   - Route every `/private` import through one module (e.g. `src/angular/`, as in the i18n design
-     of #67), enforced by lint, so an adaptation to a new Angular minor lives in one place.
-   - Run CI against `@angular/build@next`, so the release for a new Angular minor is ready when
-     Angular ships it, and against the latest patch of the supported minor, to catch behavior
-     changes within the range.
-   - Signature changes in `/private` surface as type errors when a release moves to the new
-     Angular minor, so they need no separate check.
+   an API without SemVer guarantees: signature changes in `/private` surface as type errors when a
+   release moves to the new Angular minor.
 2. **Small, stateless helpers that aren't exported: copy.** Keep the copy as close to the upstream
    code as possible, so upstream changes can be applied mechanically. Keep Angular's MIT notice and
    tag each ported piece with `// upstream: angular/angular-cli <path> @ <sha>`. On every Angular
@@ -94,9 +89,13 @@ approaches, often in combination:
    `JavaScriptTransformer` without a `Cache` and cache around `transformData` with our own key.
 4. **Changing Angular's own module state: documented exception.** Where there is no other way to
    get the behavior (#156, `environment-options.js`), the workaround stays in one place, carries an
-   `// upstream:` tag so it's reviewed on every minor bump, and warns when it no longer finds what it
-   expects instead of silently doing nothing. Whether to propose an upstream change that removes the
-   workaround is discussed in the team (principle 3).
+   `// upstream:` tag so it's reviewed on every minor bump, and has a spec in our own test suite
+   that checks its assumptions (file path, export names, types, writability) against our
+   `@angular/build` devDependency. Nothing extra runs in users' builds. A change in a new minor
+   then fails our CI instead of silently doing nothing for users. A runtime warning is not the
+   main signal: whether the internal is loaded yet depends on how the builder was started, so a
+   missing module doesn't reliably mean a broken one. Whether to propose an upstream change that removes the workaround is discussed in the team
+   (principle 3).
 5. **Never write to `node_modules`.** Do anything that needs to change installed code at bundle
    time instead, e.g. `onLoad` or a `banner` for `ngServerMode` (#157).
 
@@ -109,9 +108,9 @@ uses Angular's helpers as a parity reference.
 
 **Positive**
 
-- No shipped code depends on Angular file paths or `node_modules` contents, and the one exception
-  that touches Angular's module state warns when it stops matching. Failures are loud: a type
-  error, a CI failure or a peer dependency conflict at install time.
+- No shipped code depends on Angular file paths or `node_modules` contents, except the one
+  exception that touches Angular's module state, whose assumptions a spec checks. Failures are
+  loud: a type error, a CI failure or a peer dependency conflict at install time.
 - We keep getting Angular's compiler, bugfix and performance work on the core pipeline.
 - Copied code is small, close to upstream, attributed and reviewed on every minor bump, so drift
   is visible and cheap to resolve.
@@ -120,10 +119,11 @@ uses Angular's helpers as a parity reference.
 **Negative**
 
 - Every Angular minor needs an adapter release. Until it's out, users can't upgrade Angular: npm 7+
-  fails with `ERESOLVE` on the peer conflict, pnpm and Yarn warn. CI against `next` is what keeps
-  that window short.
-- `/private` can change behavior in a patch. CI against the latest patch catches this, but only
-  after Angular has released it.
-- Fixes Angular ships in a patch release to code we copied reach users only with our next minor
-  release, unless we port them sooner. We accept this because the copied code is small.
+  fails with `ERESOLVE` on the peer conflict, pnpm and Yarn warn. Releasing promptly after each
+  Angular minor keeps that window short.
+- `/private`, and the internal behind the module-state exception, can change in a patch within
+  the supported minor. We test against the latest patch, so such a change surfaces only after
+  Angular has released it.
+- Fixes Angular ships in a patch release to code we copied reach users only once we port them, at
+  the latest at the next minor bump. We accept this because the copied code is small.
 - The upstream-tag review has to happen on every minor bump; it's a manual checklist step.
