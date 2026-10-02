@@ -23,6 +23,7 @@
     "esbuild": "^0.28.0",
     "jsonc-parser": "^3.3.1",
     "mrmime": "^2.0.1",
+    "tinyglobby": "^0.2.17",
     "watchpack": "^2.5.2"
   },
   "repository": {
@@ -72,6 +73,7 @@
   ],
   "scripts": {
     "build": "tsc -p tsconfig.build.json && node post-build.mjs",
+    "check:entry-points": "node check-entry-points.mjs",
     "lint": "eslint src",
     "typecheck": "tsc -p tsconfig.build.json --noEmit",
     "knip": "knip --no-config-hints",

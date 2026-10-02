@@ -1,12 +1,6 @@
 import * as fs from 'fs';
 import * as path from 'path';
-
-// eslint-disable-next-line @typescript-eslint/ban-ts-comment
-// @ts-ignore - not re-exported from package root
-import { normalizeAssetPatterns } from '@angular/build/src/utils/normalize-asset-patterns.js';
-// eslint-disable-next-line @typescript-eslint/ban-ts-comment
-// @ts-ignore - not re-exported from package root
-import { resolveAssets } from '@angular/build/src/utils/resolve-assets.js';
+import { glob } from 'tinyglobby';
 
 import type { ApplicationBuilderOptions } from '@angular/build';
 
@@ -19,6 +13,17 @@ export type NormalizedAssetEntry = {
   flatten?: boolean;
 };
 
+type AssetPattern = NonNullable<ApplicationBuilderOptions['assets']>[number];
+
+// Mirrors @angular/build's internal utils/resolve-assets.ts, which its exports map doesn't expose.
+const DEFAULT_ASSET_IGNORE = ['.gitkeep', '**/.DS_Store', '**/Thumbs.db'];
+
+function isSubDirectory(parent: string, child: string): boolean {
+  const relative = path.relative(path.resolve(parent), path.resolve(parent, child));
+  return relative !== '..' && !relative.startsWith(`..${path.sep}`) && !path.isAbsolute(relative);
+}
+
+// Mirrors @angular/build's internal utils/normalize-asset-patterns.ts.
 export function normalizeRemoteAssetEntries(
   assets: ApplicationBuilderOptions['assets'] | undefined,
   workspaceRoot: string,
@@ -26,13 +31,77 @@ export function normalizeRemoteAssetEntries(
   projectSourceRoot: string | undefined
 ): NormalizedAssetEntry[] {
   if (!assets || assets.length === 0) return [];
-  return normalizeAssetPatterns(
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    assets as any,
-    workspaceRoot,
-    projectRoot,
-    projectSourceRoot
-  ) as NormalizedAssetEntry[];
+
+  const sourceRoot = path.resolve(workspaceRoot, projectSourceRoot || path.join(projectRoot, 'src'));
+  const resolvedProjectRoot = path.resolve(workspaceRoot, projectRoot);
+
+  return assets.map(pattern => {
+    const entry = normalizeAssetPattern(pattern, workspaceRoot, sourceRoot, resolvedProjectRoot);
+    if (entry.output.startsWith('..')) {
+      throw new Error('An asset cannot be written to a location outside of the output path.');
+    }
+    return entry;
+  });
+}
+
+function normalizeAssetPattern(
+  pattern: AssetPattern,
+  workspaceRoot: string,
+  sourceRoot: string,
+  projectRoot: string
+): NormalizedAssetEntry {
+  if (typeof pattern !== 'string') {
+    if (!isSubDirectory(workspaceRoot, pattern.input)) {
+      throw new Error(`The ${pattern.input} asset path must be within the workspace root.`);
+    }
+    return { ...pattern, output: path.join('.', pattern.output ?? '') };
+  }
+
+  const assetPath = path.normalize(pattern);
+  const resolvedAssetPath = path.resolve(workspaceRoot, assetPath);
+  const root = [sourceRoot, projectRoot, workspaceRoot].find(dir =>
+    isSubDirectory(dir, resolvedAssetPath)
+  );
+  if (!root) {
+    throw new Error(`The ${pattern} asset path must be within the workspace root.`);
+  }
+
+  let isDirectory: boolean;
+  try {
+    isDirectory = fs.statSync(resolvedAssetPath).isDirectory();
+  } catch {
+    isDirectory = true;
+  }
+
+  const input = isDirectory ? assetPath : path.dirname(assetPath);
+  return {
+    glob: isDirectory ? '**/*' : path.basename(assetPath),
+    input,
+    output: path.relative(root, path.resolve(workspaceRoot, input)),
+  };
+}
+
+async function resolveAssets(
+  entries: NormalizedAssetEntry[],
+  workspaceRoot: string
+): Promise<{ source: string; destination: string }[]> {
+  const resolved: { source: string; destination: string }[] = [];
+  for (const entry of entries) {
+    const cwd = path.resolve(workspaceRoot, entry.input);
+    const files = await glob(entry.glob, {
+      cwd,
+      dot: true,
+      ignore: [...DEFAULT_ASSET_IGNORE, ...(entry.ignore ?? [])],
+      followSymbolicLinks: entry.followSymlinks,
+    });
+    for (const file of files) {
+      resolved.push({
+        source: path.join(cwd, file),
+        destination: path.join(entry.output, entry.flatten ? path.basename(file) : file),
+      });
+    }
+  }
+  return resolved;
 }
 
 async function writeAssets(
@@ -43,10 +112,7 @@ async function writeAssets(
 ): Promise<void> {
   if (entries.length === 0) return;
 
-  const resolved = (await resolveAssets(entries, workspaceRoot)) as {
-    source: string;
-    destination: string;
-  }[];
+  const resolved = await resolveAssets(entries, workspaceRoot);
 
   const createdDirs = new Set<string>();
   for (const { source, destination } of resolved) {

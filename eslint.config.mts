@@ -36,6 +36,18 @@ export default [
       'no-duplicate-imports': 'error',
       'prefer-const': 'error',
       '@typescript-eslint/no-require-imports': 'warn',
+      'no-restricted-imports': [
+        'error',
+        {
+          patterns: [
+            {
+              group: ['@angular/*/src/*', '@angular-devkit/*/src/*'],
+              message:
+                'Deep imports are blocked by the package exports map at runtime; use a public entry point.',
+            },
+          ],
+        },
+      ],
     },
     languageOptions: { globals: { ...globals.browser, ...globals.node } },
   },
