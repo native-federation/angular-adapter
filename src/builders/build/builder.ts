@@ -60,7 +60,11 @@ import {
 import type { NfBuilderSchema, NfInternalOptions } from "./schema.js";
 import { createAngularBuildAdapter } from "../../tools/esbuild/angular-esbuild-adapter.js";
 import { createSharedMappingsPlugin } from "../../tools/esbuild/shared-mappings-plugin.js";
-import { getI18nConfig, translateFederationArtifacts } from "./i18n.js";
+import {
+  getI18nConfig,
+  getLocaleSubPath,
+  translateFederationArtifacts,
+} from "./i18n.js";
 import { updateScriptTags } from "./update-index-html.js";
 import { createInternalAngularBuilder } from "./internal-angular-builder.js";
 
@@ -230,10 +234,14 @@ export async function* runBuilder(
 
   const localeFilter = getLocaleFilter(ngBuilderOptions, runViteServer);
 
-  const sourceLocaleSegment =
-    typeof i18n?.sourceLocale === "string"
-      ? i18n.sourceLocale
-      : i18n?.sourceLocale?.subPath || i18n?.sourceLocale?.code || "";
+  const sourceLocaleSegment = i18n
+    ? getLocaleSubPath(
+        i18n,
+        typeof i18n.sourceLocale === "string"
+          ? i18n.sourceLocale
+          : i18n.sourceLocale.code,
+      )
+    : "";
 
   const browserOutputPath = path.join(
     outputOptions.base,
@@ -245,7 +253,11 @@ export async function* runBuilder(
     Array.isArray(localeFilter) && localeFilter.length === 1;
   const devServerOutputPath = !differentDevServerOutputPath
     ? browserOutputPath
-    : path.join(outputOptions.base, outputOptions.browser, localeFilter[0]!);
+    : path.join(
+        outputOptions.base,
+        outputOptions.browser,
+        i18n ? getLocaleSubPath(i18n, localeFilter[0]!) : localeFilter[0]!,
+      );
 
   const cachePath = getDefaultCachePath(context.workspaceRoot);
 

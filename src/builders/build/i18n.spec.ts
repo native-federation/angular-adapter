@@ -4,7 +4,12 @@ import { logger } from '@softarc/native-federation/internal';
 import type { BuilderContext } from '@angular-devkit/architect';
 import type { FederationInfo } from '@softarc/native-federation';
 
-import { getI18nConfig, translateFederationArtifacts, type I18nConfig } from './i18n.js';
+import {
+  getI18nConfig,
+  getLocaleSubPath,
+  translateFederationArtifacts,
+  type I18nConfig,
+} from './i18n.js';
 
 vi.mock('fs');
 vi.mock('child_process');
@@ -65,6 +70,8 @@ describe('translateFederationArtifacts', () => {
 
   beforeEach(() => {
     vi.mocked(execSync).mockReturnValue(Buffer.from('translated ok'));
+    vi.mocked(fs.mkdtempSync).mockReturnValue('/tmp/nf-i18n-x');
+    vi.mocked(fs.existsSync).mockReturnValue(true);
   });
 
   it('does nothing when no configured locale matches the requested ones', async () => {
@@ -143,13 +150,40 @@ describe('translateFederationArtifacts', () => {
     const [cmd, opts] = vi.mocked(execSync).mock.calls[0]!;
     expect(cmd).toContain('"/ws/node_modules/.bin/localize-translate"');
     expect(cmd).toContain('-r "/ws/dist/browser/en"');
-    expect(cmd).toContain('-o "/ws/dist/browser/{{LOCALE}}"');
+    expect(cmd).toContain('-o "/tmp/nf-i18n-x/{{LOCALE}}"');
     expect(opts).toEqual({ cwd: '/ws' });
     expect(fs.mkdirSync).toHaveBeenCalledWith('/ws/dist/browser/de', { recursive: true });
     expect(fs.copyFileSync).toHaveBeenCalledWith(
       '/ws/dist/browser/en/remoteEntry.json',
       '/ws/dist/browser/de/remoteEntry.json'
     );
+  });
+
+  it('copies staged translations into each locale subPath and removes the staging folder', async () => {
+    const subPathI18n: I18nConfig = {
+      sourceLocale: { code: 'en-US', subPath: 'en' },
+      locales: { de: { translation: 'm.de.xlf', subPath: 'deutsch' }, fr: 'm.fr.xlf' },
+    };
+
+    await translateFederationArtifacts(subPathI18n, true, 'dist', federationResult, '/ws');
+
+    const cmd = vi.mocked(execSync).mock.calls[0]![0] as string;
+    // localize-translate reads from the source subPath, but writes per locale code
+    expect(cmd).toContain('-r "/ws/dist/browser/en"');
+    expect(cmd).toContain('--target-locales de fr');
+    expect(cmd).toContain('-l en-US');
+
+    expect(fs.mkdirSync).toHaveBeenCalledWith('/ws/dist/browser/deutsch', { recursive: true });
+    expect(fs.copyFileSync).toHaveBeenCalledWith(
+      '/ws/dist/browser/en/remoteEntry.json',
+      '/ws/dist/browser/deutsch/remoteEntry.json'
+    );
+    expect(vi.mocked(fs.cpSync).mock.calls).toEqual([
+      ['/tmp/nf-i18n-x/en-US', '/ws/dist/browser/en', { recursive: true }],
+      ['/tmp/nf-i18n-x/de', '/ws/dist/browser/deutsch', { recursive: true }],
+      ['/tmp/nf-i18n-x/fr', '/ws/dist/browser/fr', { recursive: true }],
+    ]);
+    expect(fs.rmSync).toHaveBeenCalledWith('/tmp/nf-i18n-x', { recursive: true, force: true });
   });
 
   it('logs an error when the translate command fails', async () => {
@@ -160,5 +194,27 @@ describe('translateFederationArtifacts', () => {
     await translateFederationArtifacts(i18n, ['de'], 'dist', federationResult, '/ws');
 
     expect(errorSpy).toHaveBeenCalledWith('localize boom');
+    expect(fs.rmSync).toHaveBeenCalledWith('/tmp/nf-i18n-x', { recursive: true, force: true });
+  });
+});
+
+describe('getLocaleSubPath', () => {
+  const i18n: I18nConfig = {
+    sourceLocale: { code: 'en-US', subPath: '' },
+    locales: { de: { translation: 'm.de.xlf', subPath: 'deutsch' }, fr: 'm.fr.xlf' },
+  };
+
+  it('uses the subPath when configured, the locale code otherwise', () => {
+    expect(getLocaleSubPath(i18n, 'de')).toBe('deutsch');
+    expect(getLocaleSubPath(i18n, 'fr')).toBe('fr');
+  });
+
+  // @angular/build allows an empty subPath (output at the browser root), so '' must not fall back
+  it('keeps an empty source locale subPath', () => {
+    expect(getLocaleSubPath(i18n, 'en-US')).toBe('');
+  });
+
+  it('uses the code for a string source locale', () => {
+    expect(getLocaleSubPath({ ...i18n, sourceLocale: 'en-US' }, 'en-US')).toBe('en-US');
   });
 });
