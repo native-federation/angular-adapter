@@ -92,7 +92,7 @@ async function resolveAssets(
       cwd,
       dot: true,
       ignore: [...DEFAULT_ASSET_IGNORE, ...(entry.ignore ?? [])],
-      followSymbolicLinks: entry.followSymlinks,
+      followSymbolicLinks: entry.followSymlinks ?? false,
     });
     for (const file of files) {
       resolved.push({

@@ -108,6 +108,21 @@ describe('normalizeRemoteAssetEntries', () => {
     ).toThrow(/must be within the workspace root/);
   });
 
+  // Deliberate divergence: Angular picks the root via `startsWith`, so a sibling sharing the
+  // sourceRoot prefix ("src-extra") resolves against sourceRoot and throws "outside of the output
+  // path". We match on real subdirectories, so it falls through to projectRoot.
+  it('resolves a sourceRoot-prefixed sibling against projectRoot', () => {
+    write('projects/mfe/src-extra/x.txt');
+    const pattern = ['projects/mfe/src-extra/x.txt'];
+
+    expect(() =>
+      normalizeAssetPatterns(structuredClone(pattern), ws, 'projects/mfe', 'projects/mfe/src')
+    ).toThrow(/outside of the output path/);
+    expect(normalizeRemoteAssetEntries(pattern, ws, 'projects/mfe', 'projects/mfe/src')).toEqual([
+      { glob: 'x.txt', input: 'projects/mfe/src-extra', output: 'src-extra' },
+    ]);
+  });
+
   it('rejects outputs that escape the output path', () => {
     expect(() =>
       normalizeRemoteAssetEntries([{ glob: '*', input: 'shared', output: '../up' }], ws, 'p', 'p/src')
@@ -132,6 +147,42 @@ describe('copyAllAssets', () => {
     expect(expected).not.toContain('assets/.gitkeep');
     expect(expected).not.toContain('assets/Thumbs.db');
     expect(expected).not.toContain('brand/skip.tmp');
+  });
+});
+
+// Not part of the parity check: @angular/build 22.2.1 passes `undefined` to tinyglobby, which
+// follows symlinks. Upstream fixed this on main (angular/angular-cli a0a6b422cd, #34164) to match
+// the schema default of `false`; we follow the fix.
+describe('symlinked asset directories', () => {
+  beforeEach(() => {
+    write('linked/secret.txt');
+    fs.symlinkSync(path.join(ws, 'linked'), path.join(ws, 'projects/mfe/public/link'), 'dir');
+  });
+
+  it('are not followed by default', async () => {
+    const entries = normalizeRemoteAssetEntries(
+      [{ glob: '**/*', input: 'projects/mfe/public' }],
+      ws,
+      'projects/mfe',
+      'projects/mfe/src'
+    );
+
+    await copyAllAssets(entries, out, ws);
+
+    expect(listFiles(out)).toEqual(['nested/a.txt', 'robots.txt']);
+  });
+
+  it('are followed with followSymlinks: true', async () => {
+    const entries = normalizeRemoteAssetEntries(
+      [{ glob: '**/*', input: 'projects/mfe/public', followSymlinks: true }],
+      ws,
+      'projects/mfe',
+      'projects/mfe/src'
+    );
+
+    await copyAllAssets(entries, out, ws);
+
+    expect(listFiles(out)).toEqual(['link/secret.txt', 'nested/a.txt', 'robots.txt']);
   });
 });
 
