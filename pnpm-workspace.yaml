@@ -12,5 +12,8 @@ allowBuilds:
   msgpackr-extract: false
   msw: true
   nx: false
+# nx (via @nx/devkit) pins these to vulnerable versions; drop once nx ships the fixes
 overrides:
-  'smol-toml': '>=1.7.1'
+  'nx>axios': '^1.20.0'
+  'nx>brace-expansion': '^5.0.12'
+  'nx>smol-toml': '^1.7.1'
