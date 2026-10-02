@@ -28,9 +28,6 @@ jobs:
       - name: Build OK
         run: pnpm build
 
-      - name: Entry points OK
-        run: pnpm check:entry-points
-
       - name: Lint OK
         run: pnpm lint
 

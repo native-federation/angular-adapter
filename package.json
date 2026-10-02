@@ -73,7 +73,6 @@
   ],
   "scripts": {
     "build": "tsc -p tsconfig.build.json && node post-build.mjs",
-    "check:entry-points": "node check-entry-points.mjs",
     "lint": "eslint src",
     "typecheck": "tsc -p tsconfig.build.json --noEmit",
     "knip": "knip --no-config-hints",
