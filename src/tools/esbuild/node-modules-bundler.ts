@@ -119,7 +119,7 @@ export async function createNodeModulesEsbuildContext(
   const jsTransformerCache = new Cache<Uint8Array>(jsTransformerCacheStore);
   const jsTransformer = new JavaScriptTransformer(
     {
-      sourcemap: settings.sourcemap,
+      sourcemap: !!settings.sourcemap,
       thirdPartySourcemaps: false,
       advancedOptimizations,
       jit: false,

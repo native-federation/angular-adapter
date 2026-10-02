@@ -57,6 +57,7 @@ describe('createExternalsCacheKey', () => {
 
   it('changes with script source maps', () => {
     expect(keyOf({ sourcemap: true })).not.toBe(baseline);
+    expect(keyOf({ sourcemap: 'external' })).not.toBe(keyOf({ sourcemap: true }));
   });
 
   it('changes with the loader option', () => {
@@ -146,7 +147,9 @@ describe('resolveSharedBundleSettings', () => {
     [true, true],
     [{ scripts: true }, true],
     [{ scripts: false, styles: true }, false],
-  ])('normalizes sourceMap %j to scripts=%s', async (sourceMap, expected) => {
+    [{ scripts: true, hidden: true }, 'external'],
+    [{ scripts: false, hidden: true }, false],
+  ])('normalizes sourceMap %j to %j', async (sourceMap, expected) => {
     writeBrowserslist('Chrome 120\n');
 
     const resolved = await resolveSharedBundleSettings({ sourceMap } as never, contextFor());
@@ -154,8 +157,8 @@ describe('resolveSharedBundleSettings', () => {
     expect(resolved.sourcemap).toBe(expected);
   });
 
-  // Style and hidden source maps never touch shared externals, so they must not miss the cache.
-  it('keeps the key when only style or hidden source maps change', async () => {
+  // Style source maps never touch shared externals, so they must not miss the cache.
+  it('keeps the key when only style source maps change', async () => {
     writeBrowserslist('Chrome 120\n');
     const keyFor = async (sourceMap: unknown) =>
       createExternalsCacheKey(
@@ -166,7 +169,20 @@ describe('resolveSharedBundleSettings', () => {
     const base = await keyFor({ scripts: true });
 
     expect(await keyFor({ scripts: true, styles: true })).toEqual(base);
-    expect(await keyFor({ scripts: true, hidden: true })).toEqual(base);
+  });
+
+  // Hidden maps drop the sourceMappingURL comment from shared externals, so the bytes differ.
+  it('changes the key when script source maps become hidden', async () => {
+    writeBrowserslist('Chrome 120\n');
+    const keyFor = async (sourceMap: unknown) =>
+      createExternalsCacheKey(
+        await resolveSharedBundleSettings({ sourceMap } as never, contextFor()),
+        versions
+      );
+
+    expect(await keyFor({ scripts: true, hidden: true })).not.toEqual(
+      await keyFor({ scripts: true })
+    );
   });
 
   it('passes the loader option through', async () => {

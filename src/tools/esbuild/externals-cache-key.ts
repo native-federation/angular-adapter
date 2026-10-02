@@ -11,7 +11,7 @@ import { normalizeSourceMaps } from '../../utils/normalize-build-options.js';
 // Everything the adapter feeds into the shared externals bundle beyond what core keys itself.
 export interface SharedBundleSettings {
   target: string[];
-  sourcemap: boolean;
+  sourcemap: boolean | 'external';
   loader?: ApplicationBuilderOptions['loader'];
 }
 
@@ -31,10 +31,11 @@ export async function resolveSharedBundleSettings(
     (projectMetadata['root'] as string | undefined) ?? ''
   );
   const browsers = getSupportedBrowsers(projectRoot, context.logger as unknown as Console);
+  const sourceMaps = normalizeSourceMaps(builderOptions.sourceMap!);
 
   return {
     target: transformSupportedBrowsersToTargets(browsers),
-    sourcemap: !!normalizeSourceMaps(builderOptions.sourceMap!).scripts,
+    sourcemap: !!sourceMaps.scripts && (sourceMaps.hidden ? 'external' : true),
     loader: builderOptions.loader,
   };
 }

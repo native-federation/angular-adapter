@@ -117,6 +117,23 @@ describe('createAngularEsbuildContext', () => {
     expect(lastBuildOptions().tsconfig).toBe('/cache/tsconfig/abc.mapping-bundle.json');
   });
 
+  // Like @angular/build: hidden maps are written but not referenced from the bundle.
+  it.each([
+    [false, false],
+    [true, true],
+    [{ scripts: true, hidden: true }, 'external'],
+    [{ scripts: false, hidden: true }, false],
+  ])('maps sourceMap %j to esbuild sourcemap %j', async (sourceMap, expected) => {
+    await createAngularEsbuildContext(
+      makeOptions({
+        builderOptions: { optimization: false, sourceMap },
+      } as unknown as Partial<NormalizedContextOptions>),
+      'mapping-or-exposed'
+    );
+
+    expect(lastBuildOptions().sourcemap).toBe(expected);
+  });
+
   // Without `tsConfig` on the NF target the builder falls back to the Angular target's own
   // tsconfig, which is the user's file and must be left alone.
   it('leaves the tsconfig alone when the NF target declared none', async () => {

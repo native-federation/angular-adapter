@@ -163,7 +163,7 @@ export async function createAngularEsbuildContext(
     external,
     logLevel: 'warning',
     bundle: true,
-    sourcemap: sourcemapOptions.scripts,
+    sourcemap: !!sourcemapOptions.scripts && (sourcemapOptions.hidden ? 'external' : true),
     minify: !dev,
     supported: {
       'async-await': false,
