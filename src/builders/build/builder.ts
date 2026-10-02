@@ -326,7 +326,10 @@ export async function* runBuilder(
     // at eval time. `process.env` is process-global, so it crosses the Vite SSR
     // realm boundary that `globalThis` would not, and mirrors how prod's
     // node-preload is configured.
-    process.env["NF_DEV_SSR_BROWSER_PATH"] = browserOutputPath;
+    process.env["NF_DEV_SSR_BROWSER_PATH"] = path.resolve(
+      context.workspaceRoot,
+      browserOutputPath,
+    );
     if (devServerOrigin) {
       process.env["NF_DEV_SSR_ORIGIN"] = devServerOrigin;
     } else {
@@ -472,12 +475,12 @@ export async function* runBuilder(
     ]);
   }
 
-  if (fs.existsSync(normalized.options.outputPath)) {
-    fs.rmSync(normalized.options.outputPath, { recursive: true });
+  if (fs.existsSync(federationOutputPath)) {
+    fs.rmSync(federationOutputPath, { recursive: true });
   }
 
-  if (!fs.existsSync(normalized.options.outputPath)) {
-    fs.mkdirSync(normalized.options.outputPath, { recursive: true });
+  if (!fs.existsSync(federationOutputPath)) {
+    fs.mkdirSync(federationOutputPath, { recursive: true });
   }
 
   let federationResult: FederationInfo;

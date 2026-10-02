@@ -144,10 +144,10 @@ export async function* runRemoteBuilder(
     }
   }
 
-  if (existsSync(normalized.options.outputPath)) {
-    rmSync(normalized.options.outputPath, { recursive: true });
+  if (existsSync(absoluteBrowserOutput)) {
+    rmSync(absoluteBrowserOutput, { recursive: true });
   }
-  mkdirSync(normalized.options.outputPath, { recursive: true });
+  mkdirSync(absoluteBrowserOutput, { recursive: true });
 
   try {
     await buildForFederation(normalized.config, normalized.options, externals);

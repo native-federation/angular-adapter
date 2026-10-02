@@ -155,6 +155,7 @@ export async function createNodeModulesEsbuildContext(
       out: path.parse(ep.outName).name,
     })),
     outdir,
+    absWorkingDir: workspaceRoot,
     entryNames: hash ? "[name]-[hash]" : "[name]",
     write: false,
     external,

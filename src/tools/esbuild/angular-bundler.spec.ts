@@ -135,6 +135,12 @@ describe('createAngularEsbuildContext', () => {
     ]);
   });
 
+  it('pins the esbuild working directory to the workspace root', async () => {
+    await createAngularEsbuildContext(makeOptions(), 'mapping-or-exposed');
+
+    expect(lastBuildOptions().absWorkingDir).toBe(workspaceRoot);
+  });
+
   // Core hands shared mappings over absolute already.
   it('leaves an already-absolute entry point untouched', async () => {
     const absolute = path.join(workspaceRoot, 'libs', 'ui', 'src', 'index.ts');

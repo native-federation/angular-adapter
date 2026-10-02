@@ -22,7 +22,7 @@
  * routes, which was the original failure mode).
  */
 import { existsSync } from 'node:fs';
-import { join } from 'node:path';
+import { join, resolve } from 'node:path';
 import type { NativeFederationResult } from '@softarc/native-federation-orchestrator';
 
 type LoadRemoteModule = NativeFederationResult['loadRemoteModule'];
@@ -37,7 +37,7 @@ const devServerOrigin = process.env['NF_DEV_SSR_ORIGIN'] || null;
 // forever. Override for genuinely slow remotes via NF_DEV_SSR_INIT_TIMEOUT_MS.
 const INIT_TIMEOUT_MS = Number(process.env['NF_DEV_SSR_INIT_TIMEOUT_MS']) || 10_000;
 
-const browserDir = join(process.cwd(), relBrowserPath);
+const browserDir = resolve(process.cwd(), relBrowserPath);
 const manifestPath = join(browserDir, 'federation.manifest.json');
 
 // Vite serves the manifest and remote entries from memory under `ng serve`, so
