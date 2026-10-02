@@ -31,7 +31,7 @@ export function requiresLinking(filePath: string, source: string): boolean {
 export function createAngularLinkerPlugin(
   jsTransformer: JavaScriptTransformer,
   advancedOptimizations: boolean,
-  cache?: { store: Map<string, string>; keyBase: string },
+  cache?: { store: Map<string, Uint8Array>; keyBase: string },
 ): esbuild.Plugin {
   return {
     name: "angular-linker",
@@ -59,23 +59,22 @@ export function createAngularLinkerPlugin(
         const result = await jsTransformer.transformData(args.path, contents, {
           skipLinker: !needsLinking,
         });
-        const transformed = Buffer.from(result).toString("utf-8");
-        if (cacheKey) cache?.store.set(cacheKey, transformed);
+        if (cacheKey) cache?.store.set(cacheKey, result);
 
-        return { contents: transformed, loader: "js" };
+        return { contents: result, loader: "js" };
       });
     },
   };
 }
 
-const jsTransformerCacheStores = new Map<string, Map<string, string>>();
+const jsTransformerCacheStores = new Map<string, Map<string, Uint8Array>>();
 
 function getOrCreateJsTransformerCacheStore(
   cachePath: string,
-): Map<string, string> {
+): Map<string, Uint8Array> {
   let store = jsTransformerCacheStores.get(cachePath);
   if (!store) {
-    store = new Map<string, string>();
+    store = new Map<string, Uint8Array>();
     jsTransformerCacheStores.set(cachePath, store);
   }
   return store;

@@ -82,7 +82,7 @@ export const kinds = [typeof Delta, typeof OpIterator];
   async function bundle(
     jsTransformer: JavaScriptTransformer,
     advancedOptimizations: boolean,
-    cache?: { store: Map<string, string>; keyBase: string }
+    cache?: { store: Map<string, Uint8Array>; keyBase: string }
   ) {
     const outfile = path.join(fixtureDir, 'out.mjs');
 
@@ -147,7 +147,7 @@ export const kinds = [typeof Delta, typeof OpIterator];
 
     it('reuses the transform of an unchanged file across builds', async () => {
       const jsTransformer = createLinkingStub();
-      const cache = { store: new Map<string, string>(), keyBase: '{"sourcemap":false}' };
+      const cache = { store: new Map<string, Uint8Array>(), keyBase: '{"sourcemap":false}' };
 
       await bundle(jsTransformer, false, cache);
       const outfile = await bundle(jsTransformer, false, cache);
@@ -158,7 +158,7 @@ export const kinds = [typeof Delta, typeof OpIterator];
 
     it('transforms again when the file contents change', async () => {
       const jsTransformer = createLinkingStub();
-      const cache = { store: new Map<string, string>(), keyBase: '{"sourcemap":false}' };
+      const cache = { store: new Map<string, Uint8Array>(), keyBase: '{"sourcemap":false}' };
 
       await bundle(jsTransformer, false, cache);
       fs.appendFileSync(path.join(fixtureDir, 'entry.js'), 'export const other = 1;\n');
@@ -169,7 +169,7 @@ export const kinds = [typeof Delta, typeof OpIterator];
 
     it('transforms again when the output options change', async () => {
       const jsTransformer = createLinkingStub();
-      const store = new Map<string, string>();
+      const store = new Map<string, Uint8Array>();
 
       await bundle(jsTransformer, false, { store, keyBase: '{"sourcemap":false}' });
       await bundle(jsTransformer, false, { store, keyBase: '{"sourcemap":true}' });
