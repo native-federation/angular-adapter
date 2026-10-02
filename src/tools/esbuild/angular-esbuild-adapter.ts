@@ -15,6 +15,8 @@ import type { BuilderContext } from '@angular-devkit/architect';
 import type { ApplicationBuilderOptions } from '@angular/build';
 import { createAngularEsbuildContext } from './angular-bundler.js';
 import { createNodeModulesEsbuildContext } from './node-modules-bundler.js';
+import { createExternalsCacheKey } from './externals-cache-key.js';
+import { resolveSharedBundleSettings } from './shared-bundle-settings.js';
 import { normalizeContextOptions } from '../../utils/normalize-context-options.js';
 import type { NfInternalOptions } from '../../builders/build/schema.js';
 
@@ -64,10 +66,13 @@ export interface AngularBuildAdapter extends NFBuildAdapter {
   disposeFederationContexts(): Promise<void>;
 }
 
-export function createAngularBuildAdapter(
+export async function createAngularBuildAdapter(
   ngBuilderOptions: ApplicationBuilderOptions & NfInternalOptions,
   context: BuilderContext
-): AngularBuildAdapter {
+): Promise<AngularBuildAdapter> {
+  // Core reads externalsCacheKey before setup(), so the shared settings are resolved up front.
+  const sharedBundleSettings = await resolveSharedBundleSettings(ngBuilderOptions, context);
+  const externalsCacheKey = createExternalsCacheKey(sharedBundleSettings);
   const bundleContextCache = new Map<string, EsbuildContextResult>();
 
   const disposeWhere = async (matches: (entry: EsbuildContextResult) => boolean) => {
@@ -116,7 +121,7 @@ export function createAngularBuildAdapter(
 
     const { ctx, pluginDisposed } = normalizedOptions.isMappingOrExposed
       ? await createAngularEsbuildContext(normalizedOptions, name)
-      : await createNodeModulesEsbuildContext(normalizedOptions);
+      : await createNodeModulesEsbuildContext(normalizedOptions, sharedBundleSettings);
 
     bundleContextCache.set(name, {
       ctx,
@@ -164,5 +169,5 @@ export function createAngularBuildAdapter(
     }
   };
 
-  return { setup, build, dispose, disposeFederationContexts };
+  return { externalsCacheKey, setup, build, dispose, disposeFederationContexts };
 }

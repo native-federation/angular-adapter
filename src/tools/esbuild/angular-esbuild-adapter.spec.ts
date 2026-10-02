@@ -6,12 +6,19 @@ import { createAngularBuildAdapter } from './angular-esbuild-adapter.js';
 import { createAngularEsbuildContext } from './angular-bundler.js';
 import { createNodeModulesEsbuildContext } from './node-modules-bundler.js';
 import { normalizeContextOptions } from '../../utils/normalize-context-options.js';
+import { createExternalsCacheKey } from './externals-cache-key.js';
+import { resolveSharedBundleSettings } from './shared-bundle-settings.js';
 
 vi.mock('fs');
 vi.mock('esbuild', () => ({ stop: vi.fn().mockResolvedValue(undefined) }));
 vi.mock('./angular-bundler.js', () => ({ createAngularEsbuildContext: vi.fn() }));
 vi.mock('./node-modules-bundler.js', () => ({ createNodeModulesEsbuildContext: vi.fn() }));
 vi.mock('../../utils/normalize-context-options.js', () => ({ normalizeContextOptions: vi.fn() }));
+vi.mock('./externals-cache-key.js', () => ({ createExternalsCacheKey: vi.fn() }));
+vi.mock('./shared-bundle-settings.js', () => ({ resolveSharedBundleSettings: vi.fn() }));
+
+const sharedBundleSettings = { target: ['chrome120'], sourcemap: false as const, plugins: [] };
+const externalsCacheKey = { adapter: 'adapter@1.0.0', options: { target: 'chrome120' } };
 
 const ngBuilderOptions = {} as never;
 const context = {} as never;
@@ -45,6 +52,8 @@ beforeEach(() => {
   // setNgServerMode: pretend the file to patch doesn't exist so it is a no-op
   vi.mocked(fs.existsSync).mockReturnValue(false);
   vi.mocked(normalizeContextOptions).mockReturnValue(normalizedWith() as never);
+  vi.mocked(resolveSharedBundleSettings).mockResolvedValue(sharedBundleSettings);
+  vi.mocked(createExternalsCacheKey).mockReturnValue(externalsCacheKey);
   vi.mocked(createAngularEsbuildContext).mockResolvedValue({
     ctx: makeCtx() as never,
     pluginDisposed: Promise.resolve(),
@@ -56,22 +65,45 @@ beforeEach(() => {
 });
 
 describe('createAngularBuildAdapter', () => {
+  // #148: core reads the key before setup(), so it must exist as soon as the adapter does.
+  it('exposes the externals cache key built from the resolved shared settings', async () => {
+    const adapter = await createAngularBuildAdapter(ngBuilderOptions, context);
+
+    expect(resolveSharedBundleSettings).toHaveBeenCalledWith(ngBuilderOptions, context);
+    expect(createExternalsCacheKey).toHaveBeenCalledWith(sharedBundleSettings);
+    expect(adapter.externalsCacheKey).toBe(externalsCacheKey);
+  });
+
+  it('bundles shared externals with the same settings the cache key was built from', async () => {
+    vi.mocked(normalizeContextOptions).mockReturnValue(
+      normalizedWith({ isMappingOrExposed: false }) as never
+    );
+    const adapter = await createAngularBuildAdapter(ngBuilderOptions, context);
+
+    await adapter.setup('browser-shared', {} as never);
+
+    expect(createNodeModulesEsbuildContext).toHaveBeenCalledWith(
+      expect.anything(),
+      sharedBundleSettings
+    );
+  });
+
   it('throws when build is called before setup', async () => {
-    const adapter = createAngularBuildAdapter(ngBuilderOptions, context);
+    const adapter = await createAngularBuildAdapter(ngBuilderOptions, context);
     await expect(adapter.build('remote')).rejects.toThrow(
       'No context found for build "remote". Call setup() first.'
     );
   });
 
   it('throws when disposing a name that was never set up', async () => {
-    const adapter = createAngularBuildAdapter(ngBuilderOptions, context);
+    const adapter = await createAngularBuildAdapter(ngBuilderOptions, context);
     await expect(adapter.dispose('ghost')).rejects.toThrow(
       "Could not dispose of non-existing build 'ghost'"
     );
   });
 
   it('uses the Angular esbuild context for mapping/exposed builds and caches it', async () => {
-    const adapter = createAngularBuildAdapter(ngBuilderOptions, context);
+    const adapter = await createAngularBuildAdapter(ngBuilderOptions, context);
 
     await adapter.setup('remote', {} as never);
     // second setup with the same name is a no-op
@@ -85,7 +117,7 @@ describe('createAngularBuildAdapter', () => {
     vi.mocked(normalizeContextOptions).mockReturnValue(
       normalizedWith({ isMappingOrExposed: false }) as never
     );
-    const adapter = createAngularBuildAdapter(ngBuilderOptions, context);
+    const adapter = await createAngularBuildAdapter(ngBuilderOptions, context);
 
     await adapter.setup('deps', {} as never);
 
@@ -94,7 +126,7 @@ describe('createAngularBuildAdapter', () => {
   });
 
   it('rebuilds, writes output files and returns their paths', async () => {
-    const adapter = createAngularBuildAdapter(ngBuilderOptions, context);
+    const adapter = await createAngularBuildAdapter(ngBuilderOptions, context);
     await adapter.setup('remote', {} as never);
 
     const result = await adapter.build('remote');
@@ -106,7 +138,7 @@ describe('createAngularBuildAdapter', () => {
   it('invalidates the bundler cache for modified files before rebuilding', async () => {
     const normalized = normalizedWith();
     vi.mocked(normalizeContextOptions).mockReturnValue(normalized as never);
-    const adapter = createAngularBuildAdapter(ngBuilderOptions, context);
+    const adapter = await createAngularBuildAdapter(ngBuilderOptions, context);
     await adapter.setup('remote', {} as never);
 
     await adapter.build('remote', { modifiedFiles: ['a.ts'] });
@@ -115,7 +147,7 @@ describe('createAngularBuildAdapter', () => {
   });
 
   it('throws AbortedError when the signal is already aborted', async () => {
-    const adapter = createAngularBuildAdapter(ngBuilderOptions, context);
+    const adapter = await createAngularBuildAdapter(ngBuilderOptions, context);
     await adapter.setup('remote', {} as never);
 
     await expect(
@@ -129,7 +161,7 @@ describe('createAngularBuildAdapter', () => {
       ctx: ctx as never,
       pluginDisposed: Promise.resolve(),
     });
-    const adapter = createAngularBuildAdapter(ngBuilderOptions, context);
+    const adapter = await createAngularBuildAdapter(ngBuilderOptions, context);
     await adapter.setup('remote', {} as never);
 
     await adapter.dispose();
@@ -154,7 +186,7 @@ describe('createAngularBuildAdapter', () => {
       pluginDisposed: Promise.resolve(),
     });
 
-    const adapter = createAngularBuildAdapter(ngBuilderOptions, context);
+    const adapter = await createAngularBuildAdapter(ngBuilderOptions, context);
     await adapter.setup('mapping-bundle', {} as never);
     await adapter.setup('mapping-or-exposed', {} as never);
     vi.mocked(normalizeContextOptions).mockReturnValue(
@@ -179,7 +211,7 @@ describe('createAngularBuildAdapter', () => {
       ctx: makeCtx() as never,
       pluginDisposed,
     });
-    const adapter = createAngularBuildAdapter(ngBuilderOptions, context);
+    const adapter = await createAngularBuildAdapter(ngBuilderOptions, context);
     await adapter.setup('mapping-bundle', {} as never);
 
     let done = false;
@@ -193,7 +225,7 @@ describe('createAngularBuildAdapter', () => {
   });
 
   it('is a no-op when there are no mapping or exposed contexts', async () => {
-    const adapter = createAngularBuildAdapter(ngBuilderOptions, context);
+    const adapter = await createAngularBuildAdapter(ngBuilderOptions, context);
 
     await expect(adapter.disposeFederationContexts()).resolves.toBeUndefined();
   });

@@ -201,7 +201,7 @@ export async function* runBuilder(
       ? nfBuilderOptions.entryPoints
       : [path.join(path.dirname(federationTsConfig), "src/main.ts")];
 
-  const adapter = createAngularBuildAdapter(
+  const adapter = await createAngularBuildAdapter(
     {
       ...ngBuilderOptions,
       plugins: nfBuilderOptions.plugins,
