@@ -1,3 +1,6 @@
+// Portions adapted from angular/angular-cli (packages/angular/build/src/utils/), which @angular/build's
+// exports map doesn't expose (#153). Copyright Google LLC. MIT License: https://angular.dev/license
+
 import * as fs from 'fs';
 import * as path from 'path';
 import { glob } from 'tinyglobby';
@@ -15,15 +18,13 @@ export type NormalizedAssetEntry = {
 
 type AssetPattern = NonNullable<ApplicationBuilderOptions['assets']>[number];
 
-// Mirrors @angular/build's internal utils/resolve-assets.ts, which its exports map doesn't expose.
-const DEFAULT_ASSET_IGNORE = ['.gitkeep', '**/.DS_Store', '**/Thumbs.db'];
-
+// upstream: angular/angular-cli packages/angular/build/src/utils/path.ts @ 6c6bb21485
 function isSubDirectory(parent: string, child: string): boolean {
   const relative = path.relative(path.resolve(parent), path.resolve(parent, child));
   return relative !== '..' && !relative.startsWith(`..${path.sep}`) && !path.isAbsolute(relative);
 }
 
-// Mirrors @angular/build's internal utils/normalize-asset-patterns.ts.
+// upstream: angular/angular-cli packages/angular/build/src/utils/normalize-asset-patterns.ts @ 163a03264b
 export function normalizeRemoteAssetEntries(
   assets: ApplicationBuilderOptions['assets'] | undefined,
   workspaceRoot: string,
@@ -80,6 +81,9 @@ function normalizeAssetPattern(
     output: path.relative(root, path.resolve(workspaceRoot, input)),
   };
 }
+
+// upstream: angular/angular-cli packages/angular/build/src/utils/resolve-assets.ts @ a0a6b422cd
+const DEFAULT_ASSET_IGNORE = ['.gitkeep', '**/.DS_Store', '**/Thumbs.db'];
 
 async function resolveAssets(
   entries: NormalizedAssetEntry[],
