@@ -15,7 +15,8 @@ import type { BuilderContext } from '@angular-devkit/architect';
 import type { ApplicationBuilderOptions } from '@angular/build';
 import { createAngularEsbuildContext } from './angular-bundler.js';
 import { createNodeModulesEsbuildContext } from './node-modules-bundler.js';
-import { createExternalsCacheKey, resolveSharedBundleSettings } from './externals-cache-key.js';
+import { createExternalsCacheKey } from './externals-cache-key.js';
+import { resolveSharedBundleSettings } from './shared-bundle-settings.js';
 import { normalizeContextOptions } from '../../utils/normalize-context-options.js';
 import type { NfInternalOptions } from '../../builders/build/schema.js';
 

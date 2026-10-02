@@ -6,19 +6,18 @@ import { createAngularBuildAdapter } from './angular-esbuild-adapter.js';
 import { createAngularEsbuildContext } from './angular-bundler.js';
 import { createNodeModulesEsbuildContext } from './node-modules-bundler.js';
 import { normalizeContextOptions } from '../../utils/normalize-context-options.js';
-import { createExternalsCacheKey, resolveSharedBundleSettings } from './externals-cache-key.js';
+import { createExternalsCacheKey } from './externals-cache-key.js';
+import { resolveSharedBundleSettings } from './shared-bundle-settings.js';
 
 vi.mock('fs');
 vi.mock('esbuild', () => ({ stop: vi.fn().mockResolvedValue(undefined) }));
 vi.mock('./angular-bundler.js', () => ({ createAngularEsbuildContext: vi.fn() }));
 vi.mock('./node-modules-bundler.js', () => ({ createNodeModulesEsbuildContext: vi.fn() }));
 vi.mock('../../utils/normalize-context-options.js', () => ({ normalizeContextOptions: vi.fn() }));
-vi.mock('./externals-cache-key.js', () => ({
-  resolveSharedBundleSettings: vi.fn(),
-  createExternalsCacheKey: vi.fn(),
-}));
+vi.mock('./externals-cache-key.js', () => ({ createExternalsCacheKey: vi.fn() }));
+vi.mock('./shared-bundle-settings.js', () => ({ resolveSharedBundleSettings: vi.fn() }));
 
-const sharedBundleSettings = { target: ['chrome120'], sourcemap: false };
+const sharedBundleSettings = { target: ['chrome120'], sourcemap: false as const, plugins: [] };
 const externalsCacheKey = { adapter: 'adapter@1.0.0', options: { target: 'chrome120' } };
 
 const ngBuilderOptions = {} as never;

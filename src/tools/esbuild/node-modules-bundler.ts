@@ -6,7 +6,7 @@ import { createRequire } from "node:module";
 import { JavaScriptTransformer, Cache } from "@angular/build/private";
 
 import type { NormalizedContextOptions } from "../../utils/normalize-context-options.js";
-import type { SharedBundleSettings } from "./externals-cache-key.js";
+import type { SharedBundleSettings } from "./shared-bundle-settings.js";
 
 const LINKER_DECLARATION_PREFIX = "ɵɵngDeclare";
 
@@ -81,15 +81,15 @@ function getOrCreateJsTransformerCacheStore(
   return store;
 }
 
+// No builderOptions: they reach the shared bundle only through the keyed `settings` (#148).
 export async function createNodeModulesEsbuildContext(
-  options: NormalizedContextOptions,
+  options: Omit<NormalizedContextOptions, "builderOptions">,
   settings: SharedBundleSettings,
 ): Promise<{
   ctx: esbuild.BuildContext;
   pluginDisposed: Promise<void>;
 }> {
   const {
-    builderOptions,
     context,
     entryPoints,
     external,
@@ -105,10 +105,6 @@ export async function createNodeModulesEsbuildContext(
 
   const commonjsPluginModule = await import("@chialab/esbuild-plugin-commonjs");
   const commonjsPlugin = commonjsPluginModule.default;
-
-  const customPlugins = Array.isArray(builderOptions.plugins)
-    ? builderOptions.plugins
-    : [];
 
   // Create JavaScriptTransformer for handling Angular partial compilation linking
   const advancedOptimizations = !dev;
@@ -154,7 +150,7 @@ export async function createNodeModulesEsbuildContext(
     plugins: [
       createAngularLinkerPlugin(jsTransformer, advancedOptimizations),
       commonjsPlugin(),
-      ...customPlugins,
+      ...settings.plugins,
     ],
     define: {
       ...(dev ? {} : { ngDevMode: "false" }),
