@@ -41,7 +41,7 @@ docs: update readme
 ## Angular Releases
 
 Each adapter release line supports exactly one Angular minor (`@angular/build` `~X.Y.0`). See
-[ADR 0001](docs/adr/0001-angular-build-internals.md) for why.
+the [depending-on-angular-internals](.claude/skills/depending-on-angular-internals/SKILL.md) skill for why.
 
 When Angular releases a new minor:
 

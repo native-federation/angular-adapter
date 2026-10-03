@@ -11,7 +11,7 @@ import type { SharedBundleSettings } from "./shared-bundle-settings.js";
 const LINKER_DECLARATION_PREFIX = "ɵɵngDeclare";
 
 // Shared bundles run on both server and browser, so `ngServerMode` can't be a `define` here.
-// Raw text: esbuild doesn't lower banners to the target. See docs/adr/0001 rule 5 (#157).
+// Raw text: esbuild doesn't lower banners to the target. See the depending-on-angular-internals skill, rule 5 (#157).
 export const NG_SERVER_MODE_BANNER =
   "if (typeof globalThis.ngServerMode === 'undefined') globalThis.ngServerMode = typeof window === 'undefined';";
 
