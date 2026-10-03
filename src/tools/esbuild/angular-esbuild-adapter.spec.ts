@@ -49,8 +49,6 @@ function normalizedWith(overrides: Record<string, unknown> = {}) {
 
 beforeEach(() => {
   vi.clearAllMocks();
-  // setNgServerMode: pretend the file to patch doesn't exist so it is a no-op
-  vi.mocked(fs.existsSync).mockReturnValue(false);
   vi.mocked(normalizeContextOptions).mockReturnValue(normalizedWith() as never);
   vi.mocked(resolveSharedBundleSettings).mockResolvedValue(sharedBundleSettings);
   vi.mocked(createExternalsCacheKey).mockReturnValue(externalsCacheKey);
@@ -123,6 +121,19 @@ describe('createAngularBuildAdapter', () => {
 
     expect(createNodeModulesEsbuildContext).toHaveBeenCalledTimes(1);
     expect(createAngularEsbuildContext).not.toHaveBeenCalled();
+  });
+
+  // #157: setup() used to patch node_modules/@angular/core in place (and the pnpm store with it).
+  it('does not touch the file system during setup', async () => {
+    // Every path "exists", so the old patch would have read and rewritten core.mjs.
+    vi.mocked(fs.existsSync).mockReturnValue(true);
+    vi.mocked(fs.readFileSync).mockReturnValue('' as never);
+    const adapter = await createAngularBuildAdapter(ngBuilderOptions, context);
+
+    await adapter.setup('remote', {} as never);
+
+    expect(fs.writeFileSync).not.toHaveBeenCalled();
+    expect(fs.readFileSync).not.toHaveBeenCalled();
   });
 
   it('rebuilds, writes output files and returns their paths', async () => {
