@@ -40,6 +40,7 @@ export function createExternalsCacheKey(
       target: [...settings.target].sort().join(','),
       sourceMap: settings.sourcemap,
       loader: JSON.stringify(loader),
+      script: JSON.stringify(settings.script),
     },
   };
 }

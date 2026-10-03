@@ -38,6 +38,7 @@ export async function resolveNgBuilderOptions(
     sourceMap: remote.sourceMap,
     optimization: remote.optimization,
     preserveSymlinks: remote.preserveSymlinks,
+    polyfills: remote.polyfills,
   } as ApplicationBuilderOptions;
 
   return { ngBuilderOptions, projectRoot, projectSourceRoot };

@@ -7,6 +7,7 @@ import { JavaScriptTransformer } from "@angular/build/private";
 
 import type { NormalizedContextOptions } from "../../utils/normalize-context-options.js";
 import type { SharedBundleSettings } from "./shared-bundle-settings.js";
+import { getScriptBuildOptions } from "./script-options.js";
 
 const LINKER_DECLARATION_PREFIX = "ɵɵngDeclare";
 
@@ -99,7 +100,6 @@ export async function createNodeModulesEsbuildContext(
     external,
     outdir,
     cache,
-    dev,
     hash,
     chunks,
     platform,
@@ -110,8 +110,12 @@ export async function createNodeModulesEsbuildContext(
   const commonjsPluginModule = await import("@chialab/esbuild-plugin-commonjs");
   const commonjsPlugin = commonjsPluginModule.default;
 
-  // Create JavaScriptTransformer for handling Angular partial compilation linking
-  const advancedOptimizations = !dev;
+  const { define: scriptDefine, ...scriptOptions } = getScriptBuildOptions(
+    settings.script,
+    platform ?? "browser",
+  );
+  // Angular ties this to AOT too, but our bundles are always AOT.
+  const advancedOptimizations = settings.script.optimize;
   // Keys the transform cache, so it must hold every option that changes transformer output.
   // upstream: angular/angular-cli packages/angular/build/src/tools/javascript-transformer/javascript-transformer.ts @ 11dbe297f8
   const outputOptions = {
@@ -142,11 +146,7 @@ export async function createNodeModulesEsbuildContext(
     logLevel: "warning",
     bundle: true,
     sourcemap: settings.sourcemap,
-    minify: !dev,
-    supported: {
-      "async-await": false,
-      "object-rest-spread": false,
-    },
+    ...scriptOptions,
     splitting: chunks,
     platform: platform ?? "browser",
     format: "esm",
@@ -159,7 +159,7 @@ export async function createNodeModulesEsbuildContext(
       ...settings.plugins,
     ],
     define: {
-      ...(dev ? {} : { ngDevMode: "false" }),
+      ...scriptDefine,
       ngJitMode: "false",
     },
     ...(settings.loader ? { loader: settings.loader } : {}),

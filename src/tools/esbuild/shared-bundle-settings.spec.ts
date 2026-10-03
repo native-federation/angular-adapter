@@ -33,6 +33,7 @@ describe('resolveSharedBundleSettings', () => {
 
   afterEach(() => {
     fs.rmSync(workspaceRoot, { recursive: true, force: true });
+    vi.unstubAllEnvs();
   });
 
   it("reads the target from the project's .browserslistrc", async () => {
@@ -104,6 +105,51 @@ describe('resolveSharedBundleSettings', () => {
     expect(await keyFor({ scripts: true, hidden: true })).not.toEqual(
       await keyFor({ scripts: true })
     );
+  });
+
+  // #163: shared bundles follow optimization.scripts like Angular's app build, not NF's `dev`.
+  it('reads the script settings from the builder options', async () => {
+    writeBrowserslist('Chrome 120\n');
+
+    const resolved = await resolveSharedBundleSettings(
+      { optimization: false, polyfills: ['zone.js'], conditions: ['custom'] } as never,
+      contextFor()
+    );
+
+    expect(resolved.script).toEqual({
+      optimize: false,
+      allowMangle: true,
+      zoneless: false,
+      conditions: ['es2015', 'es2020', 'custom'],
+      sourcesContent: false,
+    });
+  });
+
+  // The repro from #163: only flipping `optimization` reused the cached prod-compiled core.
+  it('changes the key when script optimization changes', async () => {
+    writeBrowserslist('Chrome 120\n');
+    const keyFor = async (optimization: unknown) =>
+      createExternalsCacheKey(
+        await resolveSharedBundleSettings({ optimization } as never, contextFor()),
+        versions
+      );
+
+    expect(await keyFor(false)).not.toEqual(await keyFor(true));
+    expect(await keyFor({ scripts: true, styles: false })).toEqual(await keyFor(true));
+  });
+
+  it('changes the key when NG_BUILD_MANGLE changes', async () => {
+    writeBrowserslist('Chrome 120\n');
+    const key = async () =>
+      createExternalsCacheKey(
+        await resolveSharedBundleSettings({} as never, contextFor()),
+        versions
+      );
+
+    const mangled = await key();
+    vi.stubEnv('NG_BUILD_MANGLE', '0');
+
+    expect(await key()).not.toEqual(mangled);
   });
 
   it('passes the custom plugins through', async () => {

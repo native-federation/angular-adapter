@@ -22,6 +22,7 @@ export interface NfRemoteBuilderSchema extends JsonObject {
   sourceMap?: ApplicationBuilderOptions['sourceMap'];
   optimization?: ApplicationBuilderOptions['optimization'];
   preserveSymlinks?: ApplicationBuilderOptions['preserveSymlinks'];
+  polyfills?: ApplicationBuilderOptions['polyfills'];
 }
 
 export type NfRemoteInternalOptions = { plugins: Plugin[] };

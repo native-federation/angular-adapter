@@ -1,13 +1,10 @@
+// Adapted from angular/angular-cli (packages/angular/build/src/utils/), which @angular/build's
+// exports map doesn't expose (#153). Copyright Google LLC. MIT License: https://angular.dev/license
+
 import type { ApplicationBuilderOptions } from '@angular/build';
 
-/**
- * Vendored from `@angular/build` (`normalize-optimization.ts`, `normalize-source-maps.ts`).
- * These helpers aren't on the public or `/private` export surface.
- *
- * Types are derived from the public `ApplicationBuilderOptions`. Emitted declarations don't
- * reference Angular's internal schema module.
- */
-
+// Types come from the public ApplicationBuilderOptions, so the emitted declarations don't
+// reference Angular's internal schema module.
 type Optimization = NonNullable<ApplicationBuilderOptions['optimization']>;
 type OptimizationObject = Extract<Optimization, object>;
 type Styles = Extract<NonNullable<OptimizationObject['styles']>, object>;
@@ -21,6 +18,7 @@ type NormalizedOptimization = Required<Omit<OptimizationObject, 'fonts' | 'style
 type SourceMap = NonNullable<ApplicationBuilderOptions['sourceMap']>;
 type NormalizedSourceMap = Extract<SourceMap, object>;
 
+// upstream: angular/angular-cli packages/angular/build/src/utils/normalize-optimization.ts @ 11dbe297f8
 export function normalizeOptimization(optimization: Optimization = true): NormalizedOptimization {
   if (typeof optimization === 'object') {
     const styleOptimization = !!optimization.styles;
@@ -57,6 +55,7 @@ export function normalizeOptimization(optimization: Optimization = true): Normal
   };
 }
 
+// upstream: angular/angular-cli packages/angular/build/src/utils/normalize-source-maps.ts @ 11dbe297f8
 export function normalizeSourceMaps(sourceMap: SourceMap): NormalizedSourceMap {
   const scripts = typeof sourceMap === 'object' ? sourceMap.scripts : sourceMap;
   const styles = typeof sourceMap === 'object' ? sourceMap.styles : sourceMap;
