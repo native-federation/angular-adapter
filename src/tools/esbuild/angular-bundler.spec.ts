@@ -201,13 +201,18 @@ describe('createAngularEsbuildContext', () => {
       'angular-compiler',
       'nf-shared-mappings',
       'commonjs',
+      'angular-sourcemap-ignorelist',
     ]);
   });
 
   it('leaves the plugin out without shared mappings', async () => {
     await createAngularEsbuildContext(makeOptions(), 'mapping-or-exposed');
 
-    expect(lastBuildOptions().plugins!.map(p => p.name)).toEqual(['angular-compiler', 'commonjs']);
+    expect(lastBuildOptions().plugins!.map(p => p.name)).toEqual([
+      'angular-compiler',
+      'commonjs',
+      'angular-sourcemap-ignorelist',
+    ]);
   });
 
   // #163: exposed bundles follow optimization.scripts like Angular's app build, not NF's `dev`.

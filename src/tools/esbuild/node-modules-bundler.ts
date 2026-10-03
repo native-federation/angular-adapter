@@ -8,6 +8,7 @@ import { JavaScriptTransformer } from "@angular/build/private";
 import type { NormalizedContextOptions } from "../../utils/normalize-context-options.js";
 import type { SharedBundleSettings } from "./shared-bundle-settings.js";
 import { getScriptBuildOptions } from "./script-options.js";
+import { createSourcemapIgnorelistPlugin } from "./sourcemap-ignorelist-plugin.js";
 
 const LINKER_DECLARATION_PREFIX = "ɵɵngDeclare";
 
@@ -156,6 +157,7 @@ export async function createNodeModulesEsbuildContext(
     plugins: [
       createAngularLinkerPlugin(jsTransformer, advancedOptimizations, jsTransformerCache),
       commonjsPlugin(),
+      createSourcemapIgnorelistPlugin(),
       ...settings.plugins,
     ],
     define: {

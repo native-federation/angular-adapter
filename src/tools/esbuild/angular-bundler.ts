@@ -19,6 +19,7 @@ import type { NormalizedContextOptions } from '../../utils/normalize-context-opt
 import { writeContextTsConfig } from './write-context-tsconfig.js';
 import { createSharedMappingsPlugin } from './shared-mappings-plugin.js';
 import { getScriptBuildOptions, resolveScriptSettings } from './script-options.js';
+import { createSourcemapIgnorelistPlugin } from './sourcemap-ignorelist-plugin.js';
 
 export async function createAngularEsbuildContext(
   options: NormalizedContextOptions,
@@ -181,6 +182,7 @@ export async function createAngularEsbuildContext(
       // Angular's synthesized deep imports would otherwise inline a second copy of a mapped lib.
       ...(Object.keys(mappedPaths).length > 0 ? [createSharedMappingsPlugin(mappedPaths)] : []),
       commonjsPlugin(),
+      createSourcemapIgnorelistPlugin(),
       ...customPlugins,
     ],
     define: {
