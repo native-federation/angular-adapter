@@ -1,19 +1,21 @@
 import * as esbuild from "esbuild";
 import * as path from "path";
 import * as fs from "fs";
+import { createHash } from "node:crypto";
 
-import {
-  transformSupportedBrowsersToTargets,
-  getSupportedBrowsers,
-  JavaScriptTransformer,
-  Cache,
-} from "@angular/build/private";
-
-import { normalizeSourceMaps } from "@angular-devkit/build-angular/src/utils/index.js";
+import { JavaScriptTransformer } from "@angular/build/private";
 
 import type { NormalizedContextOptions } from "./normalize-context-options.js";
+import type { SharedBundleSettings } from "./shared-bundle-settings.js";
+import { getScriptBuildOptions } from "./script-options.js";
+import { createSourcemapIgnorelistPlugin } from "./sourcemap-ignorelist-plugin.js";
 
 const LINKER_DECLARATION_PREFIX = "ɵɵngDeclare";
+
+// Shared bundles run on both server and browser, so `ngServerMode` can't be a `define` here.
+// Raw text: esbuild doesn't lower banners to the target. (#157)
+export const NG_SERVER_MODE_BANNER =
+  "if (typeof globalThis.ngServerMode === 'undefined') globalThis.ngServerMode = typeof window === 'undefined';";
 
 /**
  * Excludes @angular/core and @angular/compiler which define the declarations
@@ -36,6 +38,7 @@ export function requiresLinking(filePath: string, source: string): boolean {
 export function createAngularLinkerPlugin(
   jsTransformer: JavaScriptTransformer,
   advancedOptimizations: boolean,
+  cache?: { store: Map<string, Uint8Array>; keyBase: string },
 ): esbuild.Plugin {
   return {
     name: "angular-linker",
@@ -49,17 +52,25 @@ export function createAngularLinkerPlugin(
           return { contents, loader: "js" };
         }
 
+        const cacheKey = cache
+          ? createHash("sha256")
+              .update(`${cache.keyBase}--${needsLinking}--${args.path}--`)
+              .update(contents)
+              .digest("hex")
+          : undefined;
+        const cached = cacheKey && cache?.store.get(cacheKey);
+        if (cached !== undefined) {
+          return { contents: cached, loader: "js" };
+        }
+
         const result = await jsTransformer.transformData(
           args.path,
           contents,
           !needsLinking,
-          undefined,
         );
+        if (cacheKey) cache?.store.set(cacheKey, result);
 
-        return {
-          contents: Buffer.from(result).toString("utf-8"),
-          loader: "js",
-        };
+        return { contents: result, loader: "js" };
       });
     },
   };
@@ -78,20 +89,20 @@ function getOrCreateJsTransformerCacheStore(
   return store;
 }
 
+// No builderOptions: they reach the shared bundle only through the keyed `settings` (#148).
 export async function createNodeModulesEsbuildContext(
-  options: NormalizedContextOptions,
+  options: Omit<NormalizedContextOptions, "builderOptions">,
+  settings: SharedBundleSettings,
 ): Promise<{
   ctx: esbuild.BuildContext;
   pluginDisposed: Promise<void>;
 }> {
   const {
-    builderOptions,
     context,
     entryPoints,
     external,
     outdir,
     cache,
-    dev,
     hash,
     chunks,
     platform,
@@ -99,48 +110,29 @@ export async function createNodeModulesEsbuildContext(
 
   const workspaceRoot = context.workspaceRoot;
 
-  const projectMetadata = await context.getProjectMetadata(
-    context.target!.project,
-  );
-  const projectRoot = path.join(
-    workspaceRoot,
-    (projectMetadata["root"] as string | undefined) ?? "",
-  );
-
-  const browsers = getSupportedBrowsers(
-    projectRoot,
-    context.logger as unknown as Console,
-  );
-  const target = transformSupportedBrowsersToTargets(browsers);
-
-  const sourcemapOptions = normalizeSourceMaps(builderOptions.sourceMap!);
-
   const commonjsPluginModule = await import("@chialab/esbuild-plugin-commonjs");
   const commonjsPlugin = commonjsPluginModule.default;
 
-  const customPlugins = Array.isArray(options.builderOptions.plugins)
-    ? options.builderOptions.plugins
-    : [];
-
-  // Create JavaScriptTransformer for handling Angular partial compilation linking
-  const advancedOptimizations = !dev;
-  const jsTransformerCacheStore = getOrCreateJsTransformerCacheStore(
-    cache.cachePath,
+  const { define: scriptDefine, ...scriptOptions } = getScriptBuildOptions(
+    settings.script,
+    platform ?? "browser",
   );
-  const jsTransformerCache = new Cache<Uint8Array>(
-    jsTransformerCacheStore,
-    "jstransformer",
-  );
-  const jsTransformer = new JavaScriptTransformer(
-    {
-      sourcemap: !!sourcemapOptions.scripts,
-      thirdPartySourcemaps: false,
-      advancedOptimizations,
-      jit: false,
-    },
-    1, // maxThreads - keep low for node_modules bundling
-    jsTransformerCache,
-  );
+  // Angular ties this to AOT too, but our bundles are always AOT.
+  const advancedOptimizations = settings.script.optimize;
+  // Keys the transform cache, so it must hold every option that changes transformer output.
+  // upstream: angular/angular-cli packages/angular/build/src/tools/esbuild/javascript-transformer.ts @ 1a728258d6
+  const outputOptions = {
+    sourcemap: !!settings.sourcemap,
+    thirdPartySourcemaps: false,
+    advancedOptimizations,
+    jit: false,
+  };
+  // maxThreads: keep low for node_modules bundling
+  const jsTransformer = new JavaScriptTransformer(outputOptions, 1);
+  const jsTransformerCache = {
+    store: getOrCreateJsTransformerCacheStore(cache.cachePath),
+    keyBase: JSON.stringify(outputOptions),
+  };
 
   const config: esbuild.BuildOptions = {
     entryPoints: entryPoints.map((ep) => ({
@@ -148,32 +140,31 @@ export async function createNodeModulesEsbuildContext(
       out: path.parse(ep.outName).name,
     })),
     outdir,
+    absWorkingDir: workspaceRoot,
     entryNames: hash ? "[name]-[hash]" : "[name]",
     write: false,
     external,
     logLevel: "warning",
     bundle: true,
-    sourcemap: sourcemapOptions.scripts,
-    minify: !dev,
-    supported: {
-      "async-await": false,
-      "object-rest-spread": false,
-    },
+    sourcemap: settings.sourcemap,
+    ...scriptOptions,
     splitting: chunks,
     platform: platform ?? "browser",
     format: "esm",
-    target: target,
+    target: settings.target,
     logLimit: 1,
+    banner: { js: NG_SERVER_MODE_BANNER },
     plugins: [
-      createAngularLinkerPlugin(jsTransformer, advancedOptimizations),
+      createAngularLinkerPlugin(jsTransformer, advancedOptimizations, jsTransformerCache),
       commonjsPlugin(),
-      ...customPlugins,
+      createSourcemapIgnorelistPlugin(),
+      ...settings.plugins,
     ],
     define: {
-      ...(dev ? {} : { ngDevMode: "false" }),
+      ...scriptDefine,
       ngJitMode: "false",
     },
-    ...(builderOptions.loader ? { loader: builderOptions.loader } : {}),
+    ...(settings.loader ? { loader: settings.loader } : {}),
     resolveExtensions: [".mjs", ".js", ".cjs"],
   };
 

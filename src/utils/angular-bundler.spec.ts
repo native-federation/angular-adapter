@@ -117,6 +117,23 @@ describe('createAngularEsbuildContext', () => {
     expect(lastBuildOptions().tsconfig).toBe('/cache/tsconfig/abc.mapping-bundle.json');
   });
 
+  // Like @angular/build: hidden maps are written but not referenced from the bundle.
+  it.each([
+    [false, false],
+    [true, true],
+    [{ scripts: true, hidden: true }, 'external'],
+    [{ scripts: false, hidden: true }, false],
+  ])('maps sourceMap %j to esbuild sourcemap %j', async (sourceMap, expected) => {
+    await createAngularEsbuildContext(
+      makeOptions({
+        builderOptions: { optimization: false, sourceMap },
+      } as unknown as Partial<NormalizedContextOptions>),
+      'mapping-or-exposed'
+    );
+
+    expect(lastBuildOptions().sourcemap).toBe(expected);
+  });
+
   // Without `tsConfig` on the NF target the builder falls back to the Angular target's own
   // tsconfig, which is the user's file and must be left alone.
   it('leaves the tsconfig alone when the NF target declared none', async () => {
@@ -133,6 +150,12 @@ describe('createAngularEsbuildContext', () => {
     expect(lastBuildOptions().entryPoints).toEqual([
       { in: path.join(workspaceRoot, 'apps/example/src/main.ts'), out: 'main' },
     ]);
+  });
+
+  it('pins the esbuild working directory to the workspace root', async () => {
+    await createAngularEsbuildContext(makeOptions(), 'mapping-or-exposed');
+
+    expect(lastBuildOptions().absWorkingDir).toBe(workspaceRoot);
   });
 
   // Core hands shared mappings over absolute already.
@@ -152,7 +175,7 @@ describe('createAngularEsbuildContext', () => {
     await createAngularEsbuildContext(
       makeOptions({
         builderOptions: {
-          optimization: false,
+          optimization: true,
           sourceMap: false,
           define: { BUILD_ID: "'abc'", ngJitMode: 'true' },
         },
@@ -178,12 +201,71 @@ describe('createAngularEsbuildContext', () => {
       'angular-compiler',
       'nf-shared-mappings',
       'commonjs',
+      'angular-sourcemap-ignorelist',
     ]);
   });
 
   it('leaves the plugin out without shared mappings', async () => {
     await createAngularEsbuildContext(makeOptions(), 'mapping-or-exposed');
 
-    expect(lastBuildOptions().plugins!.map(p => p.name)).toEqual(['angular-compiler', 'commonjs']);
+    expect(lastBuildOptions().plugins!.map(p => p.name)).toEqual([
+      'angular-compiler',
+      'commonjs',
+      'angular-sourcemap-ignorelist',
+    ]);
+  });
+
+  // #163: exposed bundles follow optimization.scripts like Angular's app build, not NF's `dev`.
+  describe('script optimization', () => {
+    function pluginOptions(): CompilerPluginOptions {
+      return vi
+        .mocked(createAwaitableCompilerPlugin)
+        .mock.calls.at(-1)![0] as CompilerPluginOptions;
+    }
+
+    it('keeps dev mode unminified with dev: false and optimization off', async () => {
+      await createAngularEsbuildContext(
+        makeOptions({ dev: false } as Partial<NormalizedContextOptions>),
+        'mapping-or-exposed'
+      );
+
+      expect(lastBuildOptions().define).not.toHaveProperty('ngDevMode');
+      expect(lastBuildOptions()).toMatchObject({
+        minifyIdentifiers: false,
+        minifySyntax: false,
+        minifyWhitespace: false,
+      });
+      expect(pluginOptions().advancedOptimizations).toBe(false);
+    });
+
+    it('disables dev mode and minifies with dev: true and optimization on', async () => {
+      await createAngularEsbuildContext(
+        makeOptions({
+          dev: true,
+          builderOptions: { optimization: true, sourceMap: false },
+        } as unknown as Partial<NormalizedContextOptions>),
+        'mapping-or-exposed'
+      );
+
+      expect(lastBuildOptions().define).toMatchObject({ ngDevMode: 'false' });
+      expect(lastBuildOptions()).toMatchObject({
+        minifyIdentifiers: true,
+        minifySyntax: true,
+        minifyWhitespace: true,
+      });
+      expect(pluginOptions().advancedOptimizations).toBe(true);
+    });
+
+    it("resolves with Angular's conditions and the server main fields for node", async () => {
+      await createAngularEsbuildContext(
+        makeOptions({ platform: 'node' } as Partial<NormalizedContextOptions>),
+        'mapping-or-exposed'
+      );
+
+      expect(lastBuildOptions()).toMatchObject({
+        conditions: ['es2015', 'es2020', 'module', 'development'],
+        mainFields: ['es2020', 'es2015', 'module', 'main'],
+      });
+    });
   });
 });

@@ -12,15 +12,14 @@ import {
   type CompilerPluginOptions,
 } from '@angular/build/private';
 
-import {
-  normalizeOptimization,
-  normalizeSourceMaps,
-} from '@angular-devkit/build-angular/src/utils/index.js';
+import { normalizeOptimization, normalizeSourceMaps } from './normalize-build-options.js';
 
 import { createAwaitableCompilerPlugin } from './create-awaitable-compiler-plugin.js';
 import type { NormalizedContextOptions } from './normalize-context-options.js';
 import { writeContextTsConfig } from './write-context-tsconfig.js';
 import { createSharedMappingsPlugin } from './shared-mappings-plugin.js';
+import { getScriptBuildOptions, resolveScriptSettings } from './script-options.js';
+import { createSourcemapIgnorelistPlugin } from './sourcemap-ignorelist-plugin.js';
 
 export async function createAngularEsbuildContext(
   options: NormalizedContextOptions,
@@ -36,7 +35,6 @@ export async function createAngularEsbuildContext(
     external,
     outdir,
     cache,
-    dev,
     hash,
     chunks,
     platform,
@@ -62,6 +60,11 @@ export async function createAngularEsbuildContext(
 
   const optimizationOptions = normalizeOptimization(builderOptions.optimization);
   const sourcemapOptions = normalizeSourceMaps(builderOptions.sourceMap!);
+  const scriptSettings = resolveScriptSettings(builderOptions);
+  const { define: scriptDefine, ...scriptOptions } = getScriptBuildOptions(
+    scriptSettings,
+    platform ?? 'browser'
+  );
 
   const searchDirectories = await generateSearchDirectories([projectRoot, workspaceRoot]);
   const postcssConfiguration = await loadPostcssConfiguration(searchDirectories);
@@ -102,7 +105,7 @@ export async function createAngularEsbuildContext(
     thirdPartySourcemaps: sourcemapOptions.vendor,
     tsconfig: tsConfigPath,
     jit: false,
-    advancedOptimizations: !dev,
+    advancedOptimizations: scriptSettings.optimize,
     fileReplacements,
     sourceFileCache: cache.bundlerCache,
     loadResultCache: cache.bundlerCache.loadResultCache,
@@ -159,17 +162,14 @@ export async function createAngularEsbuildContext(
       out: path.parse(ep.outName).name,
     })),
     outdir,
+    absWorkingDir: workspaceRoot,
     entryNames: hash ? '[name]-[hash]' : '[name]',
     write: false,
     external,
     logLevel: 'warning',
     bundle: true,
-    sourcemap: sourcemapOptions.scripts,
-    minify: !dev,
-    supported: {
-      'async-await': false,
-      'object-rest-spread': false,
-    },
+    sourcemap: !!sourcemapOptions.scripts && (sourcemapOptions.hidden ? 'external' : true),
+    ...scriptOptions,
     splitting: chunks,
     preserveSymlinks: builderOptions.preserveSymlinks,
     platform: platform ?? 'browser',
@@ -181,11 +181,12 @@ export async function createAngularEsbuildContext(
       // Angular's synthesized deep imports would otherwise inline a second copy of a mapped lib.
       ...(Object.keys(mappedPaths).length > 0 ? [createSharedMappingsPlugin(mappedPaths)] : []),
       commonjsPlugin(),
+      createSourcemapIgnorelistPlugin(),
       ...customPlugins,
     ],
     define: {
       ...builderOptions.define,
-      ...(dev ? {} : { ngDevMode: 'false' }),
+      ...scriptDefine,
       ngJitMode: 'false',
     },
     ...(builderOptions.loader ? { loader: builderOptions.loader } : {}),

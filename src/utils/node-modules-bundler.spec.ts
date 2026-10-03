@@ -2,11 +2,18 @@ import * as esbuild from 'esbuild';
 import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
+import * as vm from 'node:vm';
 import commonjsPlugin from '@chialab/esbuild-plugin-commonjs';
 
 import type { JavaScriptTransformer } from '@angular/build/private';
 
-import { createAngularLinkerPlugin, requiresLinking } from './node-modules-bundler.js';
+import type { ScriptSettings } from './script-options.js';
+import {
+  createAngularLinkerPlugin,
+  createNodeModulesEsbuildContext,
+  NG_SERVER_MODE_BANNER,
+  requiresLinking,
+} from './node-modules-bundler.js';
 
 describe('requiresLinking', () => {
   it('returns true for partially-compiled sources containing a declaration prefix', () => {
@@ -79,7 +86,11 @@ export const kinds = [typeof Delta, typeof OpIterator];
     } as unknown as JavaScriptTransformer;
   }
 
-  async function bundle(jsTransformer: JavaScriptTransformer, advancedOptimizations: boolean) {
+  async function bundle(
+    jsTransformer: JavaScriptTransformer,
+    advancedOptimizations: boolean,
+    cache?: { store: Map<string, Uint8Array>; keyBase: string }
+  ) {
     const outfile = path.join(fixtureDir, 'out.mjs');
 
     await esbuild.build({
@@ -90,7 +101,10 @@ export const kinds = [typeof Delta, typeof OpIterator];
       platform: 'node',
       logLevel: 'silent',
       resolveExtensions: ['.mjs', '.js', '.cjs'],
-      plugins: [createAngularLinkerPlugin(jsTransformer, advancedOptimizations), commonjsPlugin()],
+      plugins: [
+        createAngularLinkerPlugin(jsTransformer, advancedOptimizations, cache),
+        commonjsPlugin(),
+      ],
     });
 
     return outfile;
@@ -120,5 +134,245 @@ export const kinds = [typeof Delta, typeof OpIterator];
     await bundle(jsTransformer, false);
 
     expect(jsTransformer.transformData).not.toHaveBeenCalled();
+  });
+
+  describe('transform cache', () => {
+    function createLinkingStub(): JavaScriptTransformer {
+      return {
+        transformData: vi.fn(async (_path: string, contents: string) =>
+          Buffer.from(`${contents}\nexport const linked = true;`, 'utf-8')
+        ),
+      } as unknown as JavaScriptTransformer;
+    }
+
+    beforeEach(() => {
+      fs.writeFileSync(
+        path.join(fixtureDir, 'entry.js'),
+        'export const cmp = "ɵɵngDeclareComponent";\n'
+      );
+    });
+
+    it('reuses the transform of an unchanged file across builds', async () => {
+      const jsTransformer = createLinkingStub();
+      const cache = { store: new Map<string, Uint8Array>(), keyBase: '{"sourcemap":false}' };
+
+      await bundle(jsTransformer, false, cache);
+      const outfile = await bundle(jsTransformer, false, cache);
+
+      expect(jsTransformer.transformData).toHaveBeenCalledTimes(1);
+      expect(fs.readFileSync(outfile, 'utf-8')).toContain('linked = true');
+    });
+
+    it('transforms again when the file contents change', async () => {
+      const jsTransformer = createLinkingStub();
+      const cache = { store: new Map<string, Uint8Array>(), keyBase: '{"sourcemap":false}' };
+
+      await bundle(jsTransformer, false, cache);
+      fs.appendFileSync(path.join(fixtureDir, 'entry.js'), 'export const other = 1;\n');
+      await bundle(jsTransformer, false, cache);
+
+      expect(jsTransformer.transformData).toHaveBeenCalledTimes(2);
+    });
+
+    it('transforms again when the output options change', async () => {
+      const jsTransformer = createLinkingStub();
+      const store = new Map<string, Uint8Array>();
+
+      await bundle(jsTransformer, false, { store, keyBase: '{"sourcemap":false}' });
+      await bundle(jsTransformer, false, { store, keyBase: '{"sourcemap":true}' });
+
+      expect(jsTransformer.transformData).toHaveBeenCalledTimes(2);
+    });
+
+    it('transforms every build when no cache is given', async () => {
+      const jsTransformer = createLinkingStub();
+
+      await bundle(jsTransformer, false);
+      await bundle(jsTransformer, false);
+
+      expect(jsTransformer.transformData).toHaveBeenCalledTimes(2);
+    });
+  });
+});
+
+const devScript: ScriptSettings = {
+  optimize: false,
+  allowMangle: true,
+  zoneless: false,
+  conditions: ['es2015', 'es2020', 'module', 'development'],
+  sourcesContent: undefined,
+};
+
+// #157: replaces the old in-place patch of node_modules/@angular/core/fesm2022/core.mjs.
+describe('ngServerMode banner', () => {
+  function runBanner(globals: Record<string, unknown>) {
+    const sandbox = vm.createContext({ ...globals });
+    vm.runInContext(NG_SERVER_MODE_BANNER, sandbox);
+    return vm.runInContext('globalThis.ngServerMode', sandbox) as unknown;
+  }
+
+  it('infers server mode when there is no window', () => {
+    expect(runBanner({})).toBe(true);
+  });
+
+  // Must be false, not undefined: core's event-replay cleanup only runs for an explicit false
+  // (`typeof ngServerMode !== 'undefined' && !ngServerMode`, core.mjs in 22.2).
+  it('infers browser mode when there is a window', () => {
+    expect(runBanner({ window: {} })).toBe(false);
+  });
+
+  // Angular's own SSR entry banner sets it to true when packages are external
+  // (angular-cli application-code-bundle.ts); that value must win.
+  it('keeps a value that is already set', () => {
+    expect(runBanner({ ngServerMode: true, window: {} })).toBe(true);
+  });
+
+  describe('createNodeModulesEsbuildContext', () => {
+    let fixtureDir: string;
+
+    beforeEach(() => {
+      fixtureDir = fs.mkdtempSync(path.join(os.tmpdir(), 'nf-node-modules-banner-'));
+      fs.writeFileSync(path.join(fixtureDir, 'shared.js'), 'export const shared = () => 1;\n');
+      fs.writeFileSync(
+        path.join(fixtureDir, 'a.js'),
+        "import { shared } from './shared.js';\nexport const a = shared();\n"
+      );
+      fs.writeFileSync(
+        path.join(fixtureDir, 'b.js'),
+        "import { shared } from './shared.js';\nexport const b = shared();\n"
+      );
+    });
+
+    afterEach(() => {
+      fs.rmSync(fixtureDir, { recursive: true, force: true });
+    });
+
+    it('prepends the banner to every entry and split chunk', async () => {
+      const { ctx } = await createNodeModulesEsbuildContext(
+        {
+          context: { workspaceRoot: fixtureDir },
+          entryPoints: [
+            { fileName: path.join(fixtureDir, 'a.js'), outName: 'a.js' },
+            { fileName: path.join(fixtureDir, 'b.js'), outName: 'b.js' },
+          ],
+          external: [],
+          outdir: path.join(fixtureDir, 'out'),
+          cache: { cachePath: path.join(fixtureDir, 'cache') },
+          dev: true,
+          hash: false,
+          chunks: true,
+        } as never,
+        { target: ['es2022'], sourcemap: false, plugins: [], script: devScript }
+      );
+
+      try {
+        const result = await ctx.rebuild();
+        const jsFiles = (result.outputFiles ?? []).filter(f => f.path.endsWith('.js'));
+
+        // Two entries plus the chunk holding shared.js.
+        expect(jsFiles).toHaveLength(3);
+        for (const file of jsFiles) {
+          expect(file.text.startsWith(NG_SERVER_MODE_BANNER)).toBe(true);
+        }
+      } finally {
+        await ctx.dispose();
+      }
+    });
+  });
+});
+
+// #163: shared bundles follow optimization.scripts like Angular's app build; NF's `dev` no longer
+// decides ngDevMode or minification.
+describe('createNodeModulesEsbuildContext script options', () => {
+  let fixtureDir: string;
+
+  const prodScript: ScriptSettings = {
+    ...devScript,
+    optimize: true,
+    conditions: ['es2015', 'es2020', 'module', 'production'],
+  };
+
+  async function bundle(dev: boolean, script: ScriptSettings): Promise<string> {
+    const { ctx } = await createNodeModulesEsbuildContext(
+      {
+        context: { workspaceRoot: fixtureDir },
+        entryPoints: [{ fileName: path.join(fixtureDir, 'entry.js'), outName: 'entry.js' }],
+        external: [],
+        outdir: path.join(fixtureDir, 'out'),
+        cache: { cachePath: path.join(fixtureDir, 'cache') },
+        dev,
+        hash: false,
+        chunks: false,
+      } as never,
+      { target: ['es2022'], sourcemap: false, plugins: [], script }
+    );
+
+    try {
+      const result = await ctx.rebuild();
+      return result.outputFiles!.find(f => f.path.endsWith('.js'))!.text;
+    } finally {
+      await ctx.dispose();
+    }
+  }
+
+  beforeEach(() => {
+    fixtureDir = fs.mkdtempSync(path.join(os.tmpdir(), 'nf-node-modules-script-'));
+    const pkg = path.join(fixtureDir, 'node_modules', 'cond-pkg');
+    fs.mkdirSync(pkg, { recursive: true });
+    fs.writeFileSync(
+      path.join(pkg, 'package.json'),
+      JSON.stringify({
+        name: 'cond-pkg',
+        exports: { development: './dev.js', production: './prod.js', default: './default.js' },
+      })
+    );
+    fs.writeFileSync(path.join(pkg, 'dev.js'), "export const build = 'dev-build';\n");
+    fs.writeFileSync(path.join(pkg, 'prod.js'), "export const build = 'prod-build';\n");
+    fs.writeFileSync(path.join(pkg, 'default.js'), "export const build = 'default-build';\n");
+    fs.writeFileSync(
+      path.join(fixtureDir, 'entry.js'),
+      [
+        "import { build } from 'cond-pkg';",
+        'export function readDevMode(someLongParameterName) {',
+        "  return typeof ngDevMode === 'undefined' ? someLongParameterName : ngDevMode;",
+        '}',
+        'export { build };',
+        '',
+      ].join('\n')
+    );
+  });
+
+  afterEach(() => {
+    fs.rmSync(fixtureDir, { recursive: true, force: true });
+  });
+
+  // e.g. debugging a production build: Angular keeps dev mode, so the shared core must too.
+  it('keeps dev mode and skips minification with dev: false and optimization off', async () => {
+    const text = await bundle(false, devScript);
+
+    expect(text).toContain('ngDevMode');
+    expect(text).toContain('someLongParameterName');
+    expect(text).toContain('dev-build');
+  });
+
+  it('disables dev mode and minifies with dev: true and optimization on', async () => {
+    const text = await bundle(true, prodScript);
+
+    expect(text).not.toContain('ngDevMode');
+    expect(text).not.toContain('someLongParameterName');
+    expect(text).toContain('prod-build');
+  });
+
+  it('keeps identifiers when mangling is disallowed', async () => {
+    const text = await bundle(false, { ...prodScript, allowMangle: false });
+
+    expect(text).not.toContain('ngDevMode');
+    expect(text).toContain('someLongParameterName');
+  });
+
+  it("resolves the user's conditions instead of the defaults", async () => {
+    const text = await bundle(false, { ...prodScript, conditions: ['es2015', 'es2020'] });
+
+    expect(text).toContain('default-build');
   });
 });

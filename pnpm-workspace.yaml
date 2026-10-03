@@ -14,11 +14,11 @@ allowBuilds:
   msw: true
   nx: false
 overrides:
-  'axios': '>=1.18.0'
+  'axios': '>=1.20.0'
   # brace-expansion 5 is ESM-only named exports; minimatch 3 (via eslint 9's
   # config-array, which this branch keeps for Angular 21) needs the CJS default
-  # function. 1.1.12 is the 1.x line's fix for the same ReDoS advisory.
-  'minimatch@3>brace-expansion': '^1.1.12'
-  'brace-expansion': '>=5.0.9'
-  'fast-uri': '>=3.1.5'
+  # function. 1.1.21 is the 1.x line's fix for the same ReDoS advisory.
+  'minimatch@3>brace-expansion': '^1.1.21'
+  'brace-expansion': '>=5.0.12'
+  'fast-uri': '>=4.1.5'
   'smol-toml': '>=1.7.1'

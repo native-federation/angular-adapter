@@ -27,7 +27,11 @@ import {
   targetFromTargetString,
 } from "@angular-devkit/architect";
 
+// @angular/build's normalizer drops prebundling for a build-angular:dev-server target, whose schema
+// has no `prebundle` default. build-angular has no exports map, so the deep import resolves.
+// eslint-disable-next-line no-restricted-imports
 import { normalizeOptions } from "@angular-devkit/build-angular/src/builders/dev-server/options.js";
+// eslint-disable-next-line no-restricted-imports
 import type { Schema as DevServerSchema } from "@angular-devkit/build-angular/src/builders/dev-server/schema.js";
 
 import { type JsonObject } from "@angular-devkit/core";
@@ -57,6 +61,8 @@ import { devHostInstancesPlugin } from "../../plugin/dev-host-instances-plugin.j
 import { createAngularBuildAdapter } from "../../utils/angular-esbuild-adapter.js";
 import {
   getI18nConfig,
+  getSourceLocaleCode,
+  getLocaleSubPath,
   translateFederationArtifacts,
 } from "../../utils/i18n.js";
 import { updateScriptTags } from "../../utils/update-index-html.js";
@@ -204,7 +210,7 @@ export async function* runBuilder(
       ? nfBuilderOptions.entryPoints
       : [path.join(path.dirname(federationTsConfig), "src/main.ts")];
 
-  const adapter = createAngularBuildAdapter(
+  const adapter = await createAngularBuildAdapter(
     {
       ...ngBuilderOptions,
       plugins: nfBuilderOptions.plugins,
@@ -237,10 +243,9 @@ export async function* runBuilder(
 
   const localeFilter = getLocaleFilter(ngBuilderOptions, runViteServer);
 
-  const sourceLocaleSegment =
-    typeof i18n?.sourceLocale === "string"
-      ? i18n.sourceLocale
-      : i18n?.sourceLocale?.subPath || i18n?.sourceLocale?.code || "";
+  const sourceLocaleSegment = i18n
+    ? getLocaleSubPath(i18n, getSourceLocaleCode(i18n))
+    : "";
 
   const browserOutputPath = path.join(
     outputOptions.base,
@@ -252,7 +257,11 @@ export async function* runBuilder(
     Array.isArray(localeFilter) && localeFilter.length === 1;
   const devServerOutputPath = !differentDevServerOutputPath
     ? browserOutputPath
-    : path.join(outputOptions.base, outputOptions.browser, localeFilter[0]!);
+    : path.join(
+        outputOptions.base,
+        outputOptions.browser,
+        i18n ? getLocaleSubPath(i18n, localeFilter[0]!) : localeFilter[0]!,
+      );
 
   const cachePath = getDefaultCachePath(context.workspaceRoot);
 
@@ -333,7 +342,10 @@ export async function* runBuilder(
     // at eval time. `process.env` is process-global, so it crosses the Vite SSR
     // realm boundary that `globalThis` would not, and mirrors how prod's
     // node-preload is configured.
-    process.env["NF_DEV_SSR_BROWSER_PATH"] = browserOutputPath;
+    process.env["NF_DEV_SSR_BROWSER_PATH"] = path.resolve(
+      context.workspaceRoot,
+      browserOutputPath,
+    );
     if (devServerOrigin) {
       process.env["NF_DEV_SSR_ORIGIN"] = devServerOrigin;
     } else {
@@ -479,12 +491,12 @@ export async function* runBuilder(
     ]);
   }
 
-  if (fs.existsSync(normalized.options.outputPath)) {
-    fs.rmSync(normalized.options.outputPath, { recursive: true });
+  if (fs.existsSync(federationOutputPath)) {
+    fs.rmSync(federationOutputPath, { recursive: true });
   }
 
-  if (!fs.existsSync(normalized.options.outputPath)) {
-    fs.mkdirSync(normalized.options.outputPath, { recursive: true });
+  if (!fs.existsSync(federationOutputPath)) {
+    fs.mkdirSync(federationOutputPath, { recursive: true });
   }
 
   let federationResult: FederationInfo;
@@ -516,6 +528,7 @@ export async function* runBuilder(
       localeFilter,
       outputOptions.base,
       federationResult,
+      context.workspaceRoot,
     );
     logger.measure(start, "To translate the artifacts.");
   }
@@ -610,6 +623,7 @@ export async function* runBuilder(
           localeFilter,
           outputOptions.base,
           federationResult,
+          context.workspaceRoot,
         );
       }
 

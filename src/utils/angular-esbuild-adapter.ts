@@ -15,6 +15,8 @@ import type { BuilderContext } from '@angular-devkit/architect';
 import type { ApplicationBuilderOptions } from '@angular/build';
 import { createAngularEsbuildContext } from './angular-bundler.js';
 import { createNodeModulesEsbuildContext } from './node-modules-bundler.js';
+import { createExternalsCacheKey } from './externals-cache-key.js';
+import { resolveSharedBundleSettings } from './shared-bundle-settings.js';
 import { normalizeContextOptions } from './normalize-context-options.js';
 import type { NfInternalOptions } from '../builders/build/schema.js';
 
@@ -36,38 +38,18 @@ function writeResult(result: esbuild.BuildResult<esbuild.BuildOptions>, outdir: 
   return writtenFiles;
 }
 
-/**
- * Patches @angular/core to infer ngServerMode at runtime.
- * Usually, ngServerMode is set during bundling. However, we need to infer this
- * value at runtime as we are using the same shared bundle for @angular/core
- * on the server and in the browser.
- */
-function setNgServerMode(): void {
-  const fileToPatch = 'node_modules/@angular/core/fesm2022/core.mjs';
-  const lineToAdd = `if (typeof globalThis.ngServerMode ==='undefined') globalThis.ngServerMode = (typeof window === 'undefined') ? true : false;`;
-
-  try {
-    if (fs.existsSync(fileToPatch)) {
-      let content = fs.readFileSync(fileToPatch, 'utf-8');
-      if (!content.includes(lineToAdd)) {
-        content = lineToAdd + '\n' + content;
-        fs.writeFileSync(fileToPatch, content);
-      }
-    }
-  } catch {
-    console.error('Error patching file ', fileToPatch, '\nIs it write-protected?');
-  }
-}
-
 export interface AngularBuildAdapter extends NFBuildAdapter {
   // Disposes every mapping and exposed context, leaving esbuild running for the app build.
   disposeFederationContexts(): Promise<void>;
 }
 
-export function createAngularBuildAdapter(
+export async function createAngularBuildAdapter(
   ngBuilderOptions: ApplicationBuilderOptions & NfInternalOptions,
   context: BuilderContext
-): AngularBuildAdapter {
+): Promise<AngularBuildAdapter> {
+  // Core reads externalsCacheKey before setup(), so the shared settings are resolved up front.
+  const sharedBundleSettings = await resolveSharedBundleSettings(ngBuilderOptions, context);
+  const externalsCacheKey = createExternalsCacheKey(sharedBundleSettings);
   const bundleContextCache = new Map<string, EsbuildContextResult>();
 
   const disposeWhere = async (matches: (entry: EsbuildContextResult) => boolean) => {
@@ -106,8 +88,6 @@ export function createAngularBuildAdapter(
     name: string,
     adapterOptions: NFBuildAdapterOptions<SourceFileCache>
   ): Promise<void> => {
-    setNgServerMode();
-
     if (bundleContextCache.has(name)) {
       return;
     }
@@ -116,7 +96,7 @@ export function createAngularBuildAdapter(
 
     const { ctx, pluginDisposed } = normalizedOptions.isMappingOrExposed
       ? await createAngularEsbuildContext(normalizedOptions, name)
-      : await createNodeModulesEsbuildContext(normalizedOptions);
+      : await createNodeModulesEsbuildContext(normalizedOptions, sharedBundleSettings);
 
     bundleContextCache.set(name, {
       ctx,
@@ -164,5 +144,5 @@ export function createAngularBuildAdapter(
     }
   };
 
-  return { setup, build, dispose, disposeFederationContexts };
+  return { externalsCacheKey, setup, build, dispose, disposeFederationContexts };
 }

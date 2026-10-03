@@ -11,14 +11,10 @@ if (!process.env['NG_BUILD_PARALLEL_TS']) {
   process.env['NG_BUILD_PARALLEL_TS'] = '0';
 }
 
-/**
- * Disables Angular's chunk optimization pass (opt-in on Angular 21, on by default
- * from Angular 22). It re-bundles esbuild output via Rollup *after* Native Federation
- * has already computed its import map, so shared externals (e.g. @angular/core) are
- * no longer resolved as singletons in the optimized chunks. This surfaces at runtime
- * as `ɵɵdefineComponent is not a function`.
- */
-process.env['NG_BUILD_OPTIMIZE_CHUNKS'] = '0';
+// Angular's chunk optimizer: off unless set explicitly, see #73 for the trade-offs.
+if (!process.env['NG_BUILD_OPTIMIZE_CHUNKS']) {
+  process.env['NG_BUILD_OPTIMIZE_CHUNKS'] = '0';
+}
 
 // The writes above are too late once @angular/build is loaded, as under Nx.
 for (const { level, message } of replayNgBuildEnv([
