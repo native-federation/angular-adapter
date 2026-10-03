@@ -18,6 +18,13 @@ const versions: KeyedVersions = {
 const settings: SharedBundleSettings = {
   target: ['chrome120', 'firefox120', 'safari17'],
   sourcemap: false,
+  script: {
+    optimize: true,
+    allowMangle: true,
+    zoneless: false,
+    conditions: ['es2015', 'es2020', 'angular:linked-22.2.0', 'module', 'production'],
+    sourcesContent: undefined,
+  },
   plugins: [],
 };
 
@@ -72,6 +79,17 @@ describe('createExternalsCacheKey', () => {
 
   it('treats a missing loader like an empty one', () => {
     expect(keyOf({ loader: {} })).toBe(baseline);
+  });
+
+  // #163: the shared bundles' minification, ngDevMode and resolution follow these.
+  it.each([
+    ['optimization', { optimize: false }],
+    ['mangling', { allowMangle: false }],
+    ['zoneless', { zoneless: true }],
+    ['conditions', { conditions: ['es2015', 'custom'] }],
+    ['sourcesContent', { sourcesContent: false }],
+  ])('changes with %s', (_, script) => {
+    expect(keyOf({ script: { ...settings.script, ...script } })).not.toBe(baseline);
   });
 
   // Plugins are opaque objects; see the known gap in #148.

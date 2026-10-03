@@ -23,6 +23,10 @@ vi.mock('./create-awaitable-compiler-plugin.js', () => ({
     .mockReturnValue([{ name: 'angular-compiler', setup: vi.fn() }, Promise.resolve()]),
 }));
 
+vi.mock('./find-framework-version.js', () => ({
+  findFrameworkVersion: async () => '22.2.0',
+}));
+
 vi.mock('./write-context-tsconfig.js', () => ({
   writeContextTsConfig: vi.fn().mockReturnValue('/cache/tsconfig/abc.mapping-bundle.json'),
 }));
@@ -175,7 +179,7 @@ describe('createAngularEsbuildContext', () => {
     await createAngularEsbuildContext(
       makeOptions({
         builderOptions: {
-          optimization: false,
+          optimization: true,
           sourceMap: false,
           define: { BUILD_ID: "'abc'", ngJitMode: 'true' },
         },
@@ -208,5 +212,59 @@ describe('createAngularEsbuildContext', () => {
     await createAngularEsbuildContext(makeOptions(), 'mapping-or-exposed');
 
     expect(lastBuildOptions().plugins!.map(p => p.name)).toEqual(['angular-compiler', 'commonjs']);
+  });
+
+  // #163: exposed bundles follow optimization.scripts like Angular's app build, not NF's `dev`.
+  describe('script optimization', () => {
+    function pluginOptions(): CompilerPluginOptions {
+      return vi
+        .mocked(createAwaitableCompilerPlugin)
+        .mock.calls.at(-1)![0] as CompilerPluginOptions;
+    }
+
+    it('keeps dev mode unminified with dev: false and optimization off', async () => {
+      await createAngularEsbuildContext(
+        makeOptions({ dev: false } as Partial<NormalizedContextOptions>),
+        'mapping-or-exposed'
+      );
+
+      expect(lastBuildOptions().define).not.toHaveProperty('ngDevMode');
+      expect(lastBuildOptions()).toMatchObject({
+        minifyIdentifiers: false,
+        minifySyntax: false,
+        minifyWhitespace: false,
+      });
+      expect(pluginOptions().advancedOptimizations).toBe(false);
+    });
+
+    it('disables dev mode and minifies with dev: true and optimization on', async () => {
+      await createAngularEsbuildContext(
+        makeOptions({
+          dev: true,
+          builderOptions: { optimization: true, sourceMap: false },
+        } as unknown as Partial<NormalizedContextOptions>),
+        'mapping-or-exposed'
+      );
+
+      expect(lastBuildOptions().define).toMatchObject({ ngDevMode: 'false' });
+      expect(lastBuildOptions()).toMatchObject({
+        minifyIdentifiers: true,
+        minifySyntax: true,
+        minifyWhitespace: true,
+      });
+      expect(pluginOptions().advancedOptimizations).toBe(true);
+    });
+
+    it("resolves with Angular's conditions and the server main fields for node", async () => {
+      await createAngularEsbuildContext(
+        makeOptions({ platform: 'node' } as Partial<NormalizedContextOptions>),
+        'mapping-or-exposed'
+      );
+
+      expect(lastBuildOptions()).toMatchObject({
+        conditions: ['es2015', 'es2020', 'angular:linked-22.2.0', 'module', 'development'],
+        mainFields: ['es2020', 'es2015', 'module', 'main'],
+      });
+    });
   });
 });

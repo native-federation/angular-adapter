@@ -7,6 +7,7 @@ import commonjsPlugin from '@chialab/esbuild-plugin-commonjs';
 
 import type { JavaScriptTransformer } from '@angular/build/private';
 
+import type { ScriptSettings } from './script-options.js';
 import {
   createAngularLinkerPlugin,
   createNodeModulesEsbuildContext,
@@ -194,6 +195,14 @@ export const kinds = [typeof Delta, typeof OpIterator];
   });
 });
 
+const devScript: ScriptSettings = {
+  optimize: false,
+  allowMangle: true,
+  zoneless: false,
+  conditions: ['es2015', 'es2020', 'module', 'development'],
+  sourcesContent: undefined,
+};
+
 // #157: replaces the old in-place patch of node_modules/@angular/core/fesm2022/core.mjs.
 describe('ngServerMode banner', () => {
   function runBanner(globals: Record<string, unknown>) {
@@ -253,7 +262,7 @@ describe('ngServerMode banner', () => {
           hash: false,
           chunks: true,
         } as never,
-        { target: ['es2022'], sourcemap: false, plugins: [] }
+        { target: ['es2022'], sourcemap: false, plugins: [], script: devScript }
       );
 
       try {
@@ -269,5 +278,101 @@ describe('ngServerMode banner', () => {
         await ctx.dispose();
       }
     });
+  });
+});
+
+// #163: shared bundles follow optimization.scripts like Angular's app build; NF's `dev` no longer
+// decides ngDevMode or minification.
+describe('createNodeModulesEsbuildContext script options', () => {
+  let fixtureDir: string;
+
+  const prodScript: ScriptSettings = {
+    ...devScript,
+    optimize: true,
+    conditions: ['es2015', 'es2020', 'module', 'production'],
+  };
+
+  async function bundle(dev: boolean, script: ScriptSettings): Promise<string> {
+    const { ctx } = await createNodeModulesEsbuildContext(
+      {
+        context: { workspaceRoot: fixtureDir },
+        entryPoints: [{ fileName: path.join(fixtureDir, 'entry.js'), outName: 'entry.js' }],
+        external: [],
+        outdir: path.join(fixtureDir, 'out'),
+        cache: { cachePath: path.join(fixtureDir, 'cache') },
+        dev,
+        hash: false,
+        chunks: false,
+      } as never,
+      { target: ['es2022'], sourcemap: false, plugins: [], script }
+    );
+
+    try {
+      const result = await ctx.rebuild();
+      return result.outputFiles!.find(f => f.path.endsWith('.js'))!.text;
+    } finally {
+      await ctx.dispose();
+    }
+  }
+
+  beforeEach(() => {
+    fixtureDir = fs.mkdtempSync(path.join(os.tmpdir(), 'nf-node-modules-script-'));
+    const pkg = path.join(fixtureDir, 'node_modules', 'cond-pkg');
+    fs.mkdirSync(pkg, { recursive: true });
+    fs.writeFileSync(
+      path.join(pkg, 'package.json'),
+      JSON.stringify({
+        name: 'cond-pkg',
+        exports: { development: './dev.js', production: './prod.js', default: './default.js' },
+      })
+    );
+    fs.writeFileSync(path.join(pkg, 'dev.js'), "export const build = 'dev-build';\n");
+    fs.writeFileSync(path.join(pkg, 'prod.js'), "export const build = 'prod-build';\n");
+    fs.writeFileSync(path.join(pkg, 'default.js'), "export const build = 'default-build';\n");
+    fs.writeFileSync(
+      path.join(fixtureDir, 'entry.js'),
+      [
+        "import { build } from 'cond-pkg';",
+        'export function readDevMode(someLongParameterName) {',
+        "  return typeof ngDevMode === 'undefined' ? someLongParameterName : ngDevMode;",
+        '}',
+        'export { build };',
+        '',
+      ].join('\n')
+    );
+  });
+
+  afterEach(() => {
+    fs.rmSync(fixtureDir, { recursive: true, force: true });
+  });
+
+  // e.g. debugging a production build: Angular keeps dev mode, so the shared core must too.
+  it('keeps dev mode and skips minification with dev: false and optimization off', async () => {
+    const text = await bundle(false, devScript);
+
+    expect(text).toContain('ngDevMode');
+    expect(text).toContain('someLongParameterName');
+    expect(text).toContain('dev-build');
+  });
+
+  it('disables dev mode and minifies with dev: true and optimization on', async () => {
+    const text = await bundle(true, prodScript);
+
+    expect(text).not.toContain('ngDevMode');
+    expect(text).not.toContain('someLongParameterName');
+    expect(text).toContain('prod-build');
+  });
+
+  it('keeps identifiers when mangling is disallowed', async () => {
+    const text = await bundle(false, { ...prodScript, allowMangle: false });
+
+    expect(text).not.toContain('ngDevMode');
+    expect(text).toContain('someLongParameterName');
+  });
+
+  it("resolves the user's conditions instead of the defaults", async () => {
+    const text = await bundle(false, { ...prodScript, conditions: ['es2015', 'es2020'] });
+
+    expect(text).toContain('default-build');
   });
 });
