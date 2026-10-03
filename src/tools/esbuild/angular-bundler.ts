@@ -59,7 +59,7 @@ export async function createAngularEsbuildContext(
 
   const optimizationOptions = normalizeOptimization(builderOptions.optimization);
   const sourcemapOptions = normalizeSourceMaps(builderOptions.sourceMap!);
-  const scriptSettings = await resolveScriptSettings(builderOptions, projectRoot);
+  const scriptSettings = resolveScriptSettings(builderOptions);
   const { define: scriptDefine, ...scriptOptions } = getScriptBuildOptions(
     scriptSettings,
     platform ?? 'browser'

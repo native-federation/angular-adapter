@@ -34,7 +34,7 @@ export async function resolveSharedBundleSettings(
     target: transformSupportedBrowsersToTargets(browsers),
     sourcemap: !!sourceMaps.scripts && (sourceMaps.hidden ? 'external' : true),
     loader: builderOptions.loader,
-    script: await resolveScriptSettings(builderOptions, projectRoot),
+    script: resolveScriptSettings(builderOptions),
     plugins: Array.isArray(builderOptions.plugins) ? builderOptions.plugins : [],
   };
 }

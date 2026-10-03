@@ -1,8 +1,3 @@
-import * as fs from 'fs';
-import * as os from 'os';
-import * as path from 'path';
-
-import { findFrameworkVersion } from './find-framework-version.js';
 import {
   getConditions,
   getFeatureSupport,
@@ -12,10 +7,6 @@ import {
   resolveScriptSettings,
   type ScriptSettings,
 } from './script-options.js';
-
-vi.mock('./find-framework-version.js', () => ({
-  findFrameworkVersion: vi.fn(async () => '22.2.0'),
-}));
 
 const settings = (overrides: Partial<ScriptSettings> = {}): ScriptSettings => ({
   optimize: true,
@@ -48,26 +39,21 @@ describe('readAllowMangle', () => {
 
 describe('getConditions', () => {
   it('adds the default conditions for an optimized build', () => {
-    expect(getConditions(true, '22.2.0', undefined)).toEqual([
-      'es2015',
-      'es2020',
-      'angular:linked-22.2.0',
-      'module',
-      'production',
-    ]);
+    expect(getConditions(true, undefined)).toEqual(['es2015', 'es2020', 'module', 'production']);
   });
 
   it('adds the development condition for an unoptimized build', () => {
-    expect(getConditions(false, '22.2.0', undefined).at(-1)).toBe('development');
+    expect(getConditions(false, undefined).at(-1)).toBe('development');
   });
 
   it("replaces the defaults with the user's conditions", () => {
-    expect(getConditions(true, '22.2.0', ['custom'])).toEqual([
-      'es2015',
-      'es2020',
-      'angular:linked-22.2.0',
-      'custom',
-    ]);
+    expect(getConditions(true, ['custom'])).toEqual(['es2015', 'es2020', 'custom']);
+  });
+
+  // Deliberate deviation from Angular: no package ships pre-linked code yet, and without the
+  // condition we link at bundle time to the same output.
+  it('leaves out the pre-linked package condition', () => {
+    expect(getConditions(true, undefined).some(c => c.startsWith('angular:linked-'))).toBe(false);
   });
 });
 
@@ -180,27 +166,20 @@ describe('resolveScriptSettings', () => {
     [false, false],
     [{ scripts: false, styles: true }, false],
     [{ scripts: true }, true],
-  ])('reads optimization %j as optimize: %s', async (optimization, expected) => {
-    const resolved = await resolveScriptSettings({ optimization } as never, '/ws', {});
+  ])('reads optimization %j as optimize: %s', (optimization, expected) => {
+    const resolved = resolveScriptSettings({ optimization } as never, {});
 
     expect(resolved.optimize).toBe(expected);
   });
 
-  it('reads the framework version for the pre-linked condition', async () => {
-    const resolved = await resolveScriptSettings({} as never, '/ws/apps/example', {});
-
-    expect(findFrameworkVersion).toHaveBeenCalledWith('/ws/apps/example');
-    expect(resolved.conditions).toContain('angular:linked-22.2.0');
-  });
-
-  it("honours the user's conditions", async () => {
-    const resolved = await resolveScriptSettings({ conditions: ['custom'] } as never, '/ws', {});
+  it("honours the user's conditions", () => {
+    const resolved = resolveScriptSettings({ conditions: ['custom'] } as never, {});
 
     expect(resolved.conditions.at(-1)).toBe('custom');
   });
 
-  it('reads mangling from the given environment', async () => {
-    const resolved = await resolveScriptSettings({} as never, '/ws', {
+  it('reads mangling from the given environment', () => {
+    const resolved = resolveScriptSettings({} as never, {
       NG_BUILD_MANGLE: '0',
     });
 
@@ -212,8 +191,8 @@ describe('resolveScriptSettings', () => {
     [undefined, true],
     [['zone.js'], false],
     ['zone.js', false],
-  ])('reads polyfills %j as zoneless: %s', async (polyfills, expected) => {
-    const resolved = await resolveScriptSettings({ polyfills } as never, '/ws', {});
+  ])('reads polyfills %j as zoneless: %s', (polyfills, expected) => {
+    const resolved = resolveScriptSettings({ polyfills } as never, {});
 
     expect(resolved.zoneless).toBe(expected);
   });
@@ -223,45 +202,9 @@ describe('resolveScriptSettings', () => {
     [true, true],
     [{ scripts: true }, undefined],
     [{ scripts: true, sourcesContent: false }, false],
-  ])('reads sourceMap %j as sourcesContent: %s', async (sourceMap, expected) => {
-    const resolved = await resolveScriptSettings({ sourceMap } as never, '/ws', {});
+  ])('reads sourceMap %j as sourcesContent: %s', (sourceMap, expected) => {
+    const resolved = resolveScriptSettings({ sourceMap } as never, {});
 
     expect(resolved.sourcesContent).toBe(expected);
-  });
-});
-
-describe('findFrameworkVersion', () => {
-  let projectRoot: string;
-  let realFindFrameworkVersion: typeof findFrameworkVersion;
-
-  beforeAll(async () => {
-    ({ findFrameworkVersion: realFindFrameworkVersion } = await vi.importActual<{
-      findFrameworkVersion: typeof findFrameworkVersion;
-    }>('./find-framework-version.js'));
-  });
-
-  beforeEach(() => {
-    projectRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'nf-framework-version-'));
-  });
-
-  afterEach(() => {
-    fs.rmSync(projectRoot, { recursive: true, force: true });
-  });
-
-  it("reads the version of the project's @angular/core", async () => {
-    const corePkg = path.join(projectRoot, 'node_modules', '@angular', 'core');
-    fs.mkdirSync(corePkg, { recursive: true });
-    fs.writeFileSync(
-      path.join(corePkg, 'package.json'),
-      JSON.stringify({ name: '@angular/core', version: '22.2.0' })
-    );
-
-    expect(await realFindFrameworkVersion(projectRoot)).toBe('22.2.0');
-  });
-
-  it('throws when @angular/core is missing', async () => {
-    await expect(realFindFrameworkVersion(projectRoot)).rejects.toThrow(
-      '"@angular/core" is missing'
-    );
   });
 });

@@ -29,13 +29,6 @@ describe('resolveSharedBundleSettings', () => {
 
   beforeEach(() => {
     workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'nf-externals-key-'));
-    // Resolved from the project root for the `angular:linked-<version>` condition.
-    const corePkg = path.join(workspaceRoot, 'node_modules', '@angular', 'core');
-    fs.mkdirSync(corePkg, { recursive: true });
-    fs.writeFileSync(
-      path.join(corePkg, 'package.json'),
-      JSON.stringify({ name: '@angular/core', version: '22.2.0' })
-    );
   });
 
   afterEach(() => {
@@ -127,7 +120,7 @@ describe('resolveSharedBundleSettings', () => {
       optimize: false,
       allowMangle: true,
       zoneless: false,
-      conditions: ['es2015', 'es2020', 'angular:linked-22.2.0', 'custom'],
+      conditions: ['es2015', 'es2020', 'custom'],
       sourcesContent: false,
     });
   });

@@ -22,7 +22,7 @@ const settings: SharedBundleSettings = {
     optimize: true,
     allowMangle: true,
     zoneless: false,
-    conditions: ['es2015', 'es2020', 'angular:linked-22.2.0', 'module', 'production'],
+    conditions: ['es2015', 'es2020', 'module', 'production'],
     sourcesContent: undefined,
   },
   plugins: [],

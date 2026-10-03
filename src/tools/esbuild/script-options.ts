@@ -5,7 +5,6 @@ import type { BuildOptions } from 'esbuild';
 import type { ApplicationBuilderOptions } from '@angular/build';
 
 import { normalizeOptimization, normalizeSourceMaps } from '../../utils/normalize-build-options.js';
-import { findFrameworkVersion } from './find-framework-version.js';
 
 // Everything that makes our bundles' script output follow Angular's app build (#163). Plain data,
 // so the shared-bundle cache key can hash it.
@@ -17,11 +16,10 @@ export interface ScriptSettings {
   sourcesContent: boolean | undefined;
 }
 
-export async function resolveScriptSettings(
+export function resolveScriptSettings(
   builderOptions: ApplicationBuilderOptions,
-  projectRoot: string,
   env: NodeJS.ProcessEnv = process.env
-): Promise<ScriptSettings> {
+): ScriptSettings {
   const optimize = normalizeOptimization(builderOptions.optimization).scripts;
   const { polyfills } = builderOptions;
 
@@ -32,11 +30,7 @@ export async function resolveScriptSettings(
     zoneless: isZonelessApp(
       polyfills === undefined || Array.isArray(polyfills) ? polyfills : [polyfills]
     ),
-    conditions: getConditions(
-      optimize,
-      await findFrameworkVersion(projectRoot),
-      builderOptions.conditions
-    ),
+    conditions: getConditions(optimize, builderOptions.conditions),
     sourcesContent: normalizeSourceMaps(builderOptions.sourceMap ?? false).sourcesContent,
   };
 }
@@ -69,15 +63,11 @@ export function getScriptBuildOptions(
 }
 
 // upstream: angular/angular-cli packages/angular/build/src/tools/esbuild/application-code-bundle.ts @ 11dbe297f8
-export function getConditions(
-  optimize: boolean,
-  frameworkVersion: string,
-  customConditions: string[] | undefined
-): string[] {
+export function getConditions(optimize: boolean, customConditions: string[] | undefined): string[] {
   // Required to support rxjs 7.x which will use es5 code if this condition is not present
   const conditions = ['es2015', 'es2020'];
-  // Our bundles are never JIT, so the pre-linked package condition always applies.
-  conditions.push('angular:linked-' + frameworkVersion);
+  // Deviation: no `angular:linked-<version>`. No package ships pre-linked code yet, and without
+  // it we link at bundle time to the same output.
 
   if (customConditions) {
     conditions.push(...customConditions);

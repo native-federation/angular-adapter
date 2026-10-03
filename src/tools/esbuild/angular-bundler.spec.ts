@@ -23,10 +23,6 @@ vi.mock('./create-awaitable-compiler-plugin.js', () => ({
     .mockReturnValue([{ name: 'angular-compiler', setup: vi.fn() }, Promise.resolve()]),
 }));
 
-vi.mock('./find-framework-version.js', () => ({
-  findFrameworkVersion: async () => '22.2.0',
-}));
-
 vi.mock('./write-context-tsconfig.js', () => ({
   writeContextTsConfig: vi.fn().mockReturnValue('/cache/tsconfig/abc.mapping-bundle.json'),
 }));
@@ -262,7 +258,7 @@ describe('createAngularEsbuildContext', () => {
       );
 
       expect(lastBuildOptions()).toMatchObject({
-        conditions: ['es2015', 'es2020', 'angular:linked-22.2.0', 'module', 'development'],
+        conditions: ['es2015', 'es2020', 'module', 'development'],
         mainFields: ['es2020', 'es2015', 'module', 'main'],
       });
     });
