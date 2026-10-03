@@ -117,6 +117,13 @@
     "preserveSymlinks": {
       "type": "boolean",
       "description": "Do not use the real path when resolving modules."
+    },
+    "polyfills": {
+      "type": "array",
+      "items": { "type": "string" },
+      "uniqueItems": true,
+      "default": [],
+      "description": "The polyfills of the host that loads this remote. They are not bundled; listing 'zone.js' (or a polyfills file) makes the remote downlevel async/await for Zone.js, as Angular does for apps. Leave empty when the host is zoneless."
     }
   },
   "required": ["tsConfig"]
