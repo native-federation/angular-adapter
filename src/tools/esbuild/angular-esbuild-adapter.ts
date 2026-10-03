@@ -38,29 +38,6 @@ function writeResult(result: esbuild.BuildResult<esbuild.BuildOptions>, outdir: 
   return writtenFiles;
 }
 
-/**
- * Patches @angular/core to infer ngServerMode at runtime.
- * Usually, ngServerMode is set during bundling. However, we need to infer this
- * value at runtime as we are using the same shared bundle for @angular/core
- * on the server and in the browser.
- */
-function setNgServerMode(): void {
-  const fileToPatch = 'node_modules/@angular/core/fesm2022/core.mjs';
-  const lineToAdd = `if (typeof globalThis.ngServerMode ==='undefined') globalThis.ngServerMode = (typeof window === 'undefined') ? true : false;`;
-
-  try {
-    if (fs.existsSync(fileToPatch)) {
-      let content = fs.readFileSync(fileToPatch, 'utf-8');
-      if (!content.includes(lineToAdd)) {
-        content = lineToAdd + '\n' + content;
-        fs.writeFileSync(fileToPatch, content);
-      }
-    }
-  } catch {
-    console.error('Error patching file ', fileToPatch, '\nIs it write-protected?');
-  }
-}
-
 export interface AngularBuildAdapter extends NFBuildAdapter {
   // Disposes every mapping and exposed context, leaving esbuild running for the app build.
   disposeFederationContexts(): Promise<void>;
@@ -111,8 +88,6 @@ export async function createAngularBuildAdapter(
     name: string,
     adapterOptions: NFBuildAdapterOptions<SourceFileCache>
   ): Promise<void> => {
-    setNgServerMode();
-
     if (bundleContextCache.has(name)) {
       return;
     }

@@ -10,6 +10,11 @@ import type { SharedBundleSettings } from "./shared-bundle-settings.js";
 
 const LINKER_DECLARATION_PREFIX = "ɵɵngDeclare";
 
+// Shared bundles run on both server and browser, so `ngServerMode` can't be a `define` here.
+// Raw text: esbuild doesn't lower banners to the target. See docs/adr/0001 rule 5 (#157).
+export const NG_SERVER_MODE_BANNER =
+  "if (typeof globalThis.ngServerMode === 'undefined') globalThis.ngServerMode = typeof window === 'undefined';";
+
 /**
  * Excludes @angular/core and @angular/compiler which define the declarations
  * and would cause false positives.
@@ -147,6 +152,7 @@ export async function createNodeModulesEsbuildContext(
     format: "esm",
     target: settings.target,
     logLimit: 1,
+    banner: { js: NG_SERVER_MODE_BANNER },
     plugins: [
       createAngularLinkerPlugin(jsTransformer, advancedOptimizations, jsTransformerCache),
       commonjsPlugin(),

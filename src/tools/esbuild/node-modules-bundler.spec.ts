@@ -2,11 +2,17 @@ import * as esbuild from 'esbuild';
 import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
+import * as vm from 'node:vm';
 import commonjsPlugin from '@chialab/esbuild-plugin-commonjs';
 
 import type { JavaScriptTransformer } from '@angular/build/private';
 
-import { createAngularLinkerPlugin, requiresLinking } from './node-modules-bundler.js';
+import {
+  createAngularLinkerPlugin,
+  createNodeModulesEsbuildContext,
+  NG_SERVER_MODE_BANNER,
+  requiresLinking,
+} from './node-modules-bundler.js';
 
 describe('requiresLinking', () => {
   it('returns true for partially-compiled sources containing a declaration prefix', () => {
@@ -184,6 +190,84 @@ export const kinds = [typeof Delta, typeof OpIterator];
       await bundle(jsTransformer, false);
 
       expect(jsTransformer.transformData).toHaveBeenCalledTimes(2);
+    });
+  });
+});
+
+// #157: replaces the old in-place patch of node_modules/@angular/core/fesm2022/core.mjs.
+describe('ngServerMode banner', () => {
+  function runBanner(globals: Record<string, unknown>) {
+    const sandbox = vm.createContext({ ...globals });
+    vm.runInContext(NG_SERVER_MODE_BANNER, sandbox);
+    return vm.runInContext('globalThis.ngServerMode', sandbox) as unknown;
+  }
+
+  it('infers server mode when there is no window', () => {
+    expect(runBanner({})).toBe(true);
+  });
+
+  // Must be false, not undefined: core's event-replay cleanup only runs for an explicit false
+  // (`typeof ngServerMode !== 'undefined' && !ngServerMode`, core.mjs in 22.2).
+  it('infers browser mode when there is a window', () => {
+    expect(runBanner({ window: {} })).toBe(false);
+  });
+
+  // Angular's own SSR entry banner sets it to true when packages are external
+  // (angular-cli application-code-bundle.ts); that value must win.
+  it('keeps a value that is already set', () => {
+    expect(runBanner({ ngServerMode: true, window: {} })).toBe(true);
+  });
+
+  describe('createNodeModulesEsbuildContext', () => {
+    let fixtureDir: string;
+
+    beforeEach(() => {
+      fixtureDir = fs.mkdtempSync(path.join(os.tmpdir(), 'nf-node-modules-banner-'));
+      fs.writeFileSync(path.join(fixtureDir, 'shared.js'), 'export const shared = () => 1;\n');
+      fs.writeFileSync(
+        path.join(fixtureDir, 'a.js'),
+        "import { shared } from './shared.js';\nexport const a = shared();\n"
+      );
+      fs.writeFileSync(
+        path.join(fixtureDir, 'b.js'),
+        "import { shared } from './shared.js';\nexport const b = shared();\n"
+      );
+    });
+
+    afterEach(() => {
+      fs.rmSync(fixtureDir, { recursive: true, force: true });
+    });
+
+    it('prepends the banner to every entry and split chunk', async () => {
+      const { ctx } = await createNodeModulesEsbuildContext(
+        {
+          context: { workspaceRoot: fixtureDir },
+          entryPoints: [
+            { fileName: path.join(fixtureDir, 'a.js'), outName: 'a.js' },
+            { fileName: path.join(fixtureDir, 'b.js'), outName: 'b.js' },
+          ],
+          external: [],
+          outdir: path.join(fixtureDir, 'out'),
+          cache: { cachePath: path.join(fixtureDir, 'cache') },
+          dev: true,
+          hash: false,
+          chunks: true,
+        } as never,
+        { target: ['es2022'], sourcemap: false, plugins: [] }
+      );
+
+      try {
+        const result = await ctx.rebuild();
+        const jsFiles = (result.outputFiles ?? []).filter(f => f.path.endsWith('.js'));
+
+        // Two entries plus the chunk holding shared.js.
+        expect(jsFiles).toHaveLength(3);
+        for (const file of jsFiles) {
+          expect(file.text.startsWith(NG_SERVER_MODE_BANNER)).toBe(true);
+        }
+      } finally {
+        await ctx.dispose();
+      }
     });
   });
 });
