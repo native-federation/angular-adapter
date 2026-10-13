@@ -27,7 +27,6 @@ import { type JsonObject } from "@angular-devkit/core";
 import {
   buildForFederation,
   createFederationCache,
-  type FederationInfo,
   getExternals,
   normalizeFederationOptions,
   rebuildForFederation,
@@ -491,9 +490,8 @@ export async function* runBuilder(
     fs.mkdirSync(federationOutputPath, { recursive: true });
   }
 
-  let federationResult: FederationInfo;
   try {
-    federationResult = await buildForFederation(
+    await buildForFederation(
       normalized.config,
       normalized.options,
       externals,
@@ -519,7 +517,6 @@ export async function* runBuilder(
       i18n,
       localeFilter,
       outputOptions.base,
-      federationResult,
       context.workspaceRoot,
     );
     logger.measure(start, "To translate the artifacts.");
@@ -605,7 +602,7 @@ export async function* runBuilder(
 
       if (nfWatcher) nfWatcher.clear();
 
-      federationResult = await rebuildForFederation(
+      await rebuildForFederation(
         normalized.config,
         normalized.options,
         externals,
@@ -624,7 +621,6 @@ export async function* runBuilder(
           i18n,
           localeFilter,
           outputOptions.base,
-          federationResult,
           context.workspaceRoot,
         );
       }

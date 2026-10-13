@@ -4,7 +4,6 @@ import { execSync } from 'child_process';
 import os from 'os';
 import path from 'path';
 import fs from 'fs';
-import type { FederationInfo } from '@softarc/native-federation';
 
 type WorkspaceConfig = {
   i18n?: I18nConfig;
@@ -60,7 +59,6 @@ export async function translateFederationArtifacts(
   i18n: I18nConfig,
   localize: boolean | string[],
   outputPath: string,
-  federationResult: FederationInfo,
   workspaceRoot: string
 ) {
   outputPath = path.resolve(workspaceRoot, outputPath);
@@ -90,17 +88,12 @@ export async function translateFederationArtifacts(
   const stagingPath = fs.mkdtempSync(path.join(os.tmpdir(), 'nf-i18n-'));
   const translationOutPath = path.join(stagingPath, '{{LOCALE}}');
 
-  const federationFiles = [
-    ...federationResult.shared.flatMap(s =>
-      'entries' in s ? Object.values(s.entries) : [s.outFileName]
-    ),
-    ...federationResult.exposes.map(e => e.outFileName),
-    ...Object.values(federationResult.chunks ?? {}).flat(),
-  ];
-
-  // Here, we use a glob with an exhaustive list i/o `"*.js"`
-  // to improve performance
-  const sourcePattern = '{' + federationFiles.join(',') + '}';
+  // Translate every JS file in the source locale folder. At this point it only holds federation output,
+  // because the application build runs afterwards. The files the federation build reports (shared,
+  // exposes, chunks) miss the chunks of shared mapping bundles when denseChunking is off, so they would
+  // never reach the other locale folders. A glob also keeps the command short: an exhaustive file list
+  // exceeds the Windows command line limit (8191 characters) for larger workspaces.
+  const sourcePattern = '**/*.js';
 
   const localePath = (locale: string) =>
     path.join(outputPath, 'browser', getLocaleSubPath(i18n, locale));
