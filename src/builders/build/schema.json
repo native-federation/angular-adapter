@@ -81,6 +81,10 @@
       "description": "Will cache the shared externals so they can be re-used between builds",
       "alias": "cache"
     },
+    "cachePath": {
+      "type": "string",
+      "description": "Folder for the federation cache, relative to the workspace root. Defaults to 'node_modules/.cache/native-federation'. Avoid '.angular/cache' (Angular purges it); use e.g. '.angular/nf-cache' and gitignore it."
+    },
     "buildNotifications": {
       "type": "object",
       "description": "Opt in to build completion notifications. Omitting this option leaves them off; the defaults below only apply once it is present.",

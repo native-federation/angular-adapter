@@ -47,7 +47,6 @@ import {
 import {
   AbortedError,
   createNfWatcher,
-  getDefaultCachePath,
   linkedSharedDirs,
   logger,
   type NfFileWatcher,
@@ -68,8 +67,10 @@ import {
 import { updateScriptTags } from "../../utils/update-index-html.js";
 import { withDiskCaseWorkspaceRoot } from "./../../utils/disk-case.js";
 import { checkForInvalidImports } from "./../../utils/check-for-invalid-imports.js";
+import { warnFlatExternals } from "./../../utils/warn-flat-externals.js";
 import { federationSourceFiles } from "./../../utils/federation-source-files.js";
 import { watchpackWatch } from "./../../utils/watchpack-watch.js";
+import { resolveCachePath } from "./../../utils/resolve-cache-path.js";
 import { federationBuildNotifier } from "./federation-build-notifier.js";
 import {
   createFederationFreshness,
@@ -263,7 +264,7 @@ export async function* runBuilder(
         i18n ? getLocaleSubPath(i18n, localeFilter[0]!) : localeFilter[0]!,
       );
 
-  const cachePath = getDefaultCachePath(context.workspaceRoot);
+  const cachePath = resolveCachePath(context.workspaceRoot, nfBuilderOptions.cachePath);
 
   const normalized = await normalizeFederationOptions(
     {
@@ -290,6 +291,7 @@ export async function* runBuilder(
   // Mapped paths are checked by core's normalizeFederationOptions, which sees the
   // pruned/glob-expanded set and skips paths that were never going to be published.
   checkForInvalidImports(Object.keys(normalized.config.shared), "externals");
+  warnFlatExternals(normalized.config);
 
   const activateSsr = nfBuilderOptions.ssr && !nfBuilderOptions.dev;
 

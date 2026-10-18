@@ -31,7 +31,7 @@ function writeResult(result: esbuild.BuildResult<esbuild.BuildOptions>, outdir: 
   for (const outFile of result.outputFiles ?? []) {
     const fileName = path.basename(outFile.path);
     const filePath = path.join(outdir, fileName);
-    fs.writeFileSync(filePath, outFile.text);
+    fs.writeFileSync(filePath, outFile.contents);
     writtenFiles.push(filePath);
   }
 

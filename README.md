@@ -60,12 +60,14 @@ export default withNativeFederation({
     requiredVersion: "auto",
     build: "package",
   })
-    // includeSecondaries is an opt-out of ignoreUnusedDeps, so all of
-    // @angular/core is shared to prevent mismatches.
-    .patch(["@angular/core"], { includeSecondaries: { keepAll: true } }),
+    // includeSecondaries is an opt-out of ignoreUnusedDeps, so every Angular
+    // entrypoint is shared and builds can't publish different sets of them.
+    .patch(["@angular/*"], { includeSecondaries: { keepAll: true } })
+    .get(),
   skip: ["rxjs/ajax", "rxjs/fetch", "rxjs/testing", "rxjs/webSocket"],
   features: {
     denseChunking: true,
+    denseExternals: true,
   },
 });
 ```

@@ -202,14 +202,17 @@ describe('translateFederationArtifacts', () => {
     expect(fs.rmSync).toHaveBeenCalledWith('/tmp/nf-i18n-x', { recursive: true, force: true });
   });
 
-  it('logs an error when the translate command fails', async () => {
+  it('logs the error and rethrows when the translate command fails', async () => {
     vi.mocked(execSync).mockImplementation(() => {
       throw new Error('localize boom');
     });
 
-    await translateFederationArtifacts(i18n, ['de'], 'dist', federationResult, '/ws');
+    await expect(
+      translateFederationArtifacts(i18n, ['de'], 'dist', federationResult, '/ws'),
+    ).rejects.toThrow('localize boom');
 
     expect(errorSpy).toHaveBeenCalledWith('localize boom');
+    expect(fs.cpSync).not.toHaveBeenCalled();
     expect(fs.rmSync).toHaveBeenCalledWith('/tmp/nf-i18n-x', { recursive: true, force: true });
   });
 });

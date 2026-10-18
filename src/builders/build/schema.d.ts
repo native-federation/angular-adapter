@@ -23,6 +23,7 @@ export interface NfBuilderSchema extends JsonObject {
   devServer?: boolean;
   entryPoints?: string[];
   cacheExternalArtifacts?: boolean;
+  cachePath?: string;
 }
 
 export type NfInternalOptions = {

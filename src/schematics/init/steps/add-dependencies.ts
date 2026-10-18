@@ -40,7 +40,7 @@ export function addDependencies(
 
   addDependency('dependencies', 'es-module-shims', '^2.8.0');
 
-  addDependency('devDependencies', '@softarc/native-federation-orchestrator', '^4.6.0', true);
+  addDependency('devDependencies', '@softarc/native-federation-orchestrator', '^4.8.0', true);
 
   if (ssr) {
     console.log('SSR detected ...');

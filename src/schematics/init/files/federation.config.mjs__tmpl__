@@ -9,27 +9,27 @@ export default withNativeFederation({
     './Component': './<%=appComponentPath%>',
   },
 <% } %>
+  //shareScope: autoShareScope({level: 'minor'}),
+
   shared: fromPackageJson({ singleton: true, strictVersion: true, requiredVersion: 'auto', build: 'package' })
-    // includeSecondaries is an opt-out of ignoreUnusedDeps, so all of
-    // @angular/core is shared to prevent mismatches.
-    .patch(['@angular/core'], { includeSecondaries: { keepAll: true } }),
+    .patch(['@angular/*'], {includeSecondaries: { keepAll: true } } )
+    .get(),
+
+  //sharedMappings: mappingsFromWorkspace({ singleton: true }).filter(['@my-org/*']).get(),
 
   skip: [
     'rxjs/ajax',
     'rxjs/fetch',
     'rxjs/testing',
     'rxjs/webSocket',
-    // Add further packages you don't need at runtime
   ],
 
-  // Please read our FAQ about sharing libs:
-  // https://shorturl.at/jmzH0
+  // Please read our docs about configuring native federation:
+  // https://native-federation.com/docs/v4/angular-adapter/configuration/
 
   features: {
-    // ignoreUnusedDeps is enabled by default now
-    // ignoreUnusedDeps: true,
-
-    // Opt-in: groups chunks in remoteEntry.json for smaller metadata file
-    denseChunking: true
-  }
+    denseChunking: true,
+    denseExternals: true,
+    strictImports: false
+  },
 });

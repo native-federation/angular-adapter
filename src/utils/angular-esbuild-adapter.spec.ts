@@ -26,7 +26,7 @@ const context = {} as never;
 function makeCtx() {
   return {
     rebuild: vi.fn().mockResolvedValue({
-      outputFiles: [{ path: '/tmp/build/main.js', text: 'code' }],
+      outputFiles: [{ path: '/tmp/build/main.js', contents: new TextEncoder().encode('code') }],
     }),
     dispose: vi.fn().mockResolvedValue(undefined),
   };
@@ -142,8 +142,38 @@ describe('createAngularBuildAdapter', () => {
 
     const result = await adapter.build('remote');
 
-    expect(fs.writeFileSync).toHaveBeenCalledWith('/out/main.js', 'code');
+    expect(fs.writeFileSync).toHaveBeenCalledWith(
+      '/out/main.js',
+      new TextEncoder().encode('code')
+    );
     expect(result).toEqual([{ fileName: '/out/main.js' }]);
+  });
+
+  // #181: writing outFile.text decoded binary assets as UTF-8, replacing invalid bytes with U+FFFD.
+  it('writes binary outputs byte for byte', async () => {
+    const png = new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0xff, 0xfe, 0x00, 0x80]);
+    const ctx = makeCtx();
+    ctx.rebuild.mockResolvedValue({
+      outputFiles: [
+        {
+          path: '/tmp/build/logo.png',
+          contents: png,
+          get text() {
+            return new TextDecoder().decode(png);
+          },
+        },
+      ],
+    });
+    vi.mocked(createAngularEsbuildContext).mockResolvedValue({
+      ctx,
+      pluginDisposed: Promise.resolve(),
+    } as never);
+    const adapter = await createAngularBuildAdapter(ngBuilderOptions, context);
+    await adapter.setup('remote', {} as never);
+
+    await adapter.build('remote');
+
+    expect(fs.writeFileSync).toHaveBeenCalledWith('/out/logo.png', png);
   });
 
   it('invalidates the bundler cache for modified files before rebuilding', async () => {

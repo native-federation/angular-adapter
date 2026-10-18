@@ -136,6 +136,9 @@ function execCommand(cmd: string, cwd: string, defaultSuccessInfo: string) {
     logger.info(output.toString() || defaultSuccessInfo);
   } catch (error) {
     logger.error((error as Error).message!);
+    // Swallowing this leaves the non-source locale folders without their federation files
+    // (only remoteEntry.json is copied), so the build would succeed and ship broken locales.
+    throw error;
   }
 }
 
