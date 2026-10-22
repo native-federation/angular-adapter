@@ -522,7 +522,7 @@ export async function* runBuilder(
     translateFederationArtifacts(
       i18n,
       localeFilter,
-      outputOptions.base,
+      path.join(outputOptions.base, outputOptions.browser),
       federationResult,
       context.workspaceRoot,
     );
@@ -628,7 +628,7 @@ export async function* runBuilder(
         translateFederationArtifacts(
           i18n,
           localeFilter,
-          outputOptions.base,
+          path.join(outputOptions.base, outputOptions.browser),
           federationResult,
           context.workspaceRoot,
         );

@@ -98,7 +98,7 @@ export function translateFederationArtifacts(
   ];
 
   const localePath = (locale: string) =>
-    path.join(outputPath, 'browser', getLocaleSubPath(i18n, locale));
+    path.join(outputPath, getLocaleSubPath(i18n, locale));
   const sourceLocalePath = localePath(sourceLocale);
 
   const localizeTranslate = resolveLocalizeTranslate(workspaceRoot);

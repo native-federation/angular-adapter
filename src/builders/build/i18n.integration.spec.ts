@@ -54,7 +54,7 @@ describe('translateFederationArtifacts with the real localize-translate CLI', ()
       chunks: { c1: ['chunk.js', 'chunk.css'] },
     } as unknown as FederationInfo;
 
-    translateFederationArtifacts(i18n, true, 'dist', federationResult, workspaceRoot);
+    translateFederationArtifacts(i18n, true, 'dist/browser', federationResult, workspaceRoot);
 
     const de = (name: string) => fs.readFileSync(path.join(browser, 'de', name), 'utf8');
     expect(de('cmp.js')).toContain('Hallo');
@@ -78,7 +78,7 @@ describe('translateFederationArtifacts with the real localize-translate CLI', ()
     } as unknown as FederationInfo;
 
     expect(() =>
-      translateFederationArtifacts(i18n, true, 'dist', federationResult, workspaceRoot)
+      translateFederationArtifacts(i18n, true, 'dist/browser', federationResult, workspaceRoot)
     ).toThrow(/ENOENT/);
   });
 });
