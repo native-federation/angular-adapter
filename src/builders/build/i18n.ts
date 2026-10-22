@@ -1,6 +1,7 @@
 import type { BuilderContext } from '@angular-devkit/architect';
 import { logger } from '@softarc/native-federation/internal';
 import { execFileSync } from 'child_process';
+import { createHash } from 'crypto';
 import { createRequire } from 'module';
 import os from 'os';
 import path from 'path';
@@ -65,11 +66,18 @@ export function translateFederationArtifacts(
   workspaceRoot: string
 ) {
   outputPath = path.resolve(workspaceRoot, outputPath);
+  const sourceLocale = getSourceLocaleCode(i18n);
   const neededLocales = Array.isArray(localize) ? localize : Object.keys(i18n.locales);
 
   const locales = Object.keys(i18n.locales).filter(locale => neededLocales.includes(locale));
 
-  if (locales.length === 0) {
+  // Angular inlines $localize in the source locale whenever it builds it, but the federation output is
+  // not built by Angular. `-l` below makes localize-translate write that copy, so the source locale only
+  // needs a run of its own when there is no other locale to translate.
+  const inlineSourceLocale =
+    localize === true || (Array.isArray(localize) && localize.includes(sourceLocale));
+
+  if (locales.length === 0 && !inlineSourceLocale) {
     return;
   }
 
@@ -82,8 +90,6 @@ export function translateFederationArtifacts(
       typeof config === 'string' || Array.isArray(config) ? config : config!.translation!
     )
     .map(files => (Array.isArray(files) ? `[${files.join(',')}]` : files));
-
-  const sourceLocale = getSourceLocaleCode(i18n);
 
   // {{LOCALE}} expands to the locale code, not its subPath, so translate into a staging folder first
   const stagingPath = fs.mkdtempSync(path.join(os.tmpdir(), 'nf-i18n-'));
@@ -115,8 +121,7 @@ export function translateFederationArtifacts(
     ...translationFiles,
     '-o',
     translationOutPath,
-    '--target-locales',
-    ...locales,
+    ...(locales.length > 0 ? ['--target-locales', ...locales] : []),
     '-l',
     sourceLocale,
   ];
@@ -131,12 +136,17 @@ export function translateFederationArtifacts(
 
     logger.debug('Running: ' + [process.execPath, ...args].join(' '));
     execCommand(process.execPath, args, workspaceRoot, 'Successfully translated');
+    const translatedPaths: string[] = [];
     for (const locale of new Set([sourceLocale, ...locales])) {
       const staged = path.join(stagingPath, locale);
       if (fs.existsSync(staged)) {
         fs.cpSync(staged, localePath(locale), { recursive: true });
+        translatedPaths.push(localePath(locale));
       }
     }
+
+    // Translating changes the bundles, so the integrity hashes in the copied remoteEntry.json are stale
+    refreshIntegrity(translatedPaths);
   } finally {
     fs.rmSync(stagingPath, { recursive: true, force: true });
   }
@@ -168,6 +178,35 @@ function execCommand(file: string, args: string[], cwd: string, defaultSuccessIn
     // Swallowing this leaves the non-source locale folders without their federation files
     // (only remoteEntry.json is copied), so the build would succeed and ship broken locales.
     throw error;
+  }
+}
+
+// remoteEntry.json lists a subresource integrity hash per file when the integrityHashes feature is on
+function refreshIntegrity(localePaths: string[]) {
+  for (const localePath of localePaths) {
+    const remoteEntryPath = path.join(localePath, 'remoteEntry.json');
+    if (!fs.existsSync(remoteEntryPath)) {
+      continue;
+    }
+
+    const remoteEntry = JSON.parse(fs.readFileSync(remoteEntryPath, 'utf-8')) as {
+      integrity?: Record<string, string>;
+    };
+    if (!remoteEntry.integrity) {
+      continue;
+    }
+
+    for (const [file, previous] of Object.entries(remoteEntry.integrity)) {
+      const filePath = path.join(localePath, file);
+      if (!fs.existsSync(filePath)) {
+        continue;
+      }
+      const algorithm = previous.split('-')[0]!;
+      const hash = createHash(algorithm).update(fs.readFileSync(filePath)).digest('base64');
+      remoteEntry.integrity[file] = `${algorithm}-${hash}`;
+    }
+
+    fs.writeFileSync(remoteEntryPath, JSON.stringify(remoteEntry, null, 2));
   }
 }
 
