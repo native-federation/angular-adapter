@@ -69,6 +69,7 @@ import {
 } from "./i18n.js";
 import { updateScriptTags } from "./update-index-html.js";
 import { createInternalAngularBuilder } from "./internal-angular-builder.js";
+import { appendFederationLicenses, LICENSES_FILE } from "./federation-licenses.js";
 
 const originalWrite = process.stderr.write.bind(process.stderr);
 
@@ -258,6 +259,16 @@ export async function* runBuilder(
 
   const cachePath = resolveCachePath(context.workspaceRoot, nfBuilderOptions.cachePath);
 
+  // Angular's 3rdpartylicenses.txt only covers its own bundles, so ours are appended to it.
+  // A cache hit runs no esbuild and leaves no metafile, so those builds skip the cache.
+  const extractFederationLicenses = !runViteServer && !!ngBuilderOptions.extractLicenses;
+  const cacheExternalArtifacts =
+    nfBuilderOptions.cacheExternalArtifacts !== false && !extractFederationLicenses;
+
+  if (extractFederationLicenses && nfBuilderOptions.cacheExternalArtifacts !== false) {
+    logger.info("Bundling the shared externals without the cache to extract their licenses.");
+  }
+
   const normalized = await normalizeFederationOptions(
     {
       projectName: nfBuilderOptions.projectName,
@@ -275,7 +286,7 @@ export async function* runBuilder(
       dev: !!nfBuilderOptions.dev,
       entryPoints,
       buildNotifications: nfBuilderOptions.buildNotifications,
-      cacheExternalArtifacts: nfBuilderOptions.cacheExternalArtifacts !== false,
+      cacheExternalArtifacts,
     },
     createFederationCache(cachePath, new SourceFileCache(cachePath)),
   );
@@ -727,6 +738,14 @@ export async function* runBuilder(
         );
         first = false;
         continue;
+      }
+
+      if (extractFederationLicenses) {
+        await appendFederationLicenses(
+          path.resolve(context.workspaceRoot, outputOptions.base, LICENSES_FILE),
+          adapter.metafiles(),
+          context.workspaceRoot,
+        );
       }
 
       // The initial output's federation artifacts were already built above; only

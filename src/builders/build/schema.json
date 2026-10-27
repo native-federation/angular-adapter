@@ -78,7 +78,7 @@
     "cacheExternalArtifacts": {
       "type": "boolean",
       "default": true,
-      "description": "Will cache the shared externals so they can be re-used between builds",
+      "description": "Will cache the shared externals so they can be re-used between builds. Builds that extract licenses (the Angular target's `extractLicenses`, on by default in production) bundle the shared externals without the cache, so 3rdpartylicenses.txt can list their packages.",
       "alias": "cache"
     },
     "cachePath": {
