@@ -182,6 +182,48 @@ describe('createAngularBuildAdapter', () => {
     ]);
   });
 
+  // Shared bundles only gained a metafile for 3rdpartylicenses.txt; core keeps matching them by name.
+  it('does not set entry on shared bundles', async () => {
+    vi.mocked(normalizeContextOptions).mockReturnValue(
+      normalizedWith({ isMappingOrExposed: false }) as never
+    );
+    const ctx = makeCtx();
+    ctx.rebuild.mockResolvedValue({ outputFiles: [], metafile: { inputs: {}, outputs: {} } });
+    vi.mocked(createNodeModulesEsbuildContext).mockResolvedValue({
+      ctx,
+      pluginDisposed: Promise.resolve(),
+    } as never);
+    const adapter = await createAngularBuildAdapter(ngBuilderOptions, context);
+    await adapter.setup('browser-shared', {} as never);
+
+    await adapter.build('browser-shared');
+
+    expect(entriesByOutputName).toHaveBeenCalledWith(undefined, expect.anything(), '/ws');
+  });
+
+  it('keeps the latest metafile of each bundle, ordered by bundle name', async () => {
+    const [first, second, rebuilt] = [1, 2, 3].map(n => ({ inputs: {}, outputs: {}, n }));
+    const ctx = makeCtx();
+    ctx.rebuild
+      .mockResolvedValueOnce({ outputFiles: [], metafile: first })
+      .mockResolvedValueOnce({ outputFiles: [], metafile: second })
+      .mockResolvedValueOnce({ outputFiles: [], metafile: rebuilt });
+    vi.mocked(createAngularEsbuildContext).mockResolvedValue({
+      ctx,
+      pluginDisposed: Promise.resolve(),
+    } as never);
+    const adapter = await createAngularBuildAdapter(ngBuilderOptions, context);
+    await adapter.setup('remote-b', {} as never);
+    await adapter.setup('remote-a', {} as never);
+
+    await adapter.build('remote-b');
+    await adapter.build('remote-a');
+    await adapter.build('remote-b');
+    await adapter.disposeFederationContexts();
+
+    expect(adapter.metafiles()).toEqual([second, rebuilt]);
+  });
+
   // #181: writing outFile.text decoded binary assets as UTF-8, replacing invalid bytes with U+FFFD.
   it('writes binary outputs byte for byte', async () => {
     const png = new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0xff, 0xfe, 0x00, 0x80]);
