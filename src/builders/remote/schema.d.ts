@@ -26,4 +26,4 @@ export interface NfRemoteBuilderSchema extends JsonObject {
   polyfills?: ApplicationBuilderOptions['polyfills'];
 }
 
-export type NfRemoteInternalOptions = { plugins: Plugin[] };
+export type NfRemoteInternalOptions = { plugins?: Plugin[] };

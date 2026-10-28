@@ -80,6 +80,7 @@ export async function* runRemoteBuilder(
   const adapter = await createAngularBuildAdapter(
     {
       ...ngBuilderOptions,
+      plugins: nfBuilderOptions.plugins,
       // Required by the schema, so the tsconfig is always the builder's to manage.
       manageTsConfig: true,
       fallbackEntryPoints: entryPoints,
