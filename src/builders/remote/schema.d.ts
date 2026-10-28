@@ -8,7 +8,7 @@ export interface NfRemoteBuilderSchema extends JsonObject {
   rebuildDelay: number;
   watch: boolean;
   watchLinkedDeps?: boolean;
-  outputPath?: string;
+  outputPath?: string | { base: string; browser?: string };
   projectName?: string;
   verbose?: boolean;
   entryPoints?: string[];
@@ -26,4 +26,4 @@ export interface NfRemoteBuilderSchema extends JsonObject {
   polyfills?: ApplicationBuilderOptions['polyfills'];
 }
 
-export type NfRemoteInternalOptions = { plugins: Plugin[] };
+export type NfRemoteInternalOptions = { plugins?: Plugin[] };
