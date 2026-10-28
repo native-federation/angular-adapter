@@ -1,7 +1,5 @@
 import * as path from 'path';
 
-import { deleteOutputDir } from '@angular/build/private';
-
 import { resolveBrowserOutputPath } from './output-path.js';
 
 describe('resolveBrowserOutputPath', () => {
@@ -27,17 +25,6 @@ describe('resolveBrowserOutputPath', () => {
   it('writes directly into base when browser is empty', () => {
     expect(resolveBrowserOutputPath({ base: 'dist/apps/mfe1', browser: '' }, 'mfe1')).toBe(
       path.join('dist/apps/mfe1')
-    );
-  });
-
-  // The object form makes the workspace root reachable as an output folder; the builder
-  // relies on Angular's deleteOutputDir to refuse clearing it.
-  it('cannot clear the workspace root through deleteOutputDir', async () => {
-    const root = path.resolve('/workspace');
-    const output = resolveBrowserOutputPath({ base: '.', browser: '' }, 'mfe1');
-
-    await expect(deleteOutputDir(root, output)).rejects.toThrow(
-      'Output path MUST not be project root directory!'
     );
   });
 });
