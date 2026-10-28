@@ -3,9 +3,9 @@
 import './setup-builder-env-variables.js';
 
 import * as path from 'path';
-import { existsSync, mkdirSync, rmSync } from 'fs';
+import { mkdirSync } from 'fs';
 
-import { SourceFileCache } from '@angular/build/private';
+import { deleteOutputDir, SourceFileCache } from '@angular/build/private';
 
 import { type BuilderContext, type BuilderOutput, createBuilder } from '@angular-devkit/architect';
 
@@ -36,6 +36,7 @@ import { resolveCachePath } from '../../utils/resolve-cache-path.js';
 
 import type { NfRemoteBuilderSchema, NfRemoteInternalOptions } from './schema.js';
 import { resolveNgBuilderOptions } from './resolve-ng-options.js';
+import { resolveBrowserOutputPath } from './output-path.js';
 import { inferFederationConfigPath } from './infer-config-path.js';
 import { createDebouncedChangeWatcher } from './change-watcher.js';
 import {
@@ -60,8 +61,10 @@ export async function* runRemoteBuilder(
   const context = withDiskCaseWorkspaceRoot(builderContext);
 
   const federationTsConfig = nfBuilderOptions.tsConfig;
-  const outputBase = nfBuilderOptions.outputPath ?? `dist/${context.target!.project}`;
-  const browserOutputPath = path.join(outputBase, 'browser');
+  const browserOutputPath = resolveBrowserOutputPath(
+    nfBuilderOptions.outputPath,
+    context.target!.project
+  );
   const absoluteBrowserOutput = path.resolve(context.workspaceRoot, browserOutputPath);
 
   const { ngBuilderOptions, projectRoot, projectSourceRoot } = await resolveNgBuilderOptions(
@@ -147,9 +150,7 @@ export async function* runRemoteBuilder(
     }
   }
 
-  if (existsSync(absoluteBrowserOutput)) {
-    rmSync(absoluteBrowserOutput, { recursive: true });
-  }
+  await deleteOutputDir(context.workspaceRoot, absoluteBrowserOutput);
   mkdirSync(absoluteBrowserOutput, { recursive: true });
 
   try {
