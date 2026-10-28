@@ -514,8 +514,7 @@ export async function* runBuilder(
 
   syncFederationWatcher();
 
-  const hasLocales = i18n?.locales && Object.keys(i18n.locales).length > 0;
-  if (hasLocales && localeFilter) {
+  if (i18n && localeFilter) {
     const start = process.hrtime();
 
     translateFederationArtifacts(
@@ -623,7 +622,7 @@ export async function* runBuilder(
         throw new AbortedError("[builder] After federation build.");
       }
 
-      if (hasLocales && localeFilter) {
+      if (i18n && localeFilter) {
         translateFederationArtifacts(
           i18n,
           localeFilter,

@@ -1,5 +1,6 @@
 import * as fs from 'fs';
 import { execFileSync } from 'child_process';
+import { createHash } from 'crypto';
 import { logger } from '@softarc/native-federation/internal';
 import type { BuilderContext } from '@angular-devkit/architect';
 
@@ -83,6 +84,8 @@ describe('translateFederationArtifacts', () => {
     vi.mocked(execFileSync).mockReturnValue(Buffer.from('translated ok'));
     vi.mocked(fs.mkdtempSync).mockReturnValue('/tmp/nf-i18n-x');
     vi.mocked(fs.existsSync).mockReturnValue(true);
+    // an existing remoteEntry.json without integrity hashes
+    vi.mocked(fs.readFileSync).mockReturnValue('{}');
   });
 
   it('does nothing when no configured locale matches the requested ones', async () => {
@@ -91,6 +94,155 @@ describe('translateFederationArtifacts', () => {
     expect(execFileSync).not.toHaveBeenCalled();
     expect(fs.mkdirSync).not.toHaveBeenCalled();
     expect(infoSpy).not.toHaveBeenCalled();
+  });
+
+  describe('source locale', () => {
+    it('is inlined by the same run as the translations, without a translation file of its own', () => {
+      translateFederationArtifacts(i18n, true, 'dist/browser', federationFiles, '/ws');
+
+      expect(execFileSync).toHaveBeenCalledTimes(1);
+      expect(valueAfter(localizeArgs(), '-l')).toBe('en');
+      expect(fs.writeFileSync).not.toHaveBeenCalled();
+      expect(
+        vi.mocked(fs.cpSync).mock.calls.map(([from, to]) => [posix(String(from)), posix(String(to))])
+      ).toContainEqual(['/tmp/nf-i18n-x/en', '/ws/dist/browser/en']);
+    });
+
+    it('is inlined when it is the only requested locale', () => {
+      translateFederationArtifacts(i18n, ['en'], 'dist/browser', federationFiles, '/ws');
+
+      const args = localizeArgs();
+      expect(execFileSync).toHaveBeenCalledTimes(1);
+      expect(valueAfter(args, '-l')).toBe('en');
+      // a bare -t is accepted by the CLI, and there are no target locales to name
+      expect(args.slice(args.indexOf('-t') + 1, args.indexOf('-o'))).toEqual([]);
+      expect(args).not.toContain('--target-locales');
+      expect(fs.copyFileSync).not.toHaveBeenCalledWith(
+        expect.stringMatching(/remoteEntry\.json$/),
+        expect.stringMatching(/remoteEntry\.json$/)
+      );
+    });
+
+    it('is inlined when localize is true and no locale is configured', () => {
+      translateFederationArtifacts(
+        { sourceLocale: 'en', locales: {} },
+        true,
+        'dist/browser',
+        federationFiles,
+        '/ws'
+      );
+
+      expect(execFileSync).toHaveBeenCalledTimes(1);
+    });
+
+    it('is inlined when the i18n config has no locales at all', () => {
+      translateFederationArtifacts(
+        { sourceLocale: 'en' },
+        true,
+        'dist/browser',
+        federationFiles,
+        '/ws'
+      );
+
+      expect(execFileSync).toHaveBeenCalledTimes(1);
+      expect(localizeArgs()).not.toContain('--target-locales');
+    });
+  });
+
+  describe('integrity hashes', () => {
+    const sha384 = (content: string) =>
+      `sha384-${createHash('sha384').update(Buffer.from(content)).digest('base64')}`;
+
+    const withRemoteEntry = (integrity: Record<string, string> | undefined) => {
+      vi.mocked(fs.readFileSync).mockImplementation(file => {
+        if (String(file).endsWith('remoteEntry.json')) {
+          return JSON.stringify({ name: 'app', ...(integrity && { integrity }) });
+        }
+        return String(file).endsWith('importmap.json')
+          ? '{}'
+          : (Buffer.from('translated content') as never);
+      });
+    };
+
+    const writtenRemoteEntries = () =>
+      Object.fromEntries(
+        vi
+          .mocked(fs.writeFileSync)
+          .mock.calls.filter(c => String(c[0]).endsWith('remoteEntry.json'))
+          .map(c => [posix(String(c[0])), JSON.parse(String(c[1]))])
+      );
+
+    it('recomputes the hashes in the remoteEntry of every translated locale and the source locale', () => {
+      withRemoteEntry({ 'a.js': 'sha384-stale' });
+
+      translateFederationArtifacts(i18n, ['de', 'fr'], 'dist/browser', federationFiles, '/ws');
+
+      const written = writtenRemoteEntries();
+      // the run that translates also writes the inlined source locale
+      expect(Object.keys(written).sort()).toEqual([
+        '/ws/dist/browser/de/remoteEntry.json',
+        '/ws/dist/browser/en/remoteEntry.json',
+        '/ws/dist/browser/fr/remoteEntry.json',
+      ]);
+      expect(written['/ws/dist/browser/de/remoteEntry.json'].integrity).toEqual({
+        'a.js': sha384('translated content'),
+      });
+      expect(written['/ws/dist/browser/de/remoteEntry.json'].name).toBe('app');
+    });
+
+    it('keeps the algorithm of the existing hash', () => {
+      withRemoteEntry({ 'a.js': 'sha512-stale' });
+
+      translateFederationArtifacts(i18n, ['de'], 'dist/browser', federationFiles, '/ws');
+
+      const hash = createHash('sha512').update(Buffer.from('translated content')).digest('base64');
+      expect(writtenRemoteEntries()['/ws/dist/browser/de/remoteEntry.json'].integrity['a.js']).toBe(
+        `sha512-${hash}`
+      );
+    });
+
+    it('keeps the hash of a file that is not in the locale folder', () => {
+      withRemoteEntry({ 'a.js': 'sha384-stale', 'gone.js': 'sha384-keep' });
+      vi.mocked(fs.existsSync).mockImplementation(file => !String(file).endsWith('gone.js'));
+
+      translateFederationArtifacts(i18n, ['de'], 'dist/browser', federationFiles, '/ws');
+
+      const integrity = writtenRemoteEntries()['/ws/dist/browser/de/remoteEntry.json'].integrity;
+      expect(integrity['gone.js']).toBe('sha384-keep');
+      expect(integrity['a.js']).toBe(sha384('translated content'));
+    });
+
+    it('recomputes the hashes in importmap.json next to the remoteEntry', () => {
+      vi.mocked(fs.readFileSync).mockImplementation(file => {
+        if (String(file).endsWith('importmap.json')) {
+          return JSON.stringify({ imports: { a: 'a.js' }, integrity: { 'a.js': 'sha384-stale' } });
+        }
+        return String(file).endsWith('remoteEntry.json')
+          ? '{}'
+          : (Buffer.from('translated content') as never);
+      });
+
+      translateFederationArtifacts(i18n, ['de'], 'dist/browser', federationFiles, '/ws');
+
+      const written = Object.fromEntries(
+        vi
+          .mocked(fs.writeFileSync)
+          .mock.calls.filter(c => String(c[0]).endsWith('importmap.json'))
+          .map(c => [posix(String(c[0])), JSON.parse(String(c[1]))])
+      );
+      expect(written['/ws/dist/browser/de/importmap.json'].integrity).toEqual({
+        'a.js': sha384('translated content'),
+      });
+      expect(written['/ws/dist/browser/de/importmap.json'].imports).toEqual({ a: 'a.js' });
+    });
+
+    it('does not touch a remoteEntry without integrity hashes', () => {
+      withRemoteEntry(undefined);
+
+      translateFederationArtifacts(i18n, ['de'], 'dist/browser', federationFiles, '/ws');
+
+      expect(writtenRemoteEntries()).toEqual({});
+    });
   });
 
   it('filters to the intersection of requested and configured locales', async () => {
