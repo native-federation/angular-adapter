@@ -106,6 +106,26 @@ describe('translateFederationArtifacts with the real localize-translate CLI', ()
     expect(inlined).toContain('Hello');
   });
 
+  // A watch rebuild does not rewrite shared bundles, so the second run stages the same source
+  // files again. If the first run had inlined them in place, de would get the English text.
+  it('keeps the target locale translated when a run without the source locale repeats', () => {
+    const browser = path.join(workspaceRoot, 'dist', 'browser');
+    const translation = path.join(workspaceRoot, 'messages.de.xlf');
+    const raw = 'export const t = $localize`:@@greeting:Hello`;';
+
+    write(translation, xlf);
+    write(path.join(browser, 'en', 'remoteEntry.json'), '{}');
+    write(path.join(browser, 'en', 'cmp.js'), raw);
+
+    const i18n: I18nConfig = { sourceLocale: 'en', locales: { de: translation } };
+
+    translateFederationArtifacts(i18n, ['de'], 'dist/browser', ['cmp.js'], workspaceRoot);
+    translateFederationArtifacts(i18n, ['de'], 'dist/browser', ['cmp.js'], workspaceRoot);
+
+    expect(fs.readFileSync(path.join(browser, 'de', 'cmp.js'), 'utf8')).toContain('Hallo');
+    expect(fs.readFileSync(path.join(browser, 'en', 'cmp.js'), 'utf8')).toBe(raw);
+  });
+
   it('leaves the output and integrity hashes unchanged when the source-only run repeats', () => {
     const browser = path.join(workspaceRoot, 'dist', 'browser');
     write(
