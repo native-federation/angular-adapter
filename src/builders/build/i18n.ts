@@ -112,8 +112,8 @@ export function translateFederationArtifacts(
     '-o',
     translationOutPath,
     ...(targetLocales.length > 0 ? ['--target-locales', ...targetLocales] : []),
-    '-l',
-    sourceLocale,
+    // -l inlines the source folder in place, and a watch rebuild then translates that inlined copy
+    ...(inlineSourceLocale ? ['-l', sourceLocale] : []),
   ];
 
   const targetPaths = targetLocales.map(localePath);

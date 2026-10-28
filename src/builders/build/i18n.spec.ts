@@ -175,10 +175,10 @@ describe('translateFederationArtifacts', () => {
     it('recomputes the hashes in the remoteEntry of every translated locale and the source locale', () => {
       withRemoteEntry({ 'a.js': 'sha384-stale' });
 
-      translateFederationArtifacts(i18n, ['de', 'fr'], 'dist/browser', federationFiles, '/ws');
+      translateFederationArtifacts(i18n, true, 'dist/browser', federationFiles, '/ws');
 
       const written = writtenRemoteEntries();
-      // the run that translates also writes the inlined source locale
+      // the source locale is requested too, so the same run writes its inlined copy
       expect(Object.keys(written).sort()).toEqual([
         '/ws/dist/browser/de/remoteEntry.json',
         '/ws/dist/browser/en/remoteEntry.json',
@@ -249,8 +249,16 @@ describe('translateFederationArtifacts', () => {
     translateFederationArtifacts(i18n, ['de'], 'dist/browser', federationFiles, '/ws');
 
     const args = localizeArgs();
-    const targets = args.slice(args.indexOf('--target-locales') + 1, args.indexOf('-l'));
-    expect(targets).toEqual(['de']);
+    // --target-locales is the last option when the source locale is not requested
+    expect(args.slice(args.indexOf('--target-locales') + 1)).toEqual(['de']);
+  });
+
+  // with -l, localize-translate would overwrite the source folder with an inlined copy, which
+  // the next watch rebuild stages again for the target locales
+  it('leaves the source locale untouched when it is not requested', () => {
+    translateFederationArtifacts(i18n, ['de'], 'dist/browser', federationFiles, '/ws');
+
+    expect(localizeArgs()).not.toContain('-l');
   });
 
   it('builds the localize-translate command from the federation output files', async () => {
