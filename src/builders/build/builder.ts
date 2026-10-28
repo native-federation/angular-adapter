@@ -38,7 +38,6 @@ import { type JsonObject } from "@angular-devkit/core";
 import {
   buildForFederation,
   createFederationCache,
-  type FederationInfo,
   getExternals,
   normalizeFederationOptions,
   rebuildForFederation,
@@ -46,6 +45,7 @@ import {
 } from "@softarc/native-federation";
 import {
   AbortedError,
+  collectOutputFiles,
   createNfWatcher,
   linkedSharedDirs,
   logger,
@@ -304,11 +304,13 @@ export async function* runBuilder(
   // syncNfFileWatcher calls below a no-op) so the linked lib's real source is watched.
   const linkedDirs = linkedSharedDirs(normalized.config, normalized.options);
 
+  const useExternalsPlugin = !activateSsr;
+
   const plugins = [
     {
       name: "externals",
       setup(build: PluginBuild) {
-        if (!activateSsr && build.initialOptions.platform !== "node") {
+        if (useExternalsPlugin && build.initialOptions.platform !== "node") {
           build.initialOptions.external = externals.filter(
             (e) => e !== "tslib",
           );
@@ -501,9 +503,8 @@ export async function* runBuilder(
     fs.mkdirSync(federationOutputPath, { recursive: true });
   }
 
-  let federationResult: FederationInfo;
   try {
-    federationResult = await buildForFederation(
+    await buildForFederation(
       normalized.config,
       normalized.options,
       externals,
@@ -521,15 +522,14 @@ export async function* runBuilder(
 
   syncFederationWatcher();
 
-  const hasLocales = i18n?.locales && Object.keys(i18n.locales).length > 0;
-  if (hasLocales && localeFilter) {
+  if (i18n && localeFilter) {
     const start = process.hrtime();
 
     translateFederationArtifacts(
       i18n,
       localeFilter,
-      outputOptions.base,
-      federationResult,
+      path.join(outputOptions.base, outputOptions.browser),
+      collectOutputFiles(normalized.options.federationCache).map((f) => f.fileName),
       context.workspaceRoot,
     );
     logger.measure(start, "To translate the artifacts.");
@@ -545,6 +545,7 @@ export async function* runBuilder(
         appBuilderName,
         createInternalAngularBuilder(externals, {
           define: nfBuilderOptions.define,
+          externalsPlugin: useExternalsPlugin,
         }),
         context,
         nfBuilderOptions.skipHtmlTransform
@@ -605,7 +606,7 @@ export async function* runBuilder(
 
       if (nfWatcher) nfWatcher.clear();
 
-      federationResult = await rebuildForFederation(
+      await rebuildForFederation(
         normalized.config,
         normalized.options,
         externals,
@@ -619,12 +620,12 @@ export async function* runBuilder(
         throw new AbortedError("[builder] After federation build.");
       }
 
-      if (hasLocales && localeFilter) {
+      if (i18n && localeFilter) {
         translateFederationArtifacts(
           i18n,
           localeFilter,
-          outputOptions.base,
-          federationResult,
+          path.join(outputOptions.base, outputOptions.browser),
+          collectOutputFiles(normalized.options.federationCache).map((f) => f.fileName),
           context.workspaceRoot,
         );
       }

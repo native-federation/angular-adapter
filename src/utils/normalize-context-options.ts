@@ -18,12 +18,9 @@ export interface NormalizedContextOptions {
   tsConfigPath?: string;
   mappedPaths: PathToImport;
   cache: FederationCache<SourceFileCache>;
-  dev: boolean;
-  isMappingOrExposed: boolean;
   hash: boolean;
   chunks?: boolean;
   platform?: 'browser' | 'node';
-  optimizedMappings: boolean;
 }
 
 export function normalizeContextOptions(
@@ -40,11 +37,8 @@ export function normalizeContextOptions(
     tsConfigPath: adapterOptions.tsConfigPath,
     mappedPaths: adapterOptions.mappedPaths,
     cache: adapterOptions.cache,
-    dev: !!adapterOptions.dev,
-    isMappingOrExposed: !!adapterOptions.isMappingOrExposed,
     hash: !!adapterOptions.hash,
     chunks: adapterOptions.chunks,
     platform: adapterOptions.platform,
-    optimizedMappings: !!adapterOptions.optimizedMappings,
   };
 }

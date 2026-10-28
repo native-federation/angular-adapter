@@ -4,8 +4,8 @@ import {
   type NFBuildAdapter,
   type NFBuildAdapterResult,
   type NFBuildAdapterOptions,
-  type NFBuildAdapterContext,
   type FederationCache,
+  type EntryPoint,
 } from '@softarc/native-federation';
 import { AbortedError } from '@softarc/native-federation/internal';
 
@@ -16,26 +16,38 @@ import type { ApplicationBuilderOptions } from '@angular/build';
 import { createAngularEsbuildContext } from './angular-bundler.js';
 import { createNodeModulesEsbuildContext } from './node-modules-bundler.js';
 import { createExternalsCacheKey } from './externals-cache-key.js';
+import { entriesByOutputName } from './output-entries.js';
 import { resolveSharedBundleSettings } from './shared-bundle-settings.js';
 import { normalizeContextOptions } from './normalize-context-options.js';
 import type { NfInternalOptions } from '../builders/build/schema.js';
 
-export interface EsbuildContextResult extends NFBuildAdapterContext<esbuild.BuildContext> {
+interface EsbuildContextResult {
+  ctx: esbuild.BuildContext;
   pluginDisposed: Promise<void>;
+  kind: NFBuildAdapterOptions['kind'];
+  outdir: string;
   cache: FederationCache<SourceFileCache>;
+  entryPoints: EntryPoint[];
 }
 
-function writeResult(result: esbuild.BuildResult<esbuild.BuildOptions>, outdir: string): string[] {
-  const writtenFiles: string[] = [];
+function writeOutputs(
+  result: esbuild.BuildResult<esbuild.BuildOptions>,
+  outdir: string,
+  entryByOutputName: Map<string, string>
+): NFBuildAdapterResult[] {
+  // Component stylesheets with the same basename each emit `<name>.css.map` (#195); report the
+  // path once, as the file the last write left on disk.
+  const writtenFiles = new Map<string, NFBuildAdapterResult>();
 
   for (const outFile of result.outputFiles ?? []) {
     const fileName = path.basename(outFile.path);
     const filePath = path.join(outdir, fileName);
     fs.writeFileSync(filePath, outFile.contents);
-    writtenFiles.push(filePath);
+    const entry = entryByOutputName.get(fileName);
+    writtenFiles.set(filePath, entry ? { fileName: filePath, entry } : { fileName: filePath });
   }
 
-  return writtenFiles;
+  return [...writtenFiles.values()];
 }
 
 export interface AngularBuildAdapter extends NFBuildAdapter {
@@ -52,11 +64,13 @@ export async function createAngularBuildAdapter(
   const externalsCacheKey = createExternalsCacheKey(sharedBundleSettings);
   const bundleContextCache = new Map<string, EsbuildContextResult>();
 
-  const disposeWhere = async (matches: (entry: EsbuildContextResult) => boolean) => {
+  const disposeWhere = async (
+    matches: (entry: EsbuildContextResult, name: string) => boolean
+  ) => {
     const disposals: Promise<void>[] = [];
 
     for (const [name, entry] of bundleContextCache) {
-      if (!matches(entry)) continue;
+      if (!matches(entry, name)) continue;
       bundleContextCache.delete(name);
       disposals.push(
         (async () => {
@@ -74,7 +88,7 @@ export async function createAngularBuildAdapter(
       if (!bundleContextCache.has(name))
         throw new Error(`Could not dispose of non-existing build '${name}'`);
 
-      await disposeWhere(entry => entry.name === name);
+      await disposeWhere((_, entryName) => entryName === name);
       return;
     }
 
@@ -82,30 +96,28 @@ export async function createAngularBuildAdapter(
     await esbuild.stop();
   };
 
-  const disposeFederationContexts = () => disposeWhere(entry => entry.isMappingOrExposed);
+  const disposeFederationContexts = () => disposeWhere(entry => entry.kind !== 'shared');
 
   const setup = async (
     name: string,
     adapterOptions: NFBuildAdapterOptions<SourceFileCache>
   ): Promise<void> => {
-    if (bundleContextCache.has(name)) {
-      return;
-    }
+    if (bundleContextCache.has(name)) await dispose(name);
 
     const normalizedOptions = normalizeContextOptions(ngBuilderOptions, context, adapterOptions);
 
-    const { ctx, pluginDisposed } = normalizedOptions.isMappingOrExposed
-      ? await createAngularEsbuildContext(normalizedOptions, name)
-      : await createNodeModulesEsbuildContext(normalizedOptions, sharedBundleSettings);
+    const { ctx, pluginDisposed } =
+      adapterOptions.kind === 'shared'
+        ? await createNodeModulesEsbuildContext(normalizedOptions, sharedBundleSettings)
+        : await createAngularEsbuildContext(normalizedOptions, name);
 
     bundleContextCache.set(name, {
       ctx,
       pluginDisposed,
+      kind: adapterOptions.kind,
       outdir: normalizedOptions.outdir,
       cache: normalizedOptions.cache,
-      isMappingOrExposed: normalizedOptions.isMappingOrExposed,
-      dev: normalizedOptions.dev,
-      name,
+      entryPoints: normalizedOptions.entryPoints,
     });
   };
 
@@ -130,12 +142,14 @@ export async function createAngularBuildAdapter(
         bundleContext.cache.bundlerCache.invalidate(new Set(opts.modifiedFiles));
       }
       const result = await bundleContext.ctx.rebuild();
-      const writtenFiles = writeResult(
-        result as esbuild.BuildResult<esbuild.BuildOptions>,
-        bundleContext.outdir
+      // Without `entry`, core matches hashed entries by file name (core#193).
+      const entryByOutputName = entriesByOutputName(
+        result.metafile,
+        bundleContext.entryPoints,
+        context.workspaceRoot
       );
 
-      return writtenFiles.map(fileName => ({ fileName }) as NFBuildAdapterResult);
+      return writeOutputs(result, bundleContext.outdir, entryByOutputName);
     } catch (error) {
       if (opts?.signal?.aborted && error instanceof Error && error.message.includes('canceled')) {
         throw new AbortedError('[build] ESBuild rebuild was canceled.');

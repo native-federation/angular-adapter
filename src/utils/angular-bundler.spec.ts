@@ -48,10 +48,7 @@ function makeOptions(overrides: Partial<NormalizedContextOptions> = {}) {
     tsConfigPath: 'apps/example/tsconfig.app.json',
     mappedPaths: {},
     cache: { bundlerCache: { loadResultCache: {} }, cachePath: '/cache' },
-    dev: false,
-    isMappingOrExposed: true,
     hash: false,
-    optimizedMappings: false,
     ...overrides,
   } as unknown as NormalizedContextOptions;
 }
@@ -156,6 +153,13 @@ describe('createAngularEsbuildContext', () => {
     await createAngularEsbuildContext(makeOptions(), 'mapping-or-exposed');
 
     expect(lastBuildOptions().absWorkingDir).toBe(workspaceRoot);
+  });
+
+  // core#193: the adapter reads each output's entryPoint from the metafile to set `entry`.
+  it('requests a metafile', async () => {
+    await createAngularEsbuildContext(makeOptions(), 'mapping-or-exposed');
+
+    expect(lastBuildOptions().metafile).toBe(true);
   });
 
   // Core hands shared mappings over absolute already.

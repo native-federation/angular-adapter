@@ -10,11 +10,17 @@
     "url": "http://www.angulararchitects.io"
   },
   "peerDependencies": {
-    "@angular/build": ">=21.2.0"
+    "@angular/build": ">=21.2.0",
+    "@angular/localize": ">=21.2.0"
+  },
+  "peerDependenciesMeta": {
+    "@angular/localize": {
+      "optional": true
+    }
   },
   "dependencies": {
-    "@softarc/native-federation": "~4.8.0",
-    "@softarc/native-federation-orchestrator": "^4.8.0",
+    "@softarc/native-federation": "~4.9.0",
+    "@softarc/native-federation-orchestrator": "^4.9.0",
     "@angular-devkit/architect": "^0.2102.0",
     "@angular-devkit/build-angular": "^21.2.0",
     "@angular-devkit/core": "^21.2.0",
@@ -81,6 +87,7 @@
   "devDependencies": {
     "@angular/build": "^21.2.0",
     "@angular-devkit/build-angular": "^21.2.0",
+    "@angular/localize": "^21.2.0",
     "@eslint/js": "^9.39.1",
     "@nx/devkit": "~22.6.0",
     "@types/node": "~24.10.0",

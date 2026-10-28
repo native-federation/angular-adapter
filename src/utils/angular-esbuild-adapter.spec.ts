@@ -8,6 +8,7 @@ import { createNodeModulesEsbuildContext } from './node-modules-bundler.js';
 import { normalizeContextOptions } from './normalize-context-options.js';
 import { createExternalsCacheKey } from './externals-cache-key.js';
 import { resolveSharedBundleSettings } from './shared-bundle-settings.js';
+import { entriesByOutputName } from './output-entries.js';
 
 vi.mock('fs');
 vi.mock('esbuild', () => ({ stop: vi.fn().mockResolvedValue(undefined) }));
@@ -16,12 +17,16 @@ vi.mock('./node-modules-bundler.js', () => ({ createNodeModulesEsbuildContext: v
 vi.mock('./normalize-context-options.js', () => ({ normalizeContextOptions: vi.fn() }));
 vi.mock('./externals-cache-key.js', () => ({ createExternalsCacheKey: vi.fn() }));
 vi.mock('./shared-bundle-settings.js', () => ({ resolveSharedBundleSettings: vi.fn() }));
+vi.mock('./output-entries.js', () => ({ entriesByOutputName: vi.fn() }));
 
 const sharedBundleSettings = { target: ['chrome120'], sourcemap: false as const, plugins: [] };
 const externalsCacheKey = { adapter: 'adapter@1.0.0', options: { target: 'chrome120' } };
 
 const ngBuilderOptions = {} as never;
-const context = {} as never;
+const mapping = { kind: 'mapping' } as never;
+const exposed = { kind: 'exposed' } as never;
+const shared = { kind: 'shared' } as never;
+const context = { workspaceRoot: '/ws' } as never;
 
 function makeCtx() {
   return {
@@ -40,8 +45,6 @@ function normalizedWith(overrides: Record<string, unknown> = {}) {
     external: [],
     outdir: '/out',
     cache: { bundlerCache: { invalidate: vi.fn(), loadResultCache: {} }, cachePath: '/c' },
-    dev: false,
-    isMappingOrExposed: true,
     hash: false,
     ...overrides,
   };
@@ -52,6 +55,7 @@ beforeEach(() => {
   vi.mocked(normalizeContextOptions).mockReturnValue(normalizedWith() as never);
   vi.mocked(resolveSharedBundleSettings).mockResolvedValue(sharedBundleSettings);
   vi.mocked(createExternalsCacheKey).mockReturnValue(externalsCacheKey);
+  vi.mocked(entriesByOutputName).mockReturnValue(new Map());
   vi.mocked(createAngularEsbuildContext).mockResolvedValue({
     ctx: makeCtx() as never,
     pluginDisposed: Promise.resolve(),
@@ -73,12 +77,9 @@ describe('createAngularBuildAdapter', () => {
   });
 
   it('bundles shared externals with the same settings the cache key was built from', async () => {
-    vi.mocked(normalizeContextOptions).mockReturnValue(
-      normalizedWith({ isMappingOrExposed: false }) as never
-    );
     const adapter = await createAngularBuildAdapter(ngBuilderOptions, context);
 
-    await adapter.setup('browser-shared', {} as never);
+    await adapter.setup('browser-shared', shared);
 
     expect(createNodeModulesEsbuildContext).toHaveBeenCalledWith(
       expect.anything(),
@@ -100,24 +101,46 @@ describe('createAngularBuildAdapter', () => {
     );
   });
 
-  it('uses the Angular esbuild context for mapping/exposed builds and caches it', async () => {
+  it('uses the Angular esbuild context for mapping and exposed builds', async () => {
     const adapter = await createAngularBuildAdapter(ngBuilderOptions, context);
 
-    await adapter.setup('remote', {} as never);
-    // second setup with the same name is a no-op
-    await adapter.setup('remote', {} as never);
+    await adapter.setup('mapping-bundle', mapping);
+    await adapter.setup('remote', exposed);
 
+    expect(createAngularEsbuildContext).toHaveBeenCalledWith(expect.anything(), 'mapping-bundle');
     expect(createAngularEsbuildContext).toHaveBeenCalledWith(expect.anything(), 'remote');
     expect(createNodeModulesEsbuildContext).not.toHaveBeenCalled();
   });
 
-  it('uses the node_modules context when the build is not a mapping/exposed', async () => {
-    vi.mocked(normalizeContextOptions).mockReturnValue(
-      normalizedWith({ isMappingOrExposed: false }) as never
-    );
+  // core 4.9 contract (core#203): a second setup under the same name replaces the context.
+  it('disposes the old context before setting up the same name again', async () => {
+    const oldCtx = makeCtx();
+    let releasePlugin!: () => void;
+    const oldPluginDisposed = new Promise<void>(resolve => (releasePlugin = resolve));
+    vi.mocked(createAngularEsbuildContext).mockResolvedValueOnce({
+      ctx: oldCtx as never,
+      pluginDisposed: oldPluginDisposed,
+    });
+    const adapter = await createAngularBuildAdapter(ngBuilderOptions, context);
+    await adapter.setup('remote', exposed);
+
+    const replacing = adapter.setup('remote', exposed);
+    await new Promise(resolve => setTimeout(resolve, 0));
+    // #47: the new compiler plugin must not start before the old one reset Angular's TS state
+    expect(oldCtx.dispose).toHaveBeenCalledTimes(1);
+    expect(createAngularEsbuildContext).toHaveBeenCalledTimes(1);
+
+    releasePlugin();
+    await replacing;
+    expect(createAngularEsbuildContext).toHaveBeenCalledTimes(2);
+    await adapter.build('remote');
+    expect(oldCtx.rebuild).not.toHaveBeenCalled();
+  });
+
+  it('uses the node_modules context for shared builds', async () => {
     const adapter = await createAngularBuildAdapter(ngBuilderOptions, context);
 
-    await adapter.setup('deps', {} as never);
+    await adapter.setup('deps', shared);
 
     expect(createNodeModulesEsbuildContext).toHaveBeenCalledTimes(1);
     expect(createAngularEsbuildContext).not.toHaveBeenCalled();
@@ -130,7 +153,7 @@ describe('createAngularBuildAdapter', () => {
     vi.mocked(fs.readFileSync).mockReturnValue('' as never);
     const adapter = await createAngularBuildAdapter(ngBuilderOptions, context);
 
-    await adapter.setup('remote', {} as never);
+    await adapter.setup('remote', exposed);
 
     expect(fs.writeFileSync).not.toHaveBeenCalled();
     expect(fs.readFileSync).not.toHaveBeenCalled();
@@ -138,7 +161,7 @@ describe('createAngularBuildAdapter', () => {
 
   it('rebuilds, writes output files and returns their paths', async () => {
     const adapter = await createAngularBuildAdapter(ngBuilderOptions, context);
-    await adapter.setup('remote', {} as never);
+    await adapter.setup('remote', exposed);
 
     const result = await adapter.build('remote');
 
@@ -147,6 +170,36 @@ describe('createAngularBuildAdapter', () => {
       new TextEncoder().encode('code')
     );
     expect(result).toEqual([{ fileName: '/out/main.js' }]);
+  });
+
+  // core#193: without `entry`, core matched `chunk-<hash>.js` to an exposed `./chunk`.
+  it('sets entry from the metafile on the outputs built from an entry point', async () => {
+    const entryPoints = [{ fileName: 'src/chunk.ts', outName: 'chunk.js' }];
+    vi.mocked(normalizeContextOptions).mockReturnValue(normalizedWith({ entryPoints }) as never);
+    const metafile = { inputs: {}, outputs: {} };
+    const ctx = makeCtx();
+    ctx.rebuild.mockResolvedValue({
+      outputFiles: [
+        { path: '/ws/dist/chunk-AAAA.js', contents: new Uint8Array() },
+        { path: '/ws/dist/chunk-BBBB.js', contents: new Uint8Array() },
+      ],
+      metafile,
+    });
+    vi.mocked(createAngularEsbuildContext).mockResolvedValue({
+      ctx,
+      pluginDisposed: Promise.resolve(),
+    } as never);
+    vi.mocked(entriesByOutputName).mockReturnValue(new Map([['chunk-BBBB.js', 'chunk.js']]));
+    const adapter = await createAngularBuildAdapter(ngBuilderOptions, context);
+    await adapter.setup('remote', exposed);
+
+    const result = await adapter.build('remote');
+
+    expect(entriesByOutputName).toHaveBeenCalledWith(metafile, entryPoints, '/ws');
+    expect(result).toEqual([
+      { fileName: '/out/chunk-AAAA.js' },
+      { fileName: '/out/chunk-BBBB.js', entry: 'chunk.js' },
+    ]);
   });
 
   // #181: writing outFile.text decoded binary assets as UTF-8, replacing invalid bytes with U+FFFD.
@@ -169,18 +222,51 @@ describe('createAngularBuildAdapter', () => {
       pluginDisposed: Promise.resolve(),
     } as never);
     const adapter = await createAngularBuildAdapter(ngBuilderOptions, context);
-    await adapter.setup('remote', {} as never);
+    await adapter.setup('remote', exposed);
 
     await adapter.build('remote');
 
     expect(fs.writeFileSync).toHaveBeenCalledWith('/out/logo.png', png);
   });
 
+  // #195: @angular/build 22.2.5 also bundles an empty external stylesheet, so a component with
+  // inline styles and an empty styleUrl emits two `app.component.css.map` outputs. Core rejects
+  // two results for one name once `entry` is set.
+  it('reports a path written twice once, with the last contents on disk', async () => {
+    const ctx = makeCtx();
+    const inlineMap = new TextEncoder().encode('{"sources":["inline"]}');
+    const emptyMap = new TextEncoder().encode('{"sources":[]}');
+    ctx.rebuild.mockResolvedValue({
+      outputFiles: [
+        { path: '/ws/app.component.css.map', contents: inlineMap },
+        { path: '/ws/app.component.css.map', contents: emptyMap },
+        { path: '/ws/dist/main.js', contents: new Uint8Array() },
+      ],
+    });
+    vi.mocked(createAngularEsbuildContext).mockResolvedValue({
+      ctx,
+      pluginDisposed: Promise.resolve(),
+    } as never);
+    const adapter = await createAngularBuildAdapter(ngBuilderOptions, context);
+    await adapter.setup('remote', exposed);
+
+    const result = await adapter.build('remote');
+
+    expect(result).toEqual([
+      { fileName: '/out/app.component.css.map' },
+      { fileName: '/out/main.js' },
+    ]);
+    expect(vi.mocked(fs.writeFileSync).mock.calls.at(1)).toEqual([
+      '/out/app.component.css.map',
+      emptyMap,
+    ]);
+  });
+
   it('invalidates the bundler cache for modified files before rebuilding', async () => {
     const normalized = normalizedWith();
     vi.mocked(normalizeContextOptions).mockReturnValue(normalized as never);
     const adapter = await createAngularBuildAdapter(ngBuilderOptions, context);
-    await adapter.setup('remote', {} as never);
+    await adapter.setup('remote', exposed);
 
     await adapter.build('remote', { modifiedFiles: ['a.ts'] });
 
@@ -189,7 +275,7 @@ describe('createAngularBuildAdapter', () => {
 
   it('throws AbortedError when the signal is already aborted', async () => {
     const adapter = await createAngularBuildAdapter(ngBuilderOptions, context);
-    await adapter.setup('remote', {} as never);
+    await adapter.setup('remote', exposed);
 
     await expect(
       adapter.build('remote', { signal: { aborted: true } as AbortSignal })
@@ -203,7 +289,7 @@ describe('createAngularBuildAdapter', () => {
       pluginDisposed: Promise.resolve(),
     });
     const adapter = await createAngularBuildAdapter(ngBuilderOptions, context);
-    await adapter.setup('remote', {} as never);
+    await adapter.setup('remote', exposed);
 
     await adapter.dispose();
 
@@ -228,12 +314,9 @@ describe('createAngularBuildAdapter', () => {
     });
 
     const adapter = await createAngularBuildAdapter(ngBuilderOptions, context);
-    await adapter.setup('mapping-bundle', {} as never);
-    await adapter.setup('mapping-or-exposed', {} as never);
-    vi.mocked(normalizeContextOptions).mockReturnValue(
-      normalizedWith({ isMappingOrExposed: false }) as never
-    );
-    await adapter.setup('browser-shared', {} as never);
+    await adapter.setup('mapping-bundle', mapping);
+    await adapter.setup('mapping-or-exposed', exposed);
+    await adapter.setup('browser-shared', shared);
 
     await adapter.disposeFederationContexts();
 
@@ -253,7 +336,7 @@ describe('createAngularBuildAdapter', () => {
       pluginDisposed,
     });
     const adapter = await createAngularBuildAdapter(ngBuilderOptions, context);
-    await adapter.setup('mapping-bundle', {} as never);
+    await adapter.setup('mapping-bundle', mapping);
 
     let done = false;
     const disposing = adapter.disposeFederationContexts().then(() => (done = true));
