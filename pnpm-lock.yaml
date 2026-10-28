@@ -10,6 +10,14 @@ overrides:
   brace-expansion: '>=5.0.12'
   fast-uri: '>=4.1.5'
   smol-toml: '>=1.7.1'
+  piscina@5: ^5.3.2
+  undici@7: ^7.30.1
+  vite@7: ^7.3.7
+  body-parser@1: ^1.20.9
+  follow-redirects@1: ^1.16.1
+  launch-editor@2: ^2.14.2
+  source-map-js@1: ^1.2.2
+  zod@4: ^4.6.6
 
 importers:
 
@@ -92,11 +100,11 @@ importers:
         specifier: ^8.46.4
         version: 8.71.0(eslint@9.39.5(jiti@2.7.0)(supports-color@7.2.0))(supports-color@7.2.0)(typescript@5.9.3)
       vite:
-        specifier: ^7.0.0
-        version: 7.3.6(@types/node@24.10.15)(jiti@2.7.0)(less@4.9.0)(sass@1.97.3)(terser@5.46.0)(yaml@2.9.1)
+        specifier: ^7.3.7
+        version: 7.3.7(@types/node@24.10.15)(jiti@2.7.0)(less@4.9.0)(sass@1.97.3)(terser@5.46.0)(yaml@2.9.1)
       vitest:
         specifier: ^4.0.0
-        version: 4.1.11(@types/node@24.10.15)(@vitest/coverage-v8@4.1.11)(vite@7.3.6(@types/node@24.10.15)(jiti@2.7.0)(less@4.9.0)(sass@1.97.3)(terser@5.46.0)(yaml@2.9.1))
+        version: 4.1.11(@types/node@24.10.15)(@vitest/coverage-v8@4.1.11)(vite@7.3.7(@types/node@24.10.15)(jiti@2.7.0)(less@4.9.0)(sass@1.97.3)(terser@5.46.0)(yaml@2.9.1))
 
 packages:
 
@@ -2527,7 +2535,7 @@ packages:
     resolution: {integrity: sha512-HXciTXN/sDBYWgeAD4V4s0DN0g72x5mlxQhHxtYu3Tt8BLa6MzcJZUyDVFCdtjNs3bfENVHVzOsmooTVuNgAAw==, tarball: https://registry.npmjs.org/@vitejs/plugin-basic-ssl/-/plugin-basic-ssl-2.1.4.tgz}
     engines: {node: ^18.0.0 || ^20.0.0 || >=22.0.0}
     peerDependencies:
-      vite: ^6.0.0 || ^7.0.0
+      vite: ^7.3.7
 
   '@vitest/coverage-v8@4.1.11':
     resolution: {integrity: sha512-8MVGEFnJIcdGjcbfKmeq8z0pZHH0JlVtoVZH9Q/qwUp6wyFnEJUBMrw9DCaj+ra3vShGmhavjalMIhPNxZAUcw==, tarball: https://registry.npmjs.org/@vitest/coverage-v8/-/coverage-v8-4.1.11.tgz}
@@ -2545,7 +2553,7 @@ packages:
     resolution: {integrity: sha512-2XJVD55d1o5AZous5CCGKS74g/riOj9odEt2bQpCVZeblHyHdnMeFl4jl0XjU21stf4mbjUkew2eXQZt65g5CQ==, tarball: https://registry.npmjs.org/@vitest/mocker/-/mocker-4.1.11.tgz}
     peerDependencies:
       msw: ^2.4.9
-      vite: ^6.0.0 || ^7.0.0 || ^8.0.0
+      vite: ^7.3.7
     peerDependenciesMeta:
       msw:
         optional: true
@@ -2801,8 +2809,8 @@ packages:
   bl@4.1.0:
     resolution: {integrity: sha512-1W07cM9gS6DcLperZfFSj+bWLtaPGSOHWhPiGzXmvVJbRLdG82sH/Kn8EtW1VqWVA54AKf2h5k5BbnIbwF3h6w==, tarball: https://registry.npmjs.org/bl/-/bl-4.1.0.tgz}
 
-  body-parser@1.20.8:
-    resolution: {integrity: sha512-JNcyFQ64OiijEkPzUBTCe+hyPXUD/3LEldGQ6iF5LR1w00mx9o7xtDWHXBY2iItjdCFGoilOLNQbH943ut7pHA==, tarball: https://registry.npmjs.org/body-parser/-/body-parser-1.20.8.tgz}
+  body-parser@1.20.9:
+    resolution: {integrity: sha512-FISIQxV5u91Y9gvuFq3q/tA/qTqLJn3AhRcEvyozyhJTh5OBFFtv827AdHU7Rbyct4r+Ba1/99oFa1Y3yuFsdw==, tarball: https://registry.npmjs.org/body-parser/-/body-parser-1.20.9.tgz}
     engines: {node: '>= 0.8', npm: 1.2.8000 || >= 1.4.16}
 
   bonjour-service@1.4.4:
@@ -3424,8 +3432,8 @@ packages:
   flatted@3.4.4:
     resolution: {integrity: sha512-5+ybhBZANEJxaH3X5evAFatUxLfEHSr7n6kYJ+1Qd0mUqr4eu9gIf6GDbWHf8RJijHrjjO8G+la14SlL2SeS1Q==, tarball: https://registry.npmjs.org/flatted/-/flatted-3.4.4.tgz}
 
-  follow-redirects@1.16.0:
-    resolution: {integrity: sha512-y5rN/uOsadFT/JfYwhxRS5R7Qce+g3zG97+JrtFZlC9klX/W5hD7iiLzScI4nZqUS7DNUdhPgw4xI8W2LuXlUw==, tarball: https://registry.npmjs.org/follow-redirects/-/follow-redirects-1.16.0.tgz}
+  follow-redirects@1.16.1:
+    resolution: {integrity: sha512-FNvFGzoMLWmE6Yj9spb/zjd7yiNCHiAW9/Tg9CXrQ8wuu32HtlJOwWO11OJafl5FfY3DxTdQ0vj42zU1kvv5jg==, tarball: https://registry.npmjs.org/follow-redirects/-/follow-redirects-1.16.1.tgz}
     engines: {node: '>=4.0'}
     peerDependencies:
       debug: '*'
@@ -3817,8 +3825,8 @@ packages:
     engines: {node: ^20.19.0 || >=22.12.0}
     hasBin: true
 
-  launch-editor@2.14.1:
-    resolution: {integrity: sha512-QWBrQsMpH7gPr965dsKD/3cKWiNoTjpATQf++Xq63N6sKRGMwlVXz41O1IZTMfZQgBctD/K5Zt06+/I6pP6+HA==, tarball: https://registry.npmjs.org/launch-editor/-/launch-editor-2.14.1.tgz}
+  launch-editor@2.14.2:
+    resolution: {integrity: sha512-NHJEb30MGBCkmZXLZwz25t37QR4aY03ZzPYUJXOJaOa92uWwExI9SBQUuIznBYc1xkD7cJNGX7oc3Nl3sq2kQQ==, tarball: https://registry.npmjs.org/launch-editor/-/launch-editor-2.14.2.tgz}
 
   less-loader@12.3.1:
     resolution: {integrity: sha512-JZZmG7gMzoDP3VGeEG8Sh6FW5wygB5jYL7Wp29FFihuRTsIBacqO3LbRPr2yStYD11riVf13selLm/CPFRDBRQ==, tarball: https://registry.npmjs.org/less-loader/-/less-loader-12.3.1.tgz}
@@ -4231,8 +4239,8 @@ packages:
     resolution: {integrity: sha512-qcJu88Q2IWqJsDD529JKMdwGm/dvInW4HvQnRwiH9JtihJvzGOscDtHE3x1pBKeUOTysQ8kVmLnJ2kJu7yhcGA==, tarball: https://registry.npmjs.org/picomatch/-/picomatch-4.0.7.tgz}
     engines: {node: '>=12'}
 
-  piscina@5.2.0:
-    resolution: {integrity: sha512-DszUCKeVN/5G5QKo6jAVHL8fmKnkJvQ0ACiVgY7YGCq3TUB2oznAOayvZPIAdEThvhczkXR+qm3IHsNXpFCYfA==, tarball: https://registry.npmjs.org/piscina/-/piscina-5.2.0.tgz}
+  piscina@5.3.2:
+    resolution: {integrity: sha512-vv7l/mM7B9WgrhDaudIqv1x6v4LOBRYYmpWGdWushhpbCmVHp11sUB2v4hj1CAeTGXVxuZFz6xOU1RalAiPKfQ==, tarball: https://registry.npmjs.org/piscina/-/piscina-5.3.2.tgz}
     engines: {node: '>=20.x'}
 
   pkijs@3.4.1:
@@ -4610,8 +4618,8 @@ packages:
   sockjs@0.3.24:
     resolution: {integrity: sha512-GJgLTZ7vYb/JtPSSZ10hsOYIvEYsjbNU+zPdIHcUaWVNUEPivzxku31865sSSud0Da0W4lEeOPlmw93zLQchuQ==, tarball: https://registry.npmjs.org/sockjs/-/sockjs-0.3.24.tgz}
 
-  source-map-js@1.2.1:
-    resolution: {integrity: sha512-UXWMKhLOwVKb728IUtQPXxfYU+usdybtUrK/8uGE8CQMvrhOpwvzDBwj0QhSL7MQc7vIsISBG8VQ8+IDQxpfQA==, tarball: https://registry.npmjs.org/source-map-js/-/source-map-js-1.2.1.tgz}
+  source-map-js@1.2.2:
+    resolution: {integrity: sha512-KGj/8Y43x35aZVDtt+J4mK1hoLGHULMYfSkODJNQjNDC3oW1PqPoxMwo0pLUsWM/UEGzON/NxeHywEfNXNP3Vw==, tarball: https://registry.npmjs.org/source-map-js/-/source-map-js-1.2.2.tgz}
     engines: {node: '>=0.10.0'}
 
   source-map-loader@5.0.0:
@@ -4865,8 +4873,8 @@ packages:
   undici-types@7.16.0:
     resolution: {integrity: sha512-Zz+aZWSj8LE6zoxD+xrjh4VfkIG8Ya6LvYkZqtUQGJPZjYl53ypCaUwWqo7eI0x66KBGeRo+mlBEkMSeSZ38Nw==, tarball: https://registry.npmjs.org/undici-types/-/undici-types-7.16.0.tgz}
 
-  undici@7.29.1:
-    resolution: {integrity: sha512-RYONW2MeafgYlkVOKYKkA/Ag7BmXqgIWCa8t1m0JcxrQg9pI9lEqRhAOruOBCbAohOa/gkCF+iPi9hrgvTzu6Q==, tarball: https://registry.npmjs.org/undici/-/undici-7.29.1.tgz}
+  undici@7.30.1:
+    resolution: {integrity: sha512-03KrMbjIFDWQR5RNPrSw3bd1r12JpyFQl9/yxjUbJtqkjmllqC5lFjZh6ujeuJCKr8EOQvRW872Oy/az+nLYxg==, tarball: https://registry.npmjs.org/undici/-/undici-7.30.1.tgz}
     engines: {node: '>=20.18.1'}
 
   unicode-canonical-property-names-ecmascript@2.0.1:
@@ -4914,8 +4922,8 @@ packages:
     resolution: {integrity: sha512-BNGbWLfd0eUPabhkXUVm0j8uuvREyTh5ovRa/dyow/BqAbZJyC+5fU+IzQOzmAKzYqYRAISoRhdQr3eIZ/PXqg==, tarball: https://registry.npmjs.org/vary/-/vary-1.1.2.tgz}
     engines: {node: '>= 0.8'}
 
-  vite@7.3.6:
-    resolution: {integrity: sha512-4XP60spRGjSZFf1qYH+dJIkK2znL3zQfl9KkOV9MkkRR/3Dls0dxaBsQPTloEc5BLXWPL9vsOxopxyKoMmDueg==, tarball: https://registry.npmjs.org/vite/-/vite-7.3.6.tgz}
+  vite@7.3.7:
+    resolution: {integrity: sha512-AHEzTORMbi7/7aXp7w7KZ5+DCUdSeLsJz0grY8xHpc9DHdYb0vQu6DqJfm2tOw3gDExNgPgnJTXxM6syYFHaCA==, tarball: https://registry.npmjs.org/vite/-/vite-7.3.7.tgz}
     engines: {node: ^20.19.0 || >=22.12.0}
     hasBin: true
     peerDependencies:
@@ -4970,7 +4978,7 @@ packages:
       '@vitest/ui': 4.1.11
       happy-dom: '*'
       jsdom: '*'
-      vite: ^6.0.0 || ^7.0.0 || ^8.0.0
+      vite: ^7.3.7
     peerDependenciesMeta:
       '@edge-runtime/vm':
         optional: true
@@ -5176,8 +5184,8 @@ packages:
     resolution: {integrity: sha512-xYqdZFUK/VYazNl/oCDYN+3WloWQwMfZxBoiNt6qNyk+xfOdi598muWE42rNZFp1kNOiqW936q5RhUdnpqElSg==, tarball: https://registry.npmjs.org/yoctocolors/-/yoctocolors-2.2.0.tgz}
     engines: {node: '>=18'}
 
-  zod@4.6.5:
-    resolution: {integrity: sha512-v5l/aFXZQeai4awLbOpSoHecE9UiMrnfx75tEXLjNonXVARxQ5mOeipTjROUchszUNCqnE+hqAMujRsRHsut2Q==, tarball: https://registry.npmjs.org/zod/-/zod-4.6.5.tgz}
+  zod@4.6.7:
+    resolution: {integrity: sha512-g8W2D2kU6a8untc053fX1uVBKzM7yqAxW/3zwk83+6RyF2+SKOuV+c0wBDhUwzV1PaGapmZH+rmcUzPf+3CGwg==, tarball: https://registry.npmjs.org/zod/-/zod-4.6.7.tgz}
 
 snapshots:
 
@@ -5231,7 +5239,7 @@ snapshots:
       open: 11.0.0
       ora: 9.3.0
       picomatch: 4.0.4
-      piscina: 5.2.0
+      piscina: 5.3.2
       postcss: 8.5.23
       postcss-loader: 8.2.0(postcss@8.5.23)(typescript@5.9.3)(webpack@5.105.2(esbuild@0.28.1)(postcss@8.5.23))
       resolve-url-loader: 5.0.0
@@ -5326,7 +5334,7 @@ snapshots:
       '@babel/helper-annotate-as-pure': 7.27.3
       '@babel/helper-split-export-declaration': 7.24.7
       '@inquirer/confirm': 5.1.21(@types/node@24.10.15)
-      '@vitejs/plugin-basic-ssl': 2.1.4(vite@7.3.6(@types/node@24.10.15)(jiti@2.7.0)(less@4.9.0)(sass@1.97.3)(terser@5.46.0)(yaml@2.9.1))
+      '@vitejs/plugin-basic-ssl': 2.1.4(vite@7.3.7(@types/node@24.10.15)(jiti@2.7.0)(less@4.9.0)(sass@1.97.3)(terser@5.46.0)(yaml@2.9.1))
       beasties: 0.4.1
       browserslist: 4.29.3
       esbuild: 0.28.1
@@ -5338,7 +5346,7 @@ snapshots:
       mrmime: 2.0.1
       parse5-html-rewriting-stream: 8.0.0
       picomatch: 4.0.4
-      piscina: 5.2.0
+      piscina: 5.3.2
       rolldown: 1.0.0-rc.4(@emnapi/core@1.11.2)(@emnapi/runtime@1.11.2)
       sass: 1.97.3
       semver: 7.7.4
@@ -5346,15 +5354,15 @@ snapshots:
       tinyglobby: 0.2.15
       tslib: 2.8.1
       typescript: 5.9.3
-      undici: 7.29.1
-      vite: 7.3.6(@types/node@24.10.15)(jiti@2.7.0)(less@4.9.0)(sass@1.97.3)(terser@5.46.0)(yaml@2.9.1)
+      undici: 7.30.1
+      vite: 7.3.7(@types/node@24.10.15)(jiti@2.7.0)(less@4.9.0)(sass@1.97.3)(terser@5.46.0)(yaml@2.9.1)
       watchpack: 2.5.1
     optionalDependencies:
       '@angular/localize': 21.2.25(@angular/compiler-cli@21.2.25(@angular/compiler@21.2.25)(typescript@5.9.3))(@angular/compiler@21.2.25)
       less: 4.9.0
       lmdb: 3.5.1
       postcss: 8.5.23
-      vitest: 4.1.11(@types/node@24.10.15)(@vitest/coverage-v8@4.1.11)(vite@7.3.6(@types/node@24.10.15)(jiti@2.7.0)(less@4.9.0)(sass@1.97.3)(terser@5.46.0)(yaml@2.9.1))
+      vitest: 4.1.11(@types/node@24.10.15)(@vitest/coverage-v8@4.1.11)(vite@7.3.7(@types/node@24.10.15)(jiti@2.7.0)(less@4.9.0)(sass@1.97.3)(terser@5.46.0)(yaml@2.9.1))
     transitivePeerDependencies:
       - '@emnapi/core'
       - '@emnapi/runtime'
@@ -7429,9 +7437,9 @@ snapshots:
       '@typescript-eslint/types': 8.71.0
       eslint-visitor-keys: 5.0.1
 
-  '@vitejs/plugin-basic-ssl@2.1.4(vite@7.3.6(@types/node@24.10.15)(jiti@2.7.0)(less@4.9.0)(sass@1.97.3)(terser@5.46.0)(yaml@2.9.1))':
+  '@vitejs/plugin-basic-ssl@2.1.4(vite@7.3.7(@types/node@24.10.15)(jiti@2.7.0)(less@4.9.0)(sass@1.97.3)(terser@5.46.0)(yaml@2.9.1))':
     dependencies:
-      vite: 7.3.6(@types/node@24.10.15)(jiti@2.7.0)(less@4.9.0)(sass@1.97.3)(terser@5.46.0)(yaml@2.9.1)
+      vite: 7.3.7(@types/node@24.10.15)(jiti@2.7.0)(less@4.9.0)(sass@1.97.3)(terser@5.46.0)(yaml@2.9.1)
 
   '@vitest/coverage-v8@4.1.11(vitest@4.1.11)':
     dependencies:
@@ -7445,7 +7453,7 @@ snapshots:
       obug: 2.2.1
       std-env: 4.3.0
       tinyrainbow: 3.2.0
-      vitest: 4.1.11(@types/node@24.10.15)(@vitest/coverage-v8@4.1.11)(vite@7.3.6(@types/node@24.10.15)(jiti@2.7.0)(less@4.9.0)(sass@1.97.3)(terser@5.46.0)(yaml@2.9.1))
+      vitest: 4.1.11(@types/node@24.10.15)(@vitest/coverage-v8@4.1.11)(vite@7.3.7(@types/node@24.10.15)(jiti@2.7.0)(less@4.9.0)(sass@1.97.3)(terser@5.46.0)(yaml@2.9.1))
 
   '@vitest/expect@4.1.11':
     dependencies:
@@ -7456,13 +7464,13 @@ snapshots:
       chai: 6.2.2
       tinyrainbow: 3.2.0
 
-  '@vitest/mocker@4.1.11(vite@7.3.6(@types/node@24.10.15)(jiti@2.7.0)(less@4.9.0)(sass@1.97.3)(terser@5.46.0)(yaml@2.9.1))':
+  '@vitest/mocker@4.1.11(vite@7.3.7(@types/node@24.10.15)(jiti@2.7.0)(less@4.9.0)(sass@1.97.3)(terser@5.46.0)(yaml@2.9.1))':
     dependencies:
       '@vitest/spy': 4.1.11
       estree-walker: 3.0.3
       magic-string: 0.30.21
     optionalDependencies:
-      vite: 7.3.6(@types/node@24.10.15)(jiti@2.7.0)(less@4.9.0)(sass@1.97.3)(terser@5.46.0)(yaml@2.9.1)
+      vite: 7.3.7(@types/node@24.10.15)(jiti@2.7.0)(less@4.9.0)(sass@1.97.3)(terser@5.46.0)(yaml@2.9.1)
 
   '@vitest/pretty-format@4.1.11':
     dependencies:
@@ -7690,7 +7698,7 @@ snapshots:
 
   axios@1.20.0(debug@4.4.3(supports-color@7.2.0))(supports-color@7.2.0):
     dependencies:
-      follow-redirects: 1.16.0(debug@4.4.3(supports-color@7.2.0))
+      follow-redirects: 1.16.1(debug@4.4.3(supports-color@7.2.0))
       form-data: 4.0.6
       https-proxy-agent: 5.0.1(supports-color@7.2.0)
       proxy-from-env: 2.1.0
@@ -7768,7 +7776,7 @@ snapshots:
       inherits: 2.0.4
       readable-stream: 3.6.2
 
-  body-parser@1.20.8:
+  body-parser@1.20.9:
     dependencies:
       bytes: 3.1.2
       content-type: 1.0.5
@@ -8346,7 +8354,7 @@ snapshots:
     dependencies:
       accepts: 1.3.8
       array-flatten: 1.1.1
-      body-parser: 1.20.8
+      body-parser: 1.20.9
       content-disposition: 0.5.4
       content-type: 1.0.5
       cookie: 0.7.2
@@ -8450,7 +8458,7 @@ snapshots:
 
   flatted@3.4.4: {}
 
-  follow-redirects@1.16.0(debug@4.4.3(supports-color@7.2.0)):
+  follow-redirects@1.16.1(debug@4.4.3(supports-color@7.2.0)):
     optionalDependencies:
       debug: 4.4.3(supports-color@7.2.0)
 
@@ -8606,7 +8614,7 @@ snapshots:
   http-proxy@1.18.1(debug@4.4.3(supports-color@7.2.0)):
     dependencies:
       eventemitter3: 4.0.7
-      follow-redirects: 1.16.0(debug@4.4.3(supports-color@7.2.0))
+      follow-redirects: 1.16.1(debug@4.4.3(supports-color@7.2.0))
       requires-port: 1.0.0
     transitivePeerDependencies:
       - debug
@@ -8807,9 +8815,9 @@ snapshots:
       tinyglobby: 0.2.17
       unbash: 4.0.12
       yaml: 2.9.1
-      zod: 4.6.5
+      zod: 4.6.7
 
-  launch-editor@2.14.1:
+  launch-editor@2.14.2:
     dependencies:
       picocolors: 1.1.1
       shell-quote: 1.11.0
@@ -8929,7 +8937,7 @@ snapshots:
     dependencies:
       '@babel/parser': 7.29.9
       '@babel/types': 7.29.8
-      source-map-js: 1.2.1
+      source-map-js: 1.2.2
 
   make-dir@4.0.0:
     dependencies:
@@ -9148,7 +9156,7 @@ snapshots:
       fast-wrap-ansi: 0.2.0
       figures: 3.2.0
       flat: 5.0.2
-      follow-redirects: 1.16.0(debug@4.4.3(supports-color@7.2.0))
+      follow-redirects: 1.16.1(debug@4.4.3(supports-color@7.2.0))
       form-data: 4.0.6
       fs-constants: 1.0.0
       function-bind: 1.1.2
@@ -9445,7 +9453,7 @@ snapshots:
 
   picomatch@4.0.7: {}
 
-  piscina@5.2.0:
+  piscina@5.3.2:
     optionalDependencies:
       '@napi-rs/nice': 1.1.1
 
@@ -9507,13 +9515,13 @@ snapshots:
     dependencies:
       nanoid: 3.3.19
       picocolors: 1.1.1
-      source-map-js: 1.2.1
+      source-map-js: 1.2.2
 
   postcss@8.5.28:
     dependencies:
       nanoid: 3.3.19
       picocolors: 1.1.1
-      source-map-js: 1.2.1
+      source-map-js: 1.2.2
 
   powershell-utils@0.1.0: {}
 
@@ -9733,7 +9741,7 @@ snapshots:
     dependencies:
       chokidar: 4.0.3
       immutable: 5.1.9
-      source-map-js: 1.2.1
+      source-map-js: 1.2.2
     optionalDependencies:
       '@parcel/watcher': 2.6.0
 
@@ -9871,12 +9879,12 @@ snapshots:
       uuid: 8.3.2
       websocket-driver: 0.7.5
 
-  source-map-js@1.2.1: {}
+  source-map-js@1.2.2: {}
 
   source-map-loader@5.0.0(webpack@5.105.2(esbuild@0.28.1)(postcss@8.5.23)):
     dependencies:
       iconv-lite: 0.6.3
-      source-map-js: 1.2.1
+      source-map-js: 1.2.2
       webpack: 5.105.2(esbuild@0.28.1)(postcss@8.5.23)
 
   source-map-support@0.5.21:
@@ -10085,7 +10093,7 @@ snapshots:
 
   undici-types@7.16.0: {}
 
-  undici@7.29.1: {}
+  undici@7.30.1: {}
 
   unicode-canonical-property-names-ecmascript@2.0.1: {}
 
@@ -10118,7 +10126,7 @@ snapshots:
 
   vary@1.1.2: {}
 
-  vite@7.3.6(@types/node@24.10.15)(jiti@2.7.0)(less@4.9.0)(sass@1.97.3)(terser@5.46.0)(yaml@2.9.1):
+  vite@7.3.7(@types/node@24.10.15)(jiti@2.7.0)(less@4.9.0)(sass@1.97.3)(terser@5.46.0)(yaml@2.9.1):
     dependencies:
       esbuild: 0.28.2
       fdir: 6.5.0(picomatch@4.0.7)
@@ -10135,10 +10143,10 @@ snapshots:
       terser: 5.46.0
       yaml: 2.9.1
 
-  vitest@4.1.11(@types/node@24.10.15)(@vitest/coverage-v8@4.1.11)(vite@7.3.6(@types/node@24.10.15)(jiti@2.7.0)(less@4.9.0)(sass@1.97.3)(terser@5.46.0)(yaml@2.9.1)):
+  vitest@4.1.11(@types/node@24.10.15)(@vitest/coverage-v8@4.1.11)(vite@7.3.7(@types/node@24.10.15)(jiti@2.7.0)(less@4.9.0)(sass@1.97.3)(terser@5.46.0)(yaml@2.9.1)):
     dependencies:
       '@vitest/expect': 4.1.11
-      '@vitest/mocker': 4.1.11(vite@7.3.6(@types/node@24.10.15)(jiti@2.7.0)(less@4.9.0)(sass@1.97.3)(terser@5.46.0)(yaml@2.9.1))
+      '@vitest/mocker': 4.1.11(vite@7.3.7(@types/node@24.10.15)(jiti@2.7.0)(less@4.9.0)(sass@1.97.3)(terser@5.46.0)(yaml@2.9.1))
       '@vitest/pretty-format': 4.1.11
       '@vitest/runner': 4.1.11
       '@vitest/snapshot': 4.1.11
@@ -10155,7 +10163,7 @@ snapshots:
       tinyexec: 1.3.1
       tinyglobby: 0.2.17
       tinyrainbow: 3.2.0
-      vite: 7.3.6(@types/node@24.10.15)(jiti@2.7.0)(less@4.9.0)(sass@1.97.3)(terser@5.46.0)(yaml@2.9.1)
+      vite: 7.3.7(@types/node@24.10.15)(jiti@2.7.0)(less@4.9.0)(sass@1.97.3)(terser@5.46.0)(yaml@2.9.1)
       why-is-node-running: 2.3.0
     optionalDependencies:
       '@types/node': 24.10.15
@@ -10216,7 +10224,7 @@ snapshots:
       graceful-fs: 4.2.11
       http-proxy-middleware: 2.0.10(@types/express@4.17.25)
       ipaddr.js: 2.5.0
-      launch-editor: 2.14.1
+      launch-editor: 2.14.2
       open: 10.2.0
       p-retry: 6.2.1
       schema-utils: 4.5.0
@@ -10381,4 +10389,4 @@ snapshots:
 
   yoctocolors@2.2.0: {}
 
-  zod@4.6.5: {}
+  zod@4.6.7: {}
