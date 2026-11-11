@@ -1,5 +1,3 @@
-import { strings } from '@angular-devkit/core';
-
 export function generateRemoteMap(workspace: any, projectName: string) {
   const result = {} as Record<string, string>;
 
@@ -17,7 +15,8 @@ export function generateRemoteMap(workspace: any, projectName: string) {
         project.architect['serve-original']?.options?.port ??
         project.architect.serve?.options?.port ??
         4200;
-      result[strings.camelize(p)] = `http://localhost:${pPort}/remoteEntry.json`;
+      // The key must equal the remote's federation.config `name`, which is the raw project name.
+      result[p] = `http://localhost:${pPort}/remoteEntry.json`;
     }
   }
 
