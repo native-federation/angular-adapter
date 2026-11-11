@@ -96,13 +96,12 @@ function normalizeOptions(options: NfSchematicSchema, workspace: any): Normalize
     .join(projectRoot, 'src/assets/federation.manifest.json')
     .replace(/\\/g, '/');
 
-  const main = projectConfig.architect.build.options.main;
+  // After init, `build` is the federation builder and the original options live on `esbuild`.
+  const buildOptions = (projectConfig.architect.esbuild ?? projectConfig.architect.build).options;
+  const main = buildOptions.main;
 
-  if (!projectConfig.architect.build.options.polyfills) {
-    projectConfig.architect.build.options.polyfills = [];
-  }
-
-  const polyfills = projectConfig.architect.build.options.polyfills;
+  buildOptions.polyfills ??= [];
+  const polyfills = buildOptions.polyfills;
   return {
     polyfills,
     projectName,
