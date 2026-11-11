@@ -156,24 +156,11 @@ describe('withNativeFederation', () => {
     expect(mockCoreWithNativeFederation.mock.calls[0]![0].platform).toBe('browser');
   });
 
-  it('removes @angular/common/locales entries when ignoreUnusedDeps is disabled', () => {
+  // Locale keys only get here when the user lists them (shareAngularLocales) or opts into
+  // `includeSecondaries: { resolveGlob: true }`, so they are kept either way.
+  it.each([true, false])('keeps locale entries when ignoreUnusedDeps is %s', ignoreUnusedDeps => {
     mockCoreWithNativeFederation.mockReturnValue({
-      features: { ignoreUnusedDeps: false },
-      shared: {
-        '@angular/core': { singleton: true },
-        '@angular/common/locales/de': { singleton: true },
-        '@angular/common/locales/fr': { singleton: true },
-      },
-    });
-
-    const result = withNativeFederation({ shared: {} } as never);
-
-    expect(Object.keys(result.shared)).toEqual(['@angular/core']);
-  });
-
-  it('keeps locale entries when ignoreUnusedDeps is enabled', () => {
-    mockCoreWithNativeFederation.mockReturnValue({
-      features: { ignoreUnusedDeps: true },
+      features: { ignoreUnusedDeps },
       shared: {
         '@angular/core': { singleton: true },
         '@angular/common/locales/de': { singleton: true },
