@@ -375,4 +375,35 @@ describe('createNodeModulesEsbuildContext script options', () => {
 
     expect(text).toContain('default-build');
   });
+
+  // The builder appends these packages to Angular's 3rdpartylicenses.txt.
+  it('reports the package files it bundled in a metafile', async () => {
+    const { ctx } = await createNodeModulesEsbuildContext(
+      {
+        context: { workspaceRoot: fixtureDir },
+        entryPoints: [{ fileName: path.join(fixtureDir, 'entry.js'), outName: 'entry.js' }],
+        external: [],
+        outdir: path.join(fixtureDir, 'out'),
+        cache: { cachePath: path.join(fixtureDir, 'cache') },
+        dev: false,
+        hash: false,
+        chunks: false,
+      } as never,
+      { target: ['es2022'], sourcemap: false, plugins: [], script: prodScript }
+    );
+
+    try {
+      const { metafile } = await ctx.rebuild();
+      const inputs = Object.values(metafile!.outputs).flatMap(output =>
+        Object.entries(output.inputs)
+          .filter(([, { bytesInOutput }]) => bytesInOutput > 0)
+          .map(([input]) => input.split(path.sep).join('/'))
+      );
+
+      expect(inputs).toContain('node_modules/cond-pkg/prod.js');
+      expect(inputs).not.toContain('node_modules/cond-pkg/dev.js');
+    } finally {
+      await ctx.dispose();
+    }
+  });
 });
