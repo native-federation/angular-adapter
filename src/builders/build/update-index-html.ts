@@ -46,15 +46,17 @@ export function updateScriptTags(
 
   const htmlFragment = `<script type="esms-options">${JSON.stringify(esmsOptions)}</script>`;
 
+  // Match the file name, not the whole src: a base href such as /maintenance/
+  // would otherwise match the dev server's /maintenance/@vite/client first.
   indexContent = indexContent.replace(
-    /<script\b(?=[^>]*\bsrc="[^"]*polyfills[^"]*")[^>]*>/,
+    /<script\b(?=[^>]*\bsrc="(?:[^"]*\/)?polyfills[.-][^"/]*")[^>]*>/,
     (tag) =>
       /\btype\s*=/.test(tag)
         ? tag.replace(/\btype\s*=\s*"[^"]*"/, 'type="module"')
         : tag.replace(/<script\b/, '<script type="module"'),
   );
   indexContent = indexContent.replace(
-    /<script\b(?=[^>]*\bsrc="[^"]*main[^"]*")[^>]*>/,
+    /<script\b(?=[^>]*\bsrc="(?:[^"]*\/)?main[.-][^"/]*")[^>]*>/,
     (tag) =>
       /\btype\s*=/.test(tag)
         ? tag.replace(/\btype\s*=\s*"[^"]*"/, `type="${mainScriptType}"`)
