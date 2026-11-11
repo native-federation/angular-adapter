@@ -17,17 +17,16 @@ export function shareAngularLocales(
     strictVersion: true,
     requiredVersion: 'auto',
   };
-  const pool = opts.pool ?? config.pool;
-  const build = opts.build ?? config.build;
+  const { packageInfo, ...rest } = config;
+  const base: ExternalConfig = {
+    ...rest,
+    ...(opts.pool && { pool: opts.pool }),
+    ...(opts.build && { build: opts.build }),
+  };
 
   const locales = keys.reduce(
     (acc, key) => {
-      const { packageInfo, ...rest } = config;
-      const entry: ExternalConfig = {
-        ...rest,
-        ...(pool && { pool }),
-        ...(build && { build }),
-      };
+      const entry: ExternalConfig = { ...base };
       // The core resolves `locales/<key>.js` and its version itself. No version here:
       // the core fills in the installed @angular/common one; a user's version is a pin.
       if (opts.legacy || packageInfo) {
