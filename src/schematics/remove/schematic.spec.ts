@@ -18,7 +18,7 @@ function federatedWorkspace() {
           esbuild: {
             builder: '@angular/build:application',
             options: {
-              main: 'projects/mfe1/src/main.ts',
+              browser: 'projects/mfe1/src/main.ts',
               polyfills: ['zone.js', 'es-module-shims'],
             },
           },
@@ -37,6 +37,12 @@ function federatedWorkspace() {
       },
     },
   };
+}
+
+function withPolyfills(polyfills: string[]) {
+  const workspace = federatedWorkspace();
+  workspace.projects.mfe1.architect.esbuild.options.polyfills = polyfills;
+  return JSON.stringify(workspace);
 }
 
 async function run(tree: Tree) {
@@ -68,5 +74,14 @@ describe('remove', () => {
     expect(architect.serve.configurations.production.buildTarget).toBe(
       'mfe1:build:production',
     );
+  });
+
+  // A zoneless app only had es-module-shims, which init added; leave no empty array behind.
+  it('drops the polyfills option once es-module-shims was the only entry', async () => {
+    tree.overwrite('angular.json', withPolyfills(['es-module-shims']));
+
+    const { architect } = (await run(tree)).projects.mfe1;
+
+    expect(architect.build.options).not.toHaveProperty('polyfills');
   });
 });

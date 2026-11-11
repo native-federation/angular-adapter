@@ -5,13 +5,12 @@ import type { NfSchematicSchema } from './schema.js';
 import * as path from 'path';
 
 type NormalizedOptions = {
-  polyfills: string;
+  buildOptions: { polyfills?: string | string[] };
   projectName: string;
   projectRoot: string;
   projectSourceRoot: string;
   manifestPath: string;
   projectConfig: any;
-  main: string;
 };
 
 export default function remove(options: NfSchematicSchema): Rule {
@@ -21,13 +20,13 @@ export default function remove(options: NfSchematicSchema): Rule {
 
     const normalized = normalizeOptions(options, workspace);
 
-    const { polyfills, projectRoot } = normalized;
+    const { buildOptions, projectRoot } = normalized;
 
     const bootstrapPath = path.join(projectRoot, 'src/bootstrap.ts');
     const mainPath = path.join(projectRoot, 'src/main.ts');
 
     makeMainSync(tree, bootstrapPath, mainPath);
-    updatePolyfills(tree, polyfills);
+    updatePolyfills(tree, buildOptions);
     updateWorkspaceConfig(tree, normalized, workspace, workspaceFileName);
   };
 }
@@ -98,26 +97,29 @@ function normalizeOptions(options: NfSchematicSchema, workspace: any): Normalize
 
   // After init, `build` is the federation builder and the original options live on `esbuild`.
   const buildOptions = (projectConfig.architect.esbuild ?? projectConfig.architect.build).options;
-  const main = buildOptions.main;
 
-  buildOptions.polyfills ??= [];
-  const polyfills = buildOptions.polyfills;
   return {
-    polyfills,
+    buildOptions,
     projectName,
     projectRoot,
     projectSourceRoot,
     manifestPath,
     projectConfig,
-    main,
   };
 }
 
-function updatePolyfills(tree: Tree, polyfills: string | string[]) {
+function updatePolyfills(tree: Tree, buildOptions: NormalizedOptions['buildOptions']) {
+  const { polyfills } = buildOptions;
   if (typeof polyfills === 'string') {
     updatePolyfillsFile(tree, polyfills);
+    return;
+  }
+
+  const remaining = (polyfills ?? []).filter(p => p !== 'es-module-shims');
+  if (remaining.length) {
+    buildOptions.polyfills = remaining;
   } else {
-    updatePolyfillsArray(tree, polyfills);
+    delete buildOptions.polyfills;
   }
 }
 
@@ -127,17 +129,6 @@ function updatePolyfillsFile(tree: Tree, polyfills: string) {
     polyfillsContent = polyfillsContent.replace(`import 'es-module-shims';`, '');
     tree.overwrite(polyfills, polyfillsContent);
   }
-}
-
-function updatePolyfillsArray(_tree: Tree, polyfills: string[]) {
-  const polyfillsConfig = polyfills as string[];
-
-  const index = polyfillsConfig.findIndex(p => p === 'es-module-shims');
-  if (index === -1) {
-    return;
-  }
-
-  polyfillsConfig.splice(index, 1);
 }
 
 export function getWorkspaceFileName(tree: Tree): string {

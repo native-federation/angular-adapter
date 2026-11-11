@@ -54,8 +54,8 @@ describe('addDependencies', () => {
     );
   });
 
-  // A lower range than the adapter's own lets an existing lockfile keep an orchestrator that
-  // rejects the adapter's core as a peer, installing two copies side by side.
+  // A lower range than the adapter's own lets an existing lockfile keep an older orchestrator
+  // next to the adapter's, so the workspace ends up with two copies.
   it('pins the orchestrator to the range the adapter itself depends on', () => {
     const adapterPkg = JSON.parse(
       readFileSync(new URL('../../../../package.json', import.meta.url), 'utf8')
