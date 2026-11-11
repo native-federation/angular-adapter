@@ -34,6 +34,7 @@ export function shareAll(
   return coreShareAll(config, opts);
 }
 
+/** @deprecated Use `fromPackageJson().only([...]).override({...})` instead, each override a complete config. */
 export function share(
   configuredShareObjects: ShareExternalsOptions,
   projectPath = "",
@@ -45,7 +46,7 @@ export function share(
 /**
  * Angular-flavored {@link coreFromPackageJson}: builds a shared-externals config
  * from `package.json` and pre-seeds the Angular skip list, so the returned
- * fluent builder (`.skip()`, `.override()`, `.patch()`, `.get()`) starts from
+ * fluent builder (`.only()`, `.skip()`, `.override()`, `.patch()`) starts from
  * {@link NG_SKIP_LIST} instead of core's `DEFAULT_SKIP_LIST`.
  */
 export function fromPackageJson(
