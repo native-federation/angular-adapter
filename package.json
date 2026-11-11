@@ -19,8 +19,8 @@
     }
   },
   "dependencies": {
-    "@softarc/native-federation": "~4.9.0",
-    "@softarc/native-federation-orchestrator": "^4.9.0",
+    "@softarc/native-federation": "~4.10.0",
+    "@softarc/native-federation-orchestrator": "^4.10.0",
     "@angular-devkit/architect": "^0.2102.0",
     "@angular-devkit/build-angular": "^21.2.0",
     "@angular-devkit/core": "^21.2.0",

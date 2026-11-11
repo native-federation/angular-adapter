@@ -1,31 +1,46 @@
-import { share, type ExternalConfig } from '@softarc/native-federation/config';
+import type { ExternalConfig } from '@softarc/native-federation/config';
+import { share } from '../config/share-utils.js';
 
 export function shareAngularLocales(
   keys: string[],
-  opts: { config?: ExternalConfig; legacy?: boolean } = {}
+  opts: {
+    config?: ExternalConfig;
+    legacy?: boolean;
+    pool?: string;
+    // Must match how @angular/common is shared, or it is split over two bundles (#202).
+    build?: ExternalConfig['build'];
+    projectPath?: string;
+  } = {}
 ) {
-  if (!opts.config) {
-    opts.config = {
-      singleton: true,
-      strictVersion: true,
-      requiredVersion: 'auto',
-    };
-  }
-  const ext = opts.legacy ? '.mjs' : '.js';
+  const config: ExternalConfig = opts.config ?? {
+    singleton: true,
+    strictVersion: true,
+    requiredVersion: 'auto',
+  };
+  const { packageInfo, ...rest } = config;
+  const base: ExternalConfig = {
+    ...rest,
+    ...(opts.pool && { pool: opts.pool }),
+    ...(opts.build && { build: opts.build }),
+  };
+
   const locales = keys.reduce(
     (acc, key) => {
-      acc[`@angular/common/locales/${key}`] = {
-        ...opts.config!,
-        packageInfo: {
+      const entry: ExternalConfig = { ...base };
+      // The core resolves `locales/<key>.js` and its version itself. No version here:
+      // the core fills in the installed @angular/common one; a user's version is a pin.
+      if (opts.legacy || packageInfo) {
+        entry.packageInfo = {
           esm: true,
-          entryPoint: `node_modules/@angular/common/locales/${key}${ext}`,
-          ...opts.config!.packageInfo,
-        },
-      };
+          entryPoint: `node_modules/@angular/common/locales/${key}${opts.legacy ? '.mjs' : '.js'}`,
+          ...packageInfo,
+        } as ExternalConfig['packageInfo'];
+      }
+      acc[`@angular/common/locales/${key}`] = entry;
       return acc;
     },
     {} as Record<string, ExternalConfig>
   );
 
-  return share(locales);
+  return share(locales, opts.projectPath);
 }

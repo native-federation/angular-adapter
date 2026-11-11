@@ -42,11 +42,11 @@ importers:
         specifier: ^0.19.0
         version: 0.19.1
       '@softarc/native-federation':
-        specifier: ~4.9.0
-        version: 4.9.0
+        specifier: ~4.10.0
+        version: 4.10.0
       '@softarc/native-federation-orchestrator':
-        specifier: ^4.9.0
-        version: 4.9.0(@softarc/native-federation@4.9.0)
+        specifier: ^4.10.0
+        version: 4.10.0(@softarc/native-federation@4.10.0)
       esbuild:
         specifier: ^0.28.0
         version: 0.28.2
@@ -2358,17 +2358,17 @@ packages:
     cpu: [x64]
     os: [win32]
 
-  '@softarc/native-federation-orchestrator@4.9.0':
-    resolution: {integrity: sha512-qPe4SrIgdLC6k3Hpcb7v+rFrtHEpIOYUfIj6OsmaAL8z1hUKd9YSliTRE7Q12spFfDj2x9jG+RPebrtj2ImDjw==, tarball: https://registry.npmjs.org/@softarc/native-federation-orchestrator/-/native-federation-orchestrator-4.9.0.tgz}
-    engines: {node: '>=24.16.0'}
+  '@softarc/native-federation-orchestrator@4.10.0':
+    resolution: {integrity: sha512-XtbJ7/mfq/Qf3dx5vWon2XMBOcGdt63JxiARXVmDiEgENQEKaGmGOnl5Y9HZZUr1teOAm48BYJ/JutPGgQ9U8w==, tarball: https://registry.npmjs.org/@softarc/native-federation-orchestrator/-/native-federation-orchestrator-4.10.0.tgz}
+    engines: {node: '>=20.6.0'}
     peerDependencies:
-      '@softarc/native-federation': ^4.8.0
+      '@softarc/native-federation': ^4.10.0
     peerDependenciesMeta:
       '@softarc/native-federation':
         optional: true
 
-  '@softarc/native-federation@4.9.0':
-    resolution: {integrity: sha512-XwXxZprCd69C6DC0NFBTLqqpVVvcwzhTU+Nka4Mom/1av6ofTHYcZAu/tcr22Rtenj87LB2LN/uEAMbWLiHgkg==, tarball: https://registry.npmjs.org/@softarc/native-federation/-/native-federation-4.9.0.tgz}
+  '@softarc/native-federation@4.10.0':
+    resolution: {integrity: sha512-z9upOxlOgFsgxLr/44bv2hP+t4pUwzuyKrs4qUHWbRJY1jx277Lkvo9Ua2IEeysUaoZYh+wHGEl2mVvIotEQpA==, tarball: https://registry.npmjs.org/@softarc/native-federation/-/native-federation-4.10.0.tgz}
 
   '@softarc/sheriff-core@0.20.0':
     resolution: {integrity: sha512-dTm5dOUMOGTV3ql7ZIuI8rE+gZawIcJLEluqRYX3KDVJ215vfUzpC9LlSL4pTW0lAAeNLelmPZBzY57jLvOPpg==, tarball: https://registry.npmjs.org/@softarc/sheriff-core/-/sheriff-core-0.20.0.tgz}
@@ -7197,13 +7197,13 @@ snapshots:
   '@rollup/rollup-win32-x64-msvc@4.63.5':
     optional: true
 
-  '@softarc/native-federation-orchestrator@4.9.0(@softarc/native-federation@4.9.0)':
+  '@softarc/native-federation-orchestrator@4.10.0(@softarc/native-federation@4.10.0)':
     dependencies:
       semver: 7.8.5
     optionalDependencies:
-      '@softarc/native-federation': 4.9.0
+      '@softarc/native-federation': 4.10.0
 
-  '@softarc/native-federation@4.9.0':
+  '@softarc/native-federation@4.10.0':
     dependencies:
       '@jridgewell/sourcemap-codec': 1.6.0
       '@softarc/sheriff-core': 0.20.0(typescript@5.9.3)
