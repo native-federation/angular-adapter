@@ -1,5 +1,7 @@
 import { EmptyTree, type Tree } from '@angular-devkit/schematics';
 
+import { readFileSync } from 'node:fs';
+
 import { addDependencies } from './add-dependencies.js';
 
 const CONTEXT = { addTask: () => undefined } as never;
@@ -49,6 +51,24 @@ describe('addDependencies', () => {
 
     expect(() => addDependencies(tree, CONTEXT, { ssr: false, webcomponent: true })).toThrow(
       /@angular\/core is not a dependency/
+    );
+  });
+
+  // A lower range than the adapter's own lets an existing lockfile keep an orchestrator that
+  // rejects the adapter's core as a peer, installing two copies side by side.
+  it('pins the orchestrator to the range the adapter itself depends on', () => {
+    const adapterPkg = JSON.parse(
+      readFileSync(new URL('../../../../package.json', import.meta.url), 'utf8')
+    );
+    tree.overwrite(
+      'package.json',
+      JSON.stringify({ devDependencies: { '@softarc/native-federation-orchestrator': '^4.0.0' } })
+    );
+
+    addDependencies(tree, CONTEXT, { ssr: false, webcomponent: false });
+
+    expect(packageJson(tree).devDependencies['@softarc/native-federation-orchestrator']).toBe(
+      adapterPkg.dependencies['@softarc/native-federation-orchestrator']
     );
   });
 });
