@@ -14,10 +14,7 @@ import {
   withNativeFederation as coreWithNativeFederation,
 } from "@softarc/native-federation/config";
 import { NG_SKIP_LIST } from "./angular-skip-list.js";
-import type {
-  NormalizedFederationConfig,
-  NormalizedSharedExternalsConfig,
-} from "@softarc/native-federation/internal";
+import type { NormalizedFederationConfig } from "@softarc/native-federation/internal";
 import { existsSync, readFileSync } from "node:fs";
 import * as path from "node:path";
 import { cwd } from "node:process";
@@ -64,14 +61,7 @@ export function withNativeFederation(
     cfg.platform = getDefaultPlatform(Object.keys(cfg.shared ?? {}));
   }
 
-  const normalized = coreWithNativeFederation(cfg);
-
-  // This is for being backwards compatible
-  if (!normalized.features.ignoreUnusedDeps) {
-    normalized.shared = removeNgLocales(normalized.shared);
-  }
-
-  return normalized;
+  return coreWithNativeFederation(cfg);
 }
 
 /**
@@ -165,22 +155,4 @@ function fromBuilder<T>(
   return typeof (value as ConfigBuilder<T> | undefined)?.get === "function"
     ? (value as ConfigBuilder<T>).get()
     : (value as T | undefined);
-}
-
-function removeNgLocales(
-  shared: NormalizedSharedExternalsConfig,
-): NormalizedSharedExternalsConfig {
-  const keys = Object.keys(shared).filter(
-    (k) => !k.startsWith("@angular/common/locales"),
-  );
-
-  const filtered = keys.reduce(
-    (acc, curr) => ({
-      ...acc,
-      [curr]: shared[curr],
-    }),
-    {},
-  );
-
-  return filtered;
 }
