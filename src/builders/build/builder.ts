@@ -523,6 +523,7 @@ export async function* runBuilder(
       path.join(outputOptions.base, outputOptions.browser),
       collectOutputFiles(normalized.options.federationCache).map((f) => f.fileName),
       context.workspaceRoot,
+      ngBuilderOptions.i18nMissingTranslation,
     );
     logger.measure(start, "To translate the artifacts.");
   }
@@ -629,6 +630,7 @@ export async function* runBuilder(
           path.join(outputOptions.base, outputOptions.browser),
           collectOutputFiles(normalized.options.federationCache).map((f) => f.fileName),
           context.workspaceRoot,
+          ngBuilderOptions.i18nMissingTranslation,
         );
       }
 

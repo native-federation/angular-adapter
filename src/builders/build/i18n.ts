@@ -1,4 +1,5 @@
 import type { BuilderContext } from '@angular-devkit/architect';
+import type { ApplicationBuilderOptions } from '@angular/build';
 import { logger } from '@softarc/native-federation/internal';
 import { execFileSync } from 'child_process';
 import { createHash } from 'crypto';
@@ -62,7 +63,8 @@ export function translateFederationArtifacts(
   localize: boolean | string[],
   outputPath: string,
   federationFiles: string[],
-  workspaceRoot: string
+  workspaceRoot: string,
+  missingTranslation?: ApplicationBuilderOptions['i18nMissingTranslation']
 ) {
   outputPath = path.resolve(workspaceRoot, outputPath);
   const sourceLocale = getSourceLocaleCode(i18n);
@@ -111,6 +113,9 @@ export function translateFederationArtifacts(
     ...translationFiles,
     '-o',
     translationOutPath,
+    // Same handling as Angular's own localize step, which defaults to 'warning'
+    '-m',
+    missingTranslation ?? 'warning',
     ...(targetLocales.length > 0 ? ['--target-locales', ...targetLocales] : []),
     // -l inlines the source folder in place, and a watch rebuild then translates that inlined copy
     ...(inlineSourceLocale ? ['-l', sourceLocale] : []),

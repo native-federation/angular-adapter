@@ -3,6 +3,7 @@ import { execFileSync } from 'child_process';
 import { createHash } from 'crypto';
 import { logger } from '@softarc/native-federation/internal';
 import type { BuilderContext } from '@angular-devkit/architect';
+import type { ApplicationBuilderOptions } from '@angular/build';
 
 import {
   getI18nConfig,
@@ -283,6 +284,27 @@ describe('translateFederationArtifacts', () => {
       'src/locale/messages.de.xlf',
       '[a.xlf,b.xlf]',
     ]);
+  });
+
+  describe('missing translations', () => {
+    it.each(['error', 'warning', 'ignore'])('passes i18nMissingTranslation "%s" on', value => {
+      translateFederationArtifacts(
+        i18n,
+        true,
+        'dist/browser',
+        federationFiles,
+        '/ws',
+        value as ApplicationBuilderOptions['i18nMissingTranslation']
+      );
+
+      expect(valueAfter(localizeArgs(), '-m')).toBe(value);
+    });
+
+    it('defaults to "warning" like Angular when i18nMissingTranslation is not set', () => {
+      translateFederationArtifacts(i18n, true, 'dist/browser', federationFiles, '/ws');
+
+      expect(valueAfter(localizeArgs(), '-m')).toBe('warning');
+    });
   });
 
   const stagedFiles = () =>
