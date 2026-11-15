@@ -53,6 +53,8 @@ function writeOutputs(
 export interface AngularBuildAdapter extends NFBuildAdapter {
   // Disposes every mapping and exposed context, leaving esbuild running for the app build.
   disposeFederationContexts(): Promise<void>;
+  // The latest metafile of each bundle built so far, ordered by bundle name.
+  metafiles(): esbuild.Metafile[];
 }
 
 export async function createAngularBuildAdapter(
@@ -63,6 +65,7 @@ export async function createAngularBuildAdapter(
   const sharedBundleSettings = await resolveSharedBundleSettings(ngBuilderOptions, context);
   const externalsCacheKey = createExternalsCacheKey(sharedBundleSettings);
   const bundleContextCache = new Map<string, EsbuildContextResult>();
+  const metafilesByBundle = new Map<string, esbuild.Metafile>();
 
   const disposeWhere = async (
     matches: (entry: EsbuildContextResult, name: string) => boolean
@@ -142,9 +145,11 @@ export async function createAngularBuildAdapter(
         bundleContext.cache.bundlerCache.invalidate(new Set(opts.modifiedFiles));
       }
       const result = await bundleContext.ctx.rebuild();
-      // Without `entry`, core matches hashed entries by file name (core#193).
+      if (result.metafile) metafilesByBundle.set(name, result.metafile);
+      // Without `entry`, core matches hashed entries by file name (core#193). Shared bundles
+      // aren't hashed and keep that matching; their metafile is only there for the licenses.
       const entryByOutputName = entriesByOutputName(
-        result.metafile,
+        bundleContext.isMappingOrExposed ? result.metafile : undefined,
         bundleContext.entryPoints,
         context.workspaceRoot
       );
@@ -158,5 +163,8 @@ export async function createAngularBuildAdapter(
     }
   };
 
-  return { externalsCacheKey, setup, build, dispose, disposeFederationContexts };
+  const metafiles = () =>
+    [...metafilesByBundle.keys()].sort().map(name => metafilesByBundle.get(name)!);
+
+  return { externalsCacheKey, setup, build, dispose, disposeFederationContexts, metafiles };
 }
