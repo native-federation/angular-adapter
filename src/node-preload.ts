@@ -99,13 +99,9 @@ const globalSlot = globalThis as Record<string, unknown>;
 let status: FederationStatus;
 
 try {
+  // No hostInstances: the host bundle and the remotes resolve `@angular/*` through one import map.
   const result = await initNodeFederation(existsSync(manifestPath) ? manifestPath : {}, {
     hostRemoteEntry,
-    // Bridge the host's shared singletons (`@angular/*`, rxjs, zone.js, …) to
-    // remotes during SSR: each is resolved through the import map and published
-    // on globalThis.__NF_HOST_INSTANCES__. Without it a remote's
-    // `@angular/core/rxjs-interop` loads a private chunk → NG0203.
-    hostInstances: 'all',
   });
 
   // Bridge the loader to the app (read by the host's SSR render code).
