@@ -38,7 +38,19 @@
       "type": "string"
     },
     "outputPath": {
-      "type": "string"
+      "description": "Output folder, relative to the workspace root. A string writes to '<outputPath>/browser'. The object form follows Angular's: files go to '<base>/<browser>', and 'browser' defaults to 'browser'; set 'browser' to '' to write directly into 'base'. The output folder is emptied when the builder starts.",
+      "oneOf": [
+        { "type": "string" },
+        {
+          "type": "object",
+          "properties": {
+            "base": { "type": "string" },
+            "browser": { "type": "string", "pattern": "^[-\\w\\.]*$" }
+          },
+          "required": ["base"],
+          "additionalProperties": false
+        }
+      ]
     },
     "verbose": {
       "type": "boolean",

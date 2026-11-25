@@ -38,6 +38,31 @@ describe('updateScriptTags', () => {
     expect(result).not.toContain('text/javascript');
   });
 
+  it('ignores scripts whose path, not file name, contains main (dev server under a base href)', () => {
+    const html =
+      '<head><script type="module" src="/maintenance/@vite/client"></script></head>' +
+      '<body><script src="polyfills.js" type="module"></script><script src="main.js" type="module"></script></body>';
+    const result = updateScriptTags(html, nfOptions);
+    expect(result).toContain('<script type="module" src="/maintenance/@vite/client"></script>');
+    expect(result).toContain('<script src="main.js" type="module-shim"></script>');
+  });
+
+  it('ignores scripts whose path, not file name, contains polyfills', () => {
+    const html =
+      '<head><script type="text/javascript" src="/polyfills-docs/@vite/client"></script></head>' +
+      '<body><script src="polyfills.js"></script></body>';
+    const result = updateScriptTags(html, nfOptions);
+    expect(result).toContain('<script type="text/javascript" src="/polyfills-docs/@vite/client"></script>');
+    expect(result).toContain('<script type="module" src="polyfills.js"></script>');
+  });
+
+  it('still matches main and polyfills scripts referenced by an absolute path', () => {
+    const html = '<body><script src="/app/polyfills.js"></script><script src="/app/main.js"></script></body>';
+    const result = updateScriptTags(html, nfOptions);
+    expect(result).toContain('<script type="module" src="/app/polyfills.js"></script>');
+    expect(result).toContain('<script type="module-shim" src="/app/main.js"></script>');
+  });
+
   it('injects the esms-options script after the opening body tag with shimMode default', () => {
     const result = updateScriptTags('<body></body>', nfOptions);
     expect(result).toContain('<script type="esms-options">{"shimMode":true}</script>');

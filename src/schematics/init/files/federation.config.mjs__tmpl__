@@ -12,8 +12,7 @@ export default withNativeFederation({
   //shareScope: autoShareScope({level: 'minor'}),
 
   shared: fromPackageJson({ singleton: true, strictVersion: true, requiredVersion: 'auto', build: 'package' })
-    .patch(['@angular/*'], {includeSecondaries: { keepAll: true } } )
-    .get(),
+    .patch(['@angular/*'], {includeSecondaries: { keepAll: true } } ),
 
   //sharedMappings: mappingsFromWorkspace({ singleton: true }).filter(['@my-org/*']).get(),
 

@@ -48,10 +48,7 @@ function makeOptions(overrides: Partial<NormalizedContextOptions> = {}) {
     tsConfigPath: 'apps/example/tsconfig.app.json',
     mappedPaths: {},
     cache: { bundlerCache: { loadResultCache: {} }, cachePath: '/cache' },
-    dev: false,
-    isMappingOrExposed: true,
     hash: false,
-    optimizedMappings: false,
     ...overrides,
   } as unknown as NormalizedContextOptions;
 }

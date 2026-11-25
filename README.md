@@ -62,8 +62,7 @@ export default withNativeFederation({
   })
     // includeSecondaries is an opt-out of ignoreUnusedDeps, so every Angular
     // entrypoint is shared and builds can't publish different sets of them.
-    .patch(["@angular/*"], { includeSecondaries: { keepAll: true } })
-    .get(),
+    .patch(["@angular/*"], { includeSecondaries: { keepAll: true } }),
   skip: ["rxjs/ajax", "rxjs/fetch", "rxjs/testing", "rxjs/webSocket"],
   features: {
     denseChunking: true,

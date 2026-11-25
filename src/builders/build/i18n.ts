@@ -1,11 +1,11 @@
 import type { BuilderContext } from '@angular-devkit/architect';
 import { logger } from '@softarc/native-federation/internal';
 import { execFileSync } from 'child_process';
+import { createHash } from 'crypto';
 import { createRequire } from 'module';
 import os from 'os';
 import path from 'path';
 import fs from 'fs';
-import type { FederationInfo } from '@softarc/native-federation';
 
 type WorkspaceConfig = {
   i18n?: I18nConfig;
@@ -21,7 +21,7 @@ type LocaleObject = {
 
 export type I18nConfig = {
   sourceLocale?: string | SourceLocaleObject;
-  locales: Record<string, LocaleTranslation | LocaleObject>;
+  locales?: Record<string, LocaleTranslation | LocaleObject>;
 };
 
 type SourceLocaleObject = {
@@ -50,7 +50,7 @@ export function getLocaleSubPath(i18n: I18nConfig, locale: string): string {
   if (locale === getSourceLocaleCode(i18n)) {
     return typeof i18n.sourceLocale === 'string' ? locale : (i18n.sourceLocale?.subPath ?? locale);
   }
-  const config = i18n.locales[locale];
+  const config = i18n.locales?.[locale];
   if (config && typeof config === 'object' && !Array.isArray(config)) {
     return config.subPath ?? locale;
   }
@@ -61,44 +61,40 @@ export function translateFederationArtifacts(
   i18n: I18nConfig,
   localize: boolean | string[],
   outputPath: string,
-  federationResult: FederationInfo,
+  federationFiles: string[],
   workspaceRoot: string
 ) {
   outputPath = path.resolve(workspaceRoot, outputPath);
-  const neededLocales = Array.isArray(localize) ? localize : Object.keys(i18n.locales);
+  const sourceLocale = getSourceLocaleCode(i18n);
+  const configuredLocales = i18n.locales ?? {};
+  const neededLocales = Array.isArray(localize) ? localize : Object.keys(configuredLocales);
 
-  const locales = Object.keys(i18n.locales).filter(locale => neededLocales.includes(locale));
+  const targetLocales = Object.keys(configuredLocales).filter(locale => neededLocales.includes(locale));
 
-  if (locales.length === 0) {
+  // The federation output is not built by Angular, so its source locale copy needs inlining too
+  const inlineSourceLocale =
+    localize === true || (Array.isArray(localize) && localize.includes(sourceLocale));
+
+  if (targetLocales.length === 0 && !inlineSourceLocale) {
     return;
   }
 
   logger.info('Writing Translations');
 
   // localize-translate expects a list of files for one locale as `[a,b]`
-  const translationFiles = locales
-    .map(loc => i18n.locales[loc])
+  const translationFiles = targetLocales
+    .map(loc => configuredLocales[loc])
     .map(config =>
       typeof config === 'string' || Array.isArray(config) ? config : config!.translation!
     )
     .map(files => (Array.isArray(files) ? `[${files.join(',')}]` : files));
 
-  const sourceLocale = getSourceLocaleCode(i18n);
-
   // {{LOCALE}} expands to the locale code, not its subPath, so translate into a staging folder first
   const stagingPath = fs.mkdtempSync(path.join(os.tmpdir(), 'nf-i18n-'));
   const translationOutPath = path.join(stagingPath, '{{LOCALE}}');
 
-  const federationFiles = [
-    ...federationResult.shared.flatMap(s =>
-      'entries' in s ? Object.values(s.entries) : [s.outFileName]
-    ),
-    ...federationResult.exposes.map(e => e.outFileName),
-    ...Object.values(federationResult.chunks ?? {}).flat(),
-  ];
-
   const localePath = (locale: string) =>
-    path.join(outputPath, 'browser', getLocaleSubPath(i18n, locale));
+    path.join(outputPath, getLocaleSubPath(i18n, locale));
   const sourceLocalePath = localePath(sourceLocale);
 
   const localizeTranslate = resolveLocalizeTranslate(workspaceRoot);
@@ -115,13 +111,12 @@ export function translateFederationArtifacts(
     ...translationFiles,
     '-o',
     translationOutPath,
-    '--target-locales',
-    ...locales,
-    '-l',
-    sourceLocale,
+    ...(targetLocales.length > 0 ? ['--target-locales', ...targetLocales] : []),
+    // -l inlines the source folder in place, and a watch rebuild then translates that inlined copy
+    ...(inlineSourceLocale ? ['-l', sourceLocale] : []),
   ];
 
-  const targetPaths = locales.map(localePath);
+  const targetPaths = targetLocales.map(localePath);
   ensureDistFolders(targetPaths);
   copyRemoteEntry(targetPaths, sourceLocalePath);
 
@@ -131,12 +126,17 @@ export function translateFederationArtifacts(
 
     logger.debug('Running: ' + [process.execPath, ...args].join(' '));
     execCommand(process.execPath, args, workspaceRoot, 'Successfully translated');
-    for (const locale of new Set([sourceLocale, ...locales])) {
+    const translatedPaths: string[] = [];
+    for (const locale of new Set([sourceLocale, ...targetLocales])) {
       const staged = path.join(stagingPath, locale);
       if (fs.existsSync(staged)) {
         fs.cpSync(staged, localePath(locale), { recursive: true });
+        translatedPaths.push(localePath(locale));
       }
     }
+
+    // Translating changes the bundles, so the integrity hashes in the copied manifests are stale
+    refreshIntegrity(translatedPaths);
   } finally {
     fs.rmSync(stagingPath, { recursive: true, force: true });
   }
@@ -169,6 +169,39 @@ function execCommand(file: string, args: string[], cwd: string, defaultSuccessIn
     // (only remoteEntry.json is copied), so the build would succeed and ship broken locales.
     throw error;
   }
+}
+
+function refreshIntegrity(localePaths: string[]) {
+  for (const localePath of localePaths) {
+    for (const manifest of ['remoteEntry.json', 'importmap.json']) {
+      refreshManifestIntegrity(localePath, path.join(localePath, manifest));
+    }
+  }
+}
+
+function refreshManifestIntegrity(localePath: string, manifestPath: string) {
+  if (!fs.existsSync(manifestPath)) {
+    return;
+  }
+
+  const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf-8')) as {
+    integrity?: Record<string, string>;
+  };
+  if (!manifest.integrity) {
+    return;
+  }
+
+  for (const [file, previous] of Object.entries(manifest.integrity)) {
+    const filePath = path.join(localePath, file);
+    if (!fs.existsSync(filePath)) {
+      continue;
+    }
+    const algorithm = previous.split('-')[0]!;
+    const hash = createHash(algorithm).update(fs.readFileSync(filePath)).digest('base64');
+    manifest.integrity[file] = `${algorithm}-${hash}`;
+  }
+
+  fs.writeFileSync(manifestPath, JSON.stringify(manifest, null, 2));
 }
 
 function copyRemoteEntry(targetPaths: string[], sourceLocalePath: string) {
