@@ -60,6 +60,11 @@
       "types": "./src/node-preload.d.ts",
       "import": "./src/node-preload.js",
       "default": "./src/node-preload.js"
+    },
+    "./ssr": {
+      "types": "./src/ssr.d.ts",
+      "import": "./src/ssr.js",
+      "default": "./src/ssr.js"
     }
   },
   "homepage": "https://native-federation.com/docs/v4/angular-adapter/",
