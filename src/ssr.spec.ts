@@ -148,6 +148,89 @@ describe('rewriteModulePreloads', () => {
     expect(await rewriteModulePreloads(res)).toBe(res);
   });
 
+  it('ignores esms-options inside an HTML comment', async () => {
+    const commented = `<!-- ${NATIVE} -->`;
+    const res = html(page(commented + SHIM, '<link rel="modulepreload" href="chunk-ABC.js">'));
+
+    expect(await rewriteModulePreloads(res)).toBe(res);
+  });
+
+  it('reads attributes, not text inside other attribute values', async () => {
+    const res = html(
+      page(
+        NATIVE,
+        '<link title="x rel=modulepreload y" rel="stylesheet" href="s.css">' +
+          '<link title="no crossorigin" rel="modulepreload" href="a.js">' +
+          '<link title="a>b" rel="modulepreload" href="b.js">',
+      ),
+    );
+
+    const body = await (await rewriteModulePreloads(res))!.text();
+
+    expect(body).toContain('<link title="x rel=modulepreload y" rel="stylesheet" href="s.css">');
+    expect(body).toContain('<link title="no crossorigin" rel="preload" as="script" crossorigin');
+    expect(body).toContain('<link title="a>b" rel="preload" as="script" crossorigin href="b.js">');
+  });
+
+  it('leaves preload markup inside a script body alone', async () => {
+    const script = '<script>const tag = \'<link rel="modulepreload" href="x.js">\';</script>';
+    const res = html(page(NATIVE, script + '<link rel="modulepreload" href="chunk-ABC.js">'));
+
+    const body = await (await rewriteModulePreloads(res))!.text();
+
+    expect(body).toContain(script);
+    expect(body).toContain('<link rel="preload" as="script" crossorigin href="chunk-ABC.js">');
+  });
+
+  it('leaves custom elements whose names start with link or script alone', async () => {
+    const custom =
+      '<link-card rel="modulepreload" href="a.js"></link-card>' +
+      '<script-runner type="esms-options">{"shimMode":true}</script-runner>';
+    const res = html(page(NATIVE, custom + '<link rel="modulepreload" href="chunk-ABC.js">'));
+
+    const body = await (await rewriteModulePreloads(res))!.text();
+
+    expect(body).toContain(custom);
+    expect(body).toContain('<link rel="preload" as="script" crossorigin href="chunk-ABC.js">');
+  });
+
+  it('keeps an existing as instead of adding a second one', async () => {
+    const res = html(page(NATIVE, '<link rel="modulepreload" as="script" href="chunk-ABC.js">'));
+
+    const body = await (await rewriteModulePreloads(res))!.text();
+
+    expect(body).toContain('<link rel="preload" crossorigin as="script" href="chunk-ABC.js">');
+  });
+
+  it('matches case-insensitively and keeps the tag name as written', async () => {
+    const options = '<SCRIPT TYPE="ESMS-OPTIONS">{"shimMode":false}</SCRIPT>';
+    const res = html(page(options, '<LINK REL=" ModulePreload " HREF="a.js">'));
+
+    const body = await (await rewriteModulePreloads(res))!.text();
+
+    expect(body).toContain('<LINK rel="preload" as="script" crossorigin HREF="a.js">');
+  });
+
+  it('takes the mode from the first esms-options block only', async () => {
+    const res = html(page(SHIM + NATIVE, '<link rel="modulepreload" href="chunk-ABC.js">'));
+
+    expect(await rewriteModulePreloads(res)).toBe(res);
+  });
+
+  it('treats everything after an unclosed script as its body, as browsers do', async () => {
+    const res = html(page(NATIVE, '<script>let a = 1;<link rel="modulepreload" href="x.js">'));
+
+    expect(await rewriteModulePreloads(res)).toBe(res);
+  });
+
+  it('leaves a page in another charset alone rather than re-encoding it', async () => {
+    const res = html(page(NATIVE, '<link rel="modulepreload" href="chunk-ABC.js">'), {
+      'content-type': 'text/html; charset=iso-8859-1',
+    });
+
+    expect(await rewriteModulePreloads(res)).toBe(res);
+  });
+
   it('leaves a page with no esms-options alone', async () => {
     const res = html(page('', '<link rel="modulepreload" href="chunk-ABC.js">'));
 
