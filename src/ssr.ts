@@ -1,5 +1,6 @@
+// First block wins: the builder writes it right after `<body>`; HTML comments aren't skipped.
 const ESMS_OPTIONS =
-  /<script\b[^>]*\btype\s*=\s*["']esms-options["'][^>]*>([\s\S]*?)<\/script>/i;
+  /<script\b[^>]*(?<![\w-])type\s*=\s*["']esms-options["'][^>]*>([\s\S]*?)<\/script>/i;
 // Only an exact `rel` of `modulepreload`: never `data-rel`, never `rel="modulepreload foo"`.
 const REL_MODULEPRELOAD = String.raw`(?<![\w-])rel\s*=\s*(["']?)modulepreload\1(?=[\s/>])`;
 const MODULE_PRELOAD = new RegExp(String.raw`<link\b[^>]*${REL_MODULEPRELOAD}[^>]*>`, 'gi');

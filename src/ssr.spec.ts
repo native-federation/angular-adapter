@@ -141,6 +141,13 @@ describe('rewriteModulePreloads', () => {
     expect(body).toContain('<link data-rel="modulepreload" rel="stylesheet" href="data.css">');
   });
 
+  it('ignores a data-type attribute that only looks like esms-options', async () => {
+    const decoy = '<script data-type="esms-options">{"shimMode":false}</script>';
+    const res = html(page(decoy + SHIM, '<link rel="modulepreload" href="chunk-ABC.js">'));
+
+    expect(await rewriteModulePreloads(res)).toBe(res);
+  });
+
   it('leaves a page with no esms-options alone', async () => {
     const res = html(page('', '<link rel="modulepreload" href="chunk-ABC.js">'));
 
