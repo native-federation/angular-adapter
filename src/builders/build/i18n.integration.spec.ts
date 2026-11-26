@@ -1,6 +1,7 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import { createHash } from 'crypto';
+import type { ApplicationBuilderOptions } from '@angular/build';
 
 import { translateFederationArtifacts, type I18nConfig } from './i18n.js';
 
@@ -162,5 +163,32 @@ describe('translateFederationArtifacts with the real localize-translate CLI', ()
     expect(() =>
       translateFederationArtifacts(i18n, true, 'dist/browser', ['missing.js'], workspaceRoot)
     ).toThrow(/ENOENT/);
+  });
+
+  it('fails on a missing translation when i18nMissingTranslation is "error"', () => {
+    const browser = path.join(workspaceRoot, 'dist', 'browser');
+    const translation = path.join(workspaceRoot, 'messages.de.xlf');
+
+    write(translation, xlf);
+    write(path.join(browser, 'en', 'remoteEntry.json'), '{}');
+    write(path.join(browser, 'en', 'cmp.js'), 'export const t = $localize`:@@farewell:Bye`;');
+
+    const i18n: I18nConfig = { sourceLocale: 'en', locales: { de: translation } };
+    const translate = (missingTranslation: ApplicationBuilderOptions['i18nMissingTranslation']) =>
+      translateFederationArtifacts(
+        i18n,
+        ['de'],
+        'dist/browser',
+        ['cmp.js'],
+        workspaceRoot,
+        missingTranslation
+      );
+
+    expect(() => translate('error' as ApplicationBuilderOptions['i18nMissingTranslation'])).toThrow(
+      /No translation found for "farewell"/
+    );
+    expect(() =>
+      translate('ignore' as ApplicationBuilderOptions['i18nMissingTranslation'])
+    ).not.toThrow();
   });
 });
