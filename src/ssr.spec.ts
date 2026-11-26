@@ -1,5 +1,15 @@
+import { createRequire } from 'module';
+import * as path from 'path';
 import { describe, it, expect } from 'vitest';
 import { rewriteModulePreloads } from './ssr';
+
+// Angular's original, loaded by absolute file path because the exports map blocks the
+// `@angular/build/src/...` specifier (#153).
+const require = createRequire(import.meta.url);
+const angularBuildRoot = path.dirname(require.resolve('@angular/build/package.json'));
+const { augmentIndexHtml } = require(
+  path.join(angularBuildRoot, 'src/utils/index-file/augment-index-html.js'),
+);
 
 const NATIVE = '<script type="esms-options">{"shimMode":false}</script>';
 const SHIM = '<script type="esms-options">{"shimMode":true}</script>';
@@ -15,7 +25,8 @@ function html(body: string, headers: Record<string, string> = {}): Response {
   return new Response(body, {
     status: 200,
     headers: {
-      'content-type': 'text/html; charset=utf-8',
+      // What `@angular/ssr` sends: no space, upper case.
+      'content-type': 'text/html;charset=UTF-8',
       'content-length': String(new TextEncoder().encode(body).length),
       ...headers,
     },
@@ -49,7 +60,7 @@ describe('rewriteModulePreloads', () => {
 
     expect(out!.headers.has('content-length')).toBe(false);
     expect(out!.headers.get('x-custom')).toBe('kept');
-    expect(out!.headers.get('content-type')).toBe('text/html; charset=utf-8');
+    expect(out!.headers.get('content-type')).toBe('text/html;charset=UTF-8');
     expect(out!.status).toBe(200);
   });
 
@@ -66,18 +77,6 @@ describe('rewriteModulePreloads', () => {
     expect(await out!.text()).toContain('rel="preload" as="script"');
     expect(out!.status).toBe(404);
     expect(out!.statusText).toBe('Not Found');
-  });
-
-  it('does not add a second crossorigin', async () => {
-    const res = html(
-      page(NATIVE, '<link rel="modulepreload" href="chunk-ABC.js" crossorigin="anonymous">'),
-    );
-
-    const body = await (await rewriteModulePreloads(res))!.text();
-
-    expect(body).toContain(
-      '<link rel="preload" as="script" href="chunk-ABC.js" crossorigin="anonymous">',
-    );
   });
 
   it('leaves shim mode alone, returning the same response with its body unread', async () => {
@@ -98,6 +97,20 @@ describe('rewriteModulePreloads', () => {
     const body = await (await rewriteModulePreloads(res))!.text();
 
     expect(body).toContain('<link rel="preload" as="script" crossorigin href="chunk-ABC.js">');
+  });
+
+  it('keeps the nonce that ngCspNonce adds to esms-options and to the links', async () => {
+    // Angular's addNonce appends `nonce` after the attributes already there.
+    const options = '<script type="esms-options" nonce="r4nd0m">{"shimMode":false}</script>';
+    const res = html(
+      page(options, '<link rel="modulepreload" href="chunk-ABC.js" nonce="r4nd0m">'),
+    );
+
+    const body = await (await rewriteModulePreloads(res))!.text();
+
+    expect(body).toContain(
+      '<link rel="preload" as="script" crossorigin href="chunk-ABC.js" nonce="r4nd0m">',
+    );
   });
 
   it('rewrites a streamed body, as the engine returns for server-rendered routes', async () => {
@@ -148,40 +161,6 @@ describe('rewriteModulePreloads', () => {
     expect(await rewriteModulePreloads(res)).toBe(res);
   });
 
-  it('ignores esms-options inside an HTML comment', async () => {
-    const commented = `<!-- ${NATIVE} -->`;
-    const res = html(page(commented + SHIM, '<link rel="modulepreload" href="chunk-ABC.js">'));
-
-    expect(await rewriteModulePreloads(res)).toBe(res);
-  });
-
-  it('reads attributes, not text inside other attribute values', async () => {
-    const res = html(
-      page(
-        NATIVE,
-        '<link title="x rel=modulepreload y" rel="stylesheet" href="s.css">' +
-          '<link title="no crossorigin" rel="modulepreload" href="a.js">' +
-          '<link title="a>b" rel="modulepreload" href="b.js">',
-      ),
-    );
-
-    const body = await (await rewriteModulePreloads(res))!.text();
-
-    expect(body).toContain('<link title="x rel=modulepreload y" rel="stylesheet" href="s.css">');
-    expect(body).toContain('<link title="no crossorigin" rel="preload" as="script" crossorigin');
-    expect(body).toContain('<link title="a>b" rel="preload" as="script" crossorigin href="b.js">');
-  });
-
-  it('leaves preload markup inside a script body alone', async () => {
-    const script = '<script>const tag = \'<link rel="modulepreload" href="x.js">\';</script>';
-    const res = html(page(NATIVE, script + '<link rel="modulepreload" href="chunk-ABC.js">'));
-
-    const body = await (await rewriteModulePreloads(res))!.text();
-
-    expect(body).toContain(script);
-    expect(body).toContain('<link rel="preload" as="script" crossorigin href="chunk-ABC.js">');
-  });
-
   it('leaves custom elements whose names start with link or script alone', async () => {
     const custom =
       '<link-card rel="modulepreload" href="a.js"></link-card>' +
@@ -194,50 +173,13 @@ describe('rewriteModulePreloads', () => {
     expect(body).toContain('<link rel="preload" as="script" crossorigin href="chunk-ABC.js">');
   });
 
-  it('keeps an existing as instead of adding a second one', async () => {
-    const res = html(page(NATIVE, '<link rel="modulepreload" as="script" href="chunk-ABC.js">'));
-
-    const body = await (await rewriteModulePreloads(res))!.text();
-
-    expect(body).toContain('<link rel="preload" crossorigin as="script" href="chunk-ABC.js">');
-  });
-
-  it('matches case-insensitively and keeps the tag name as written', async () => {
-    const options = '<SCRIPT TYPE="ESMS-OPTIONS">{"shimMode":false}</SCRIPT>';
-    const res = html(page(options, '<LINK REL=" ModulePreload " HREF="a.js">'));
-
-    const body = await (await rewriteModulePreloads(res))!.text();
-
-    expect(body).toContain('<LINK rel="preload" as="script" crossorigin HREF="a.js">');
-  });
-
-  it('takes the mode from the first esms-options block only', async () => {
-    const res = html(page(SHIM + NATIVE, '<link rel="modulepreload" href="chunk-ABC.js">'));
-
-    expect(await rewriteModulePreloads(res)).toBe(res);
-  });
-
-  it('treats everything after an unclosed script as its body, as browsers do', async () => {
-    const res = html(page(NATIVE, '<script>let a = 1;<link rel="modulepreload" href="x.js">'));
-
-    expect(await rewriteModulePreloads(res)).toBe(res);
-  });
-
-  it('leaves a page in another charset alone rather than re-encoding it', async () => {
-    const res = html(page(NATIVE, '<link rel="modulepreload" href="chunk-ABC.js">'), {
-      'content-type': 'text/html; charset=iso-8859-1',
-    });
-
-    expect(await rewriteModulePreloads(res)).toBe(res);
-  });
-
   it('leaves a page with no esms-options alone', async () => {
     const res = html(page('', '<link rel="modulepreload" href="chunk-ABC.js">'));
 
     expect(await rewriteModulePreloads(res)).toBe(res);
   });
 
-  it('leaves unparsable esms-options alone', async () => {
+  it('needs the builder\'s exact {"shimMode":false prefix', async () => {
     const res = html(
       page(
         '<script type="esms-options">{shimMode:false</script>',
@@ -265,5 +207,21 @@ describe('rewriteModulePreloads', () => {
 
   it('passes null through, for routes the engine does not handle', async () => {
     expect(await rewriteModulePreloads(null)).toBeNull();
+  });
+});
+
+describe("@angular/build's modulepreload hints", () => {
+  // The helper matches the literal `<link rel="modulepreload"`, so `rel` has to stay first.
+  it('are still written with rel first', async () => {
+    const { content } = await augmentIndexHtml({
+      html: '<html><head></head><body><app-root></app-root></body></html>',
+      sri: false,
+      files: [],
+      entrypoints: [],
+      loadOutputFile: async () => '',
+      hints: [{ url: 'chunk-ABC.js', mode: 'modulepreload' }],
+    });
+
+    expect(content).toContain('<link rel="modulepreload" href="chunk-ABC.js">');
   });
 });
