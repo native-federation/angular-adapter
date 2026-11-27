@@ -45,6 +45,7 @@ beforeEach(() => {
   write('projects/mfe/public/nested/.gitkeep');
   write('shared/drafts/wip.txt');
   write('shared/drafts/keep.md');
+  write('shared/top.txt');
   write('projects/mfe/README.md');
   write('shared/brand/font.woff2');
   write('shared/brand/skip.tmp');
@@ -65,10 +66,10 @@ const patterns = [
   { glob: '**/*', input: 'projects/mfe/public' },
   { glob: '**/*.txt', input: 'projects/mfe/public', output: 'static', flatten: true },
   { glob: '**/*', input: 'shared/brand', output: '/brand/', ignore: ['*.tmp'] },
-  // 22.3: a bare directory ignore excludes its contents, a literal glob takes the stat fast path
-  // and a glob naming a directory no longer expands to its files.
   { glob: '**/*', input: 'shared', output: 'sh', ignore: ['drafts', 'brand/'] },
+  // Literal glob: 22.3 resolves it with a stat instead of tinyglobby, with the same result.
   { glob: 'robots.txt', input: 'projects/mfe/public', output: 'literal' },
+  // Since 22.3 a glob naming a directory no longer expands to its files (65f302c5df).
   { glob: 'nested', input: 'projects/mfe/public', output: 'dir-glob' },
 ];
 
@@ -155,9 +156,10 @@ describe('copyAllAssets', () => {
     expect(expected).not.toContain('assets/.gitkeep');
     expect(expected).not.toContain('assets/Thumbs.db');
     expect(expected).not.toContain('brand/skip.tmp');
+    // Before 22.3 the default `.gitkeep` ignore only matched at the input root.
     expect(expected).not.toContain('nested/.gitkeep');
-    expect(expected).toEqual(expect.arrayContaining(['literal/robots.txt']));
-    expect(expected.filter(f => f.startsWith('sh/'))).toEqual([]);
+    expect(expected).toContain('literal/robots.txt');
+    expect(expected.filter(f => f.startsWith('sh/'))).toEqual(['sh/top.txt']);
     expect(expected.filter(f => f.startsWith('dir-glob/'))).toEqual([]);
   });
 });
@@ -203,5 +205,14 @@ describe('copyChangedAssets', () => {
     await copyChangedAssets(entries, out, ws, ['projects/mfe/src/assets/logo.svg']);
 
     expect(listFiles(out)).toEqual(['assets/logo.svg']);
+  });
+
+  it('copies a changed file matched by a literal glob', async () => {
+    const entries = normalizeRemoteAssetEntries(patterns, ws, 'projects/mfe', 'projects/mfe/src');
+
+    await copyChangedAssets(entries, out, ws, ['projects/mfe/public/robots.txt']);
+
+    // Matched by the `**/*`, the flattened `**/*.txt` and the literal `robots.txt` entries.
+    expect(listFiles(out)).toEqual(['literal/robots.txt', 'robots.txt', 'static/robots.txt']);
   });
 });
