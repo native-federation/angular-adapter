@@ -35,7 +35,7 @@ export function resolveScriptSettings(
   };
 }
 
-// upstream: angular/angular-cli packages/angular/build/src/tools/esbuild/application-code-bundle.ts @ 11dbe297f8
+// upstream: angular/angular-cli packages/angular/build/src/tools/esbuild/application-code-bundle.ts @ bdda8bbf1b
 export function getScriptBuildOptions(
   settings: ScriptSettings,
   platform: 'browser' | 'node'
@@ -62,7 +62,7 @@ export function getScriptBuildOptions(
   };
 }
 
-// upstream: angular/angular-cli packages/angular/build/src/tools/esbuild/application-code-bundle.ts @ 11dbe297f8
+// upstream: angular/angular-cli packages/angular/build/src/tools/esbuild/application-code-bundle.ts @ bdda8bbf1b
 export function getConditions(optimize: boolean, customConditions: string[] | undefined): string[] {
   // Required to support rxjs 7.x which will use es5 code if this condition is not present
   const conditions = ['es2015', 'es2020'];
@@ -78,7 +78,7 @@ export function getConditions(optimize: boolean, customConditions: string[] | un
   return conditions;
 }
 
-// upstream: angular/angular-cli packages/angular/build/src/tools/esbuild/utils.ts @ 11dbe297f8
+// upstream: angular/angular-cli packages/angular/build/src/tools/esbuild/utils.ts @ bdda8bbf1b
 export function getFeatureSupport(nativeAsyncAwait: boolean): BuildOptions['supported'] {
   return {
     // Native async/await is not supported with Zone.js. Disabling support here will cause
@@ -95,7 +95,7 @@ export function getFeatureSupport(nativeAsyncAwait: boolean): BuildOptions['supp
   };
 }
 
-// upstream: angular/angular-cli packages/angular/build/src/tools/esbuild/utils.ts @ 11dbe297f8
+// upstream: angular/angular-cli packages/angular/build/src/tools/esbuild/utils.ts @ bdda8bbf1b
 export function isZonelessApp(polyfills: string[] | undefined): boolean {
   return !polyfills?.some(p => p === 'zone.js' || /\.[mc]?[jt]s$/.test(p));
 }
@@ -103,12 +103,12 @@ export function isZonelessApp(polyfills: string[] | undefined): boolean {
 const TRUTHY_VALUES = new Set(['1', 'true']);
 const FALSY_VALUES = new Set(['0', 'false']);
 
-// upstream: angular/angular-cli packages/angular/build/src/utils/environment-options.ts @ 11dbe297f8
+// upstream: angular/angular-cli packages/angular/build/src/utils/environment-options.ts @ bdda8bbf1b
 function isPresent(variable: string | undefined): variable is string {
   return typeof variable === 'string' && variable !== '';
 }
 
-// upstream: angular/angular-cli packages/angular/build/src/utils/environment-options.ts @ 11dbe297f8
+// upstream: angular/angular-cli packages/angular/build/src/utils/environment-options.ts @ bdda8bbf1b
 function parseTristate(variable: string | undefined): boolean | undefined {
   if (!isPresent(variable)) {
     return undefined;
@@ -125,14 +125,14 @@ function parseTristate(variable: string | undefined): boolean | undefined {
   return undefined;
 }
 
-// upstream: angular/angular-cli packages/angular/build/src/utils/environment-options.ts @ 11dbe297f8
+// upstream: angular/angular-cli packages/angular/build/src/utils/environment-options.ts @ bdda8bbf1b
 export function readAllowMangle(env: NodeJS.ProcessEnv): boolean {
   return (
     parseTristate(env['NG_BUILD_MANGLE']) ?? debugOptimizeMangle(env['NG_BUILD_DEBUG_OPTIMIZE'])
   );
 }
 
-// Only the `mangle` part of Angular's `debugOptimize`: `minify` and `beautify` are unused in 22.2.
+// Only the `mangle` part of Angular's `debugOptimize`: `minify` and `beautify` are unused in 22.3.
 function debugOptimizeMangle(debugOptimizeVariable: string | undefined): boolean {
   if (!isPresent(debugOptimizeVariable) || parseTristate(debugOptimizeVariable) === false) {
     return true;

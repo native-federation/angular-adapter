@@ -1,5 +1,5 @@
 import { SchematicsException, type SchematicContext, type Tree } from '@angular-devkit/schematics';
-import { NodePackageInstallTask } from '@angular-devkit/schematics/tasks/index.js';
+import { NodePackageInstallTask } from '@angular-devkit/schematics/tasks';
 
 type DependencyType = 'dependencies' | 'devDependencies';
 type PackageJson = Partial<Record<DependencyType, Record<string, string>>>;

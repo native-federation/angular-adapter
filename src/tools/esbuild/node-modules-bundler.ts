@@ -118,7 +118,7 @@ export async function createNodeModulesEsbuildContext(
   // Angular ties this to AOT too, but our bundles are always AOT.
   const advancedOptimizations = settings.script.optimize;
   // Keys the transform cache, so it must hold every option that changes transformer output.
-  // upstream: angular/angular-cli packages/angular/build/src/tools/javascript-transformer/javascript-transformer.ts @ 11dbe297f8
+  // upstream: angular/angular-cli packages/angular/build/src/tools/javascript-transformer/javascript-transformer.ts @ bdda8bbf1b
   const outputOptions = {
     sourcemap: !!settings.sourcemap,
     thirdPartySourcemaps: false,
