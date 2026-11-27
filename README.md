@@ -54,12 +54,8 @@ export default withNativeFederation({
   exposes: {
     "./Component": "./projects/mfe1/src/app/app.component.ts",
   },
-  shared: fromPackageJson({
-    singleton: true,
-    strictVersion: true,
-    requiredVersion: "auto",
-    build: "package",
-  })
+  // Without a base config: singleton, strictVersion, requiredVersion 'auto', build 'package'.
+  shared: fromPackageJson()
     // includeSecondaries is an opt-out of ignoreUnusedDeps, so every Angular
     // entrypoint is shared and builds can't publish different sets of them.
     .patch(["@angular/*"], { includeSecondaries: { keepAll: true } }),
