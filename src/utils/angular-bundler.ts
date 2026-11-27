@@ -20,6 +20,7 @@ import { writeContextTsConfig } from './write-context-tsconfig.js';
 import { createSharedMappingsPlugin } from './shared-mappings-plugin.js';
 import { getScriptBuildOptions, resolveScriptSettings } from './script-options.js';
 import { createSourcemapIgnorelistPlugin } from './sourcemap-ignorelist-plugin.js';
+import { NG_SERVER_MODE_BANNER } from './node-modules-bundler.js';
 
 export async function createAngularEsbuildContext(
   options: NormalizedContextOptions,
@@ -185,6 +186,8 @@ export async function createAngularEsbuildContext(
       createSourcemapIgnorelistPlugin(),
       ...customPlugins,
     ],
+    // Exposed modules also run during SSR, so `ngServerMode` can't be a `define` here. (#209)
+    banner: { js: NG_SERVER_MODE_BANNER },
     define: {
       ...builderOptions.define,
       ...scriptDefine,

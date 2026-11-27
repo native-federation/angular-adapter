@@ -5,6 +5,7 @@
     "src/config.ts",
     "src/internal.ts",
     "src/node-preload.ts",
+    "src/ssr.ts",
     "src/builders/*/builder.ts",
     "src/schematics/*/schematic.ts",
     "src/generators/*/generator.ts",

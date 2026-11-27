@@ -14,10 +14,12 @@ import {
   withNativeFederation as coreWithNativeFederation,
 } from "@softarc/native-federation/config";
 import { NG_SKIP_LIST } from "./angular-skip-list.js";
-import type { NormalizedFederationConfig } from "@softarc/native-federation/internal";
+import {
+  inferProjectPath,
+  type NormalizedFederationConfig,
+} from "@softarc/native-federation/internal";
 import { existsSync, readFileSync } from "node:fs";
 import * as path from "node:path";
-import { cwd } from "node:process";
 
 export function shareAll(
   config: ShareAllExternalsOptions,
@@ -47,7 +49,7 @@ export function share(
  * {@link NG_SKIP_LIST} instead of core's `DEFAULT_SKIP_LIST`.
  */
 export function fromPackageJson(
-  baseCfg: ShareAllExternalsOptions,
+  baseCfg?: ShareAllExternalsOptions,
   projectPath = "",
 ): PackageJsonExternalsBuilder {
   return coreFromPackageJson(baseCfg, projectPath).skip(NG_SKIP_LIST);
@@ -75,7 +77,7 @@ export interface PackageShareScopeOptions {
   level?: "major" | "minor" | "patch";
   /** Package whose version drives the scope. Defaults to `@angular/core`. */
   dependency?: string;
-  /** Directory to start resolving `package.json` from. Defaults to `cwd()`. */
+  /** Relative to `workspaceRoot`; defaults to the `packageJson` folder or `workspaceRoot`. */
   projectPath?: string;
   prefix?: string;
 }
@@ -97,12 +99,12 @@ export interface PackageShareScopeOptions {
 export function autoShareScope(opts: PackageShareScopeOptions = {}): string {
   const {
     level = "minor",
-    projectPath = cwd(),
+    projectPath,
     dependency = "@angular/core",
     prefix = "ng",
   } = opts;
 
-  let dir = projectPath;
+  let dir = inferProjectPath(projectPath);
   while (
     !existsSync(path.join(dir, "package.json")) &&
     path.dirname(dir) !== dir

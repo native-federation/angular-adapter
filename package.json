@@ -19,7 +19,7 @@
     }
   },
   "dependencies": {
-    "@softarc/native-federation": "~4.10.0",
+    "@softarc/native-federation": "~4.11.0",
     "@softarc/native-federation-orchestrator": "^4.10.0",
     "@angular-devkit/architect": "^0.2102.0",
     "@angular-devkit/build-angular": "^21.2.0",
@@ -60,6 +60,11 @@
       "types": "./src/node-preload.d.ts",
       "import": "./src/node-preload.js",
       "default": "./src/node-preload.js"
+    },
+    "./ssr": {
+      "types": "./src/ssr.d.ts",
+      "import": "./src/ssr.js",
+      "default": "./src/ssr.js"
     }
   },
   "homepage": "https://native-federation.com/docs/v4/angular-adapter/",
