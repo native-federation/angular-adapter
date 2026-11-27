@@ -23,6 +23,12 @@ vi.mock('@softarc/native-federation/config', () => ({
   withNativeFederation: (...args: unknown[]) => mockCoreWithNativeFederation(...args),
 }));
 
+const mockInferProjectPath = vi.fn((p?: string) => p ?? '/workspace');
+
+vi.mock('@softarc/native-federation/internal', () => ({
+  inferProjectPath: (...args: unknown[]) => mockInferProjectPath(...(args as [string?])),
+}));
+
 const mockExistsSync = vi.fn((p: string) => p.endsWith('package.json'));
 const mockReadFileSync = vi.fn(() =>
   JSON.stringify({ dependencies: { '@angular/core': '^21.1.4' } }),
@@ -74,6 +80,13 @@ describe('fromPackageJson', () => {
     fromPackageJson(baseCfg);
 
     expect(mockCoreFromPackageJson).toHaveBeenCalledWith(baseCfg, '');
+    expect(mockFromPackageJsonSkip).toHaveBeenCalledWith(NG_SKIP_LIST);
+  });
+
+  it('leaves the base config to core when none is given', () => {
+    fromPackageJson();
+
+    expect(mockCoreFromPackageJson).toHaveBeenCalledWith(undefined, '');
     expect(mockFromPackageJsonSkip).toHaveBeenCalledWith(NG_SKIP_LIST);
   });
 
@@ -183,6 +196,15 @@ describe('autoShareScope', () => {
     );
 
     expect(autoShareScope({ projectPath: '/project' })).toBe('ng21.1');
+  });
+
+  it('resolves the projectPath like core does (#256)', () => {
+    autoShareScope({ projectPath: 'apps/shell' });
+    expect(mockInferProjectPath).toHaveBeenLastCalledWith('apps/shell');
+
+    autoShareScope();
+    expect(mockInferProjectPath).toHaveBeenLastCalledWith(undefined);
+    expect(mockExistsSync).toHaveBeenCalledWith('/workspace/package.json');
   });
 
   it('pins to the major version at level "major"', () => {
