@@ -42,6 +42,10 @@ beforeEach(() => {
   write('projects/mfe/src/assets/Thumbs.db');
   write('projects/mfe/public/robots.txt');
   write('projects/mfe/public/nested/a.txt');
+  write('projects/mfe/public/nested/.gitkeep');
+  write('shared/drafts/wip.txt');
+  write('shared/drafts/keep.md');
+  write('shared/top.txt');
   write('projects/mfe/README.md');
   write('shared/brand/font.woff2');
   write('shared/brand/skip.tmp');
@@ -62,6 +66,11 @@ const patterns = [
   { glob: '**/*', input: 'projects/mfe/public' },
   { glob: '**/*.txt', input: 'projects/mfe/public', output: 'static', flatten: true },
   { glob: '**/*', input: 'shared/brand', output: '/brand/', ignore: ['*.tmp'] },
+  { glob: '**/*', input: 'shared', output: 'sh', ignore: ['drafts', 'brand/'] },
+  // Literal glob: 22.3 resolves it with a stat instead of tinyglobby, with the same result.
+  { glob: 'robots.txt', input: 'projects/mfe/public', output: 'literal' },
+  // Since 22.3 a glob naming a directory no longer expands to its files (65f302c5df).
+  { glob: 'nested', input: 'projects/mfe/public', output: 'dir-glob' },
 ];
 
 describe('normalizeRemoteAssetEntries', () => {
@@ -108,19 +117,19 @@ describe('normalizeRemoteAssetEntries', () => {
     ).toThrow(/must be within the workspace root/);
   });
 
-  // Deliberate divergence: Angular picks the root via `startsWith`, so a sibling sharing the
-  // sourceRoot prefix ("src-extra") resolves against sourceRoot and throws "outside of the output
-  // path". We match on real subdirectories, so it falls through to projectRoot.
+  // Before 22.3 Angular matched with `startsWith` and resolved this against sourceRoot
+  // (angular/angular-cli 58c30c05f6); kept as a regression test.
   it('resolves a sourceRoot-prefixed sibling against projectRoot', () => {
     write('projects/mfe/src-extra/x.txt');
     const pattern = ['projects/mfe/src-extra/x.txt'];
+    const expected = [{ glob: 'x.txt', input: 'projects/mfe/src-extra', output: 'src-extra' }];
 
-    expect(() =>
+    expect(
       normalizeAssetPatterns(structuredClone(pattern), ws, 'projects/mfe', 'projects/mfe/src')
-    ).toThrow(/outside of the output path/);
-    expect(normalizeRemoteAssetEntries(pattern, ws, 'projects/mfe', 'projects/mfe/src')).toEqual([
-      { glob: 'x.txt', input: 'projects/mfe/src-extra', output: 'src-extra' },
-    ]);
+    ).toEqual(expected);
+    expect(normalizeRemoteAssetEntries(pattern, ws, 'projects/mfe', 'projects/mfe/src')).toEqual(
+      expected
+    );
   });
 
   it('rejects outputs that escape the output path', () => {
@@ -147,12 +156,15 @@ describe('copyAllAssets', () => {
     expect(expected).not.toContain('assets/.gitkeep');
     expect(expected).not.toContain('assets/Thumbs.db');
     expect(expected).not.toContain('brand/skip.tmp');
+    // Before 22.3 the default `.gitkeep` ignore only matched at the input root.
+    expect(expected).not.toContain('nested/.gitkeep');
+    expect(expected).toContain('literal/robots.txt');
+    expect(expected.filter(f => f.startsWith('sh/'))).toEqual(['sh/top.txt']);
+    expect(expected.filter(f => f.startsWith('dir-glob/'))).toEqual([]);
   });
 });
 
-// Not part of the parity check: @angular/build 22.2.1 passes `undefined` to tinyglobby, which
-// follows symlinks. Upstream fixed this on main (angular/angular-cli a0a6b422cd, #34164) to match
-// the schema default of `false`; we follow the fix.
+// Symlinks aren't followed by default since angular/angular-cli a0a6b422cd (#34164, 22.3).
 describe('symlinked asset directories', () => {
   beforeEach(() => {
     write('linked/secret.txt');
@@ -193,5 +205,14 @@ describe('copyChangedAssets', () => {
     await copyChangedAssets(entries, out, ws, ['projects/mfe/src/assets/logo.svg']);
 
     expect(listFiles(out)).toEqual(['assets/logo.svg']);
+  });
+
+  it('copies a changed file matched by a literal glob', async () => {
+    const entries = normalizeRemoteAssetEntries(patterns, ws, 'projects/mfe', 'projects/mfe/src');
+
+    await copyChangedAssets(entries, out, ws, ['projects/mfe/public/robots.txt']);
+
+    // Matched by the `**/*`, the flattened `**/*.txt` and the literal `robots.txt` entries.
+    expect(listFiles(out)).toEqual(['literal/robots.txt', 'robots.txt', 'static/robots.txt']);
   });
 });

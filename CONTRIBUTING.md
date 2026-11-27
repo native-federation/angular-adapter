@@ -46,7 +46,7 @@ the [depending-on-angular-internals](.claude/skills/depending-on-angular-interna
 When Angular releases a new minor:
 
 1. Move `@angular/build` (peer and dev dependency) and the `@angular-devkit/*` dependencies to
-   the new minor, e.g. `~22.2.0` and `^0.2202.0`.
+   the new minor, e.g. `~22.3.0` and `^0.2203.0`.
 2. Fix what breaks in `pnpm typecheck` and `pnpm test`. Changes to `@angular/build/private` usually
    show up there first.
 3. Review every `// upstream: angular/angular-cli <path> @ <sha>` tag against the new minor's

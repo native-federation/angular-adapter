@@ -6,7 +6,7 @@
  * found in the LICENSE file at https://angular.dev/license
  */
 
-// upstream: angular/angular-cli packages/angular/build/src/tools/esbuild/sourcemap-ignorelist-plugin.ts @ 5a0d226b7c
+// upstream: angular/angular-cli packages/angular/build/src/tools/esbuild/sourcemap-ignorelist-plugin.ts @ bdda8bbf1b
 
 import * as path from 'path';
 import type { Plugin } from 'esbuild';

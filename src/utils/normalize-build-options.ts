@@ -18,7 +18,7 @@ type NormalizedOptimization = Required<Omit<OptimizationObject, 'fonts' | 'style
 type SourceMap = NonNullable<ApplicationBuilderOptions['sourceMap']>;
 type NormalizedSourceMap = Extract<SourceMap, object>;
 
-// upstream: angular/angular-cli packages/angular/build/src/utils/normalize-optimization.ts @ 11dbe297f8
+// upstream: angular/angular-cli packages/angular/build/src/utils/normalize-optimization.ts @ bdda8bbf1b
 export function normalizeOptimization(optimization: Optimization = true): NormalizedOptimization {
   if (typeof optimization === 'object') {
     const styleOptimization = !!optimization.styles;
@@ -55,7 +55,7 @@ export function normalizeOptimization(optimization: Optimization = true): Normal
   };
 }
 
-// upstream: angular/angular-cli packages/angular/build/src/utils/normalize-source-maps.ts @ 11dbe297f8
+// upstream: angular/angular-cli packages/angular/build/src/utils/normalize-source-maps.ts @ bdda8bbf1b
 export function normalizeSourceMaps(sourceMap: SourceMap): NormalizedSourceMap {
   const scripts = typeof sourceMap === 'object' ? sourceMap.scripts : sourceMap;
   const styles = typeof sourceMap === 'object' ? sourceMap.styles : sourceMap;
